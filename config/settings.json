@@ -1,0 +1,23 @@
+{
+  "energycharts_base_url": "https://api.energy-charts.info",
+  "request_interval_seconds": 31,
+  "request_timeout_seconds": 180,
+  "max_retries": 4,
+  "refetch_days": 10,
+  "refetch_days_weekly": 45,
+  "weekly_refetch_weekday": 6,
+  "backfill_chunk_days": 366,
+  "min_chunk_days": 31,
+  "history_years": 5,
+  "budget_minutes": 80,
+  "min_day_coverage": 0.8,
+  "five_year_min_years": 3,
+  "daily_chart_days": 90,
+  "monthly_chart_months": 25,
+  "eurostat_since": "auto",
+  "movers_count": 12,
+  "price_licenses": [
+    "cc_by"
+  ],
+  "forecasts": true
+}

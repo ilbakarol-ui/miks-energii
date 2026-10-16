@@ -1,0 +1,22 @@
+{
+  "_opis": "Współczynniki emisji bezpośrednich CO2 ze spalania, t CO2 na MWh energii elektrycznej netto. Biomasa = 0 (konwencja UNFCCC / EU ETS: emisje biogeniczne). Wartości typowe dla floty europejskiej - wynik jest szacunkiem, nie raportem emisji.",
+  "lignite": 1.10,
+  "hard_coal": 0.90,
+  "peat_shale": 1.05,
+  "gas": 0.40,
+  "oil": 0.75,
+  "waste": 0.35,
+  "misc": 0.40,
+  "biomass": 0.0,
+  "nuclear": 0.0,
+  "wind_onshore": 0.0,
+  "wind_offshore": 0.0,
+  "solar": 0.0,
+  "hydro_ror": 0.0,
+  "hydro_reservoir": 0.0,
+  "hydro_other": 0.0,
+  "hydro_pumped": 0.0,
+  "geothermal": 0.0,
+  "other_renewable": 0.0,
+  "battery": 0.0
+}

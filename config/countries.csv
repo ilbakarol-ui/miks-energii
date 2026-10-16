@@ -1,0 +1,32 @@
+code,name,ec,eurostat,tz,group
+EU,UE-27 (łącznie),eu,EU27_2020,Europe/Brussels,agregat
+AT,Austria,at,AT,Europe/Vienna,UE
+BE,Belgia,be,BE,Europe/Brussels,UE
+BG,Bułgaria,bg,BG,Europe/Sofia,UE
+HR,Chorwacja,hr,HR,Europe/Zagreb,UE
+CY,Cypr,cy,CY,Asia/Nicosia,UE
+CZ,Czechy,cz,CZ,Europe/Prague,UE
+DK,Dania,dk,DK,Europe/Copenhagen,UE
+EE,Estonia,ee,EE,Europe/Tallinn,UE
+FI,Finlandia,fi,FI,Europe/Helsinki,UE
+FR,Francja,fr,FR,Europe/Paris,UE
+GR,Grecja,gr,EL,Europe/Athens,UE
+ES,Hiszpania,es,ES,Europe/Madrid,UE
+NL,Holandia,nl,NL,Europe/Amsterdam,UE
+IE,Irlandia,ie,IE,Europe/Dublin,UE
+LT,Litwa,lt,LT,Europe/Vilnius,UE
+LU,Luksemburg,lu,LU,Europe/Luxembourg,UE
+LV,Łotwa,lv,LV,Europe/Riga,UE
+MT,Malta,,MT,Europe/Malta,UE
+DE,Niemcy,de,DE,Europe/Berlin,UE
+PL,Polska,pl,PL,Europe/Warsaw,UE
+PT,Portugalia,pt,PT,Europe/Lisbon,UE
+RO,Rumunia,ro,RO,Europe/Bucharest,UE
+SK,Słowacja,sk,SK,Europe/Bratislava,UE
+SI,Słowenia,si,SI,Europe/Ljubljana,UE
+SE,Szwecja,se,SE,Europe/Stockholm,UE
+HU,Węgry,hu,HU,Europe/Budapest,UE
+IT,Włochy,it,IT,Europe/Rome,UE
+NO,Norwegia,no,NO,Europe/Oslo,spoza UE
+CH,Szwajcaria,ch,,Europe/Zurich,spoza UE
+UK,Wielka Brytania,uk,UK,Europe/London,spoza UE

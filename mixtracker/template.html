@@ -1,0 +1,1151 @@
+<title>Miks energii w Europie</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&display=swap">
+<style>
+/* Układ: pulpit dyspozytorski - pasek wyboru u góry, wskaźniki, potem miks, trendy, kraje, kontrola danych. */
+:root {
+  --bg: #f3f5f6;
+  --surface: #fcfcfc;
+  --ink: #11161a;
+  --ink-2: #4a535b;
+  --muted: #7c858c;
+  --line: #dde2e5;
+  --axis: #c2c9cd;
+  --accent: #134a66;
+  --accent-soft: #e2edf2;
+  --band: rgba(17, 22, 26, 0.07);
+  --ly: #9aa3a9;
+  --warn-bg: #fff4d6;
+  --warn-ink: #6b4a00;
+  --up: #b3401f;
+  --down: #1f6a9a;
+  --font-ui: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --s-gas: #eb6834; --s-nuclear: #6250d6; --s-coal: #e34948; --s-bio: #008300;
+  --s-other: #e87ba4; --s-hydro: #2a78d6; --s-wind: #1baf7a; --s-solar: #eda100;
+  --s-total: #134a66;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1215; --surface: #151a1e; --ink: #e8ecee; --ink-2: #b3bcc2; --muted: #7e888f;
+    --line: #262d33; --axis: #39424a; --accent: #8cc8e4; --accent-soft: #1b2a33;
+    --band: rgba(232, 236, 238, 0.09); --ly: #6d777e; --warn-bg: #3a2f12; --warn-ink: #f1d48a;
+    --up: #ef8a68; --down: #7cb7e0;
+    --s-gas: #d95926; --s-nuclear: #9085e9; --s-coal: #e66767; --s-bio: #008300;
+    --s-other: #d55181; --s-hydro: #3987e5; --s-wind: #199e70; --s-solar: #c98500; --s-total: #8cc8e4;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1215; --surface: #151a1e; --ink: #e8ecee; --ink-2: #b3bcc2; --muted: #7e888f;
+  --line: #262d33; --axis: #39424a; --accent: #8cc8e4; --accent-soft: #1b2a33;
+  --band: rgba(232, 236, 238, 0.09); --ly: #6d777e; --warn-bg: #3a2f12; --warn-ink: #f1d48a;
+  --up: #ef8a68; --down: #7cb7e0;
+  --s-gas: #d95926; --s-nuclear: #9085e9; --s-coal: #e66767; --s-bio: #008300;
+  --s-other: #d55181; --s-hydro: #3987e5; --s-wind: #199e70; --s-solar: #c98500; --s-total: #8cc8e4;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 15px; line-height: 1.45;
+  margin: 0;
+}
+.wrap {
+  max-width: 1180px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+  display: grid; gap: 28px;
+}
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; margin: 0; text-wrap: balance; letter-spacing: 0.01em; }
+h1 { font-size: 30px; line-height: 1.1; }
+h2 { font-size: 21px; }
+h3 { font-size: 16px; font-weight: 500; color: var(--ink-2); }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.num { font-variant-numeric: tabular-nums; }
+header.top { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: end; justify-content: space-between; }
+header.top .stamp { font-size: 13px; color: var(--ink-2); }
+.eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+.demo { background: var(--warn-bg); color: var(--warn-ink); border-radius: 8px; padding: 10px 14px; font-size: 14px; }
+
+.controls {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--bg); padding-block: 10px; margin-block: -10px;
+  display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center;
+  border-bottom: 1px solid var(--line);
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+select, button { font: inherit; color: var(--ink); }
+select {
+  background: var(--surface); border: 1px solid var(--axis); border-radius: 8px; padding: 7px 10px; min-width: 0; max-width: 100%;
+}
+.seg { display: inline-flex; border: 1px solid var(--axis); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.seg button { background: none; border: 0; padding: 7px 12px; cursor: pointer; font-size: 14px; color: var(--ink-2); }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--ink); font-weight: 600; }
+button:focus-visible, select:focus-visible, th button:focus-visible, tr:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.period-label { font-size: 14px; color: var(--ink-2); }
+
+section { display: grid; gap: 12px; min-width: 0; }
+.head { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; justify-content: space-between; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; align-content: start; }
+
+.kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 900px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.kpi .note { font-size: 12px; color: var(--muted); }
+.fc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 12px; }
+.fc-card { display: grid; gap: 8px; align-content: start; }
+.fc-card h3 { color: var(--ink); font-size: 18px; font-weight: 600; }
+.fc-card .sum { font-size: 14px; color: var(--ink-2); }
+.cap td, .cap th { padding: 7px 8px; }
+.cap td:first-child { white-space: normal; min-width: 120px; }
+@media (max-width: 520px) { .cap th:nth-child(4), .cap td:nth-child(4) { display: none; } }
+@media (max-width: 560px) { .kpis { grid-template-columns: 1fr 1fr; gap: 10px; } .kpi .value { font-size: 26px; } .kpi .value small { font-size: 14px; } .deltas { font-size: 12px; gap: 2px 6px; } }
+.kpi .chip { justify-self: start; }
+.kpi { display: grid; gap: 8px; align-content: start; }
+.kpi .label { font-size: 14px; color: var(--ink-2); font-weight: 500; }
+.kpi .value { font-family: var(--font-display); font-size: 34px; font-weight: 600; line-height: 1; }
+.kpi .value small { font-size: 18px; font-weight: 500; color: var(--ink-2); margin-left: 4px; }
+.deltas { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 13px; }
+.deltas dt { color: var(--muted); }
+.deltas dd { margin: 0; font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
+.d-up, .d-down { color: var(--ink); }
+.chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; border-radius: 999px; padding: 2px 8px; background: var(--accent-soft); color: var(--ink); white-space: nowrap; }
+.chip.hi::before { content: "▲"; font-size: 9px; } .chip.lo::before { content: "▼"; font-size: 9px; }
+
+.range { position: relative; height: 14px; }
+.range .track { position: absolute; left: 0; right: 0; top: 6px; height: 2px; background: var(--line); border-radius: 1px; }
+.range .span { position: absolute; top: 3px; height: 8px; background: var(--band); border-radius: 4px; }
+.range .avg { position: absolute; top: 1px; width: 2px; height: 12px; background: var(--muted); }
+.range .cur { position: absolute; top: 2px; width: 10px; height: 10px; border-radius: 50%; margin-left: -5px; box-shadow: 0 0 0 2px var(--surface); }
+.range .lyd { position: absolute; top: 3px; width: 8px; height: 8px; border-radius: 50%; margin-left: -4px; border: 2px solid var(--ly); background: var(--surface); }
+
+.mix { display: grid; gap: 2px; }
+.mix-row { display: grid; grid-template-columns: minmax(110px, 1.3fr) minmax(90px, 3fr) 64px 80px minmax(90px, 1.2fr); gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.mix-row.head-row { font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--axis); padding-top: 0; }
+.mix-row .name { display: flex; align-items: center; gap: 8px; font-size: 14px; min-width: 0; }
+.mix-row .name span:last-child { overflow-wrap: anywhere; }
+.sw { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.bar { height: 14px; display: flex; align-items: center; }
+.bar i { display: block; height: 100%; border-radius: 0 4px 4px 0; min-width: 1px; }
+.mix-row .v { text-align: right; font-variant-numeric: tabular-nums; font-size: 14px; }
+.mix-row .gwh { color: var(--ink-2); }
+.mix-row.sub .name { padding-left: 18px; color: var(--ink-2); font-size: 13px; }
+@media (max-width: 640px) {
+  .mix-row { grid-template-columns: minmax(118px, 2fr) minmax(40px, 1.2fr) 52px 52px; gap: 8px; }
+  .mix-row .rng { display: none; }
+}
+
+.chart { position: relative; min-width: 0; }
+.chart svg { display: block; width: 100%; overflow: visible; }
+.chart text { fill: var(--muted); font-size: 11px; font-family: var(--font-ui); font-variant-numeric: tabular-nums; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend .ln { width: 16px; height: 2px; border-radius: 1px; }
+.legend .bd { width: 16px; height: 10px; border-radius: 3px; background: var(--band); }
+.tip {
+  position: absolute; pointer-events: none; z-index: 4; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--axis); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; line-height: 1.4;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12); min-width: 150px; max-width: 240px;
+}
+.tip b { font-weight: 600; }
+.tip .r { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
+.tip .r span:first-child { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 12px; }
+
+.tablebox { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+th, td { padding: 7px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
+th:first-child, td:first-child { text-align: left; position: sticky; left: 0; background: var(--surface); }
+th.t, td.t { text-align: left; }
+th { font-weight: 600; font-size: 12px; color: var(--ink-2); vertical-align: bottom; }
+th button { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: inherit; }
+th button[aria-sort]::after { content: " ↕"; color: var(--muted); }
+th button[aria-sort="descending"]::after { content: " ↓"; color: var(--ink); }
+th button[aria-sort="ascending"]::after { content: " ↑"; color: var(--ink); }
+tbody tr { cursor: pointer; }
+tbody tr:hover td { background: var(--accent-soft); }
+tbody tr.sel td { background: var(--accent-soft); font-weight: 600; }
+td .mini { display: flex; width: 120px; height: 10px; border-radius: 3px; overflow: hidden; gap: 1px; background: var(--surface); }
+td .mini i { display: block; height: 100%; }
+td.na, .na { color: var(--muted); }
+.cell-hi { color: var(--up); } .cell-lo { color: var(--down); }
+
+.movers { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 10px; }
+.mover { display: grid; gap: 4px; padding: 12px 14px; }
+.mover .who { font-weight: 600; }
+.mover .what { font-size: 14px; color: var(--ink-2); }
+.mover .tag { justify-self: start; }
+
+.notes { display: grid; gap: 6px; font-size: 13px; color: var(--ink-2); max-width: 75ch; }
+footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; max-width: 80ch; }
+footer a, .notes a { color: var(--accent); }
+.empty { padding: 24px; text-align: center; color: var(--muted); }
+@media (max-width: 520px) {
+  h1 { font-size: 25px; }
+  .kpi .value { font-size: 30px; }
+  .panel { padding: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div style="display:grid;gap:4px">
+      <span class="eyebrow">UE-27 · Norwegia · Szwajcaria · Wielka Brytania</span>
+      <h1>Miks energii w Europie</h1>
+    </div>
+    <p class="stamp" id="stamp"></p>
+  </header>
+  <div class="demo" id="demo" hidden></div>
+
+  <div class="controls" role="group" aria-label="Wybór kraju i okresu">
+    <select id="country" aria-label="Kraj"></select>
+    <div class="seg" id="period" role="group" aria-label="Okres">
+      <button type="button" id="p-week" data-p="week">Tydzień</button>
+      <button type="button" id="p-month" data-p="month">Miesiąc</button>
+      <button type="button" id="p-ytd" data-p="ytd">Rok do daty</button>
+    </div>
+    <span class="period-label" id="period-label"></span>
+  </div>
+
+  <div id="daily-part" style="display:grid;gap:28px">
+    <section aria-labelledby="h-kpi">
+      <h2 id="h-kpi" class="visually-hidden" hidden>Wskaźniki</h2>
+      <div class="kpis" id="kpis"></div>
+    </section>
+
+    <section aria-labelledby="h-mix">
+      <div class="head">
+        <h2 id="h-mix">Miks produkcji</h2>
+        <div class="seg" role="group" aria-label="Szczegółowość">
+          <button type="button" id="mix-groups" aria-pressed="true">Grupy</button>
+          <button type="button" id="mix-details" aria-pressed="false">Szczegóły</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="mix" id="mix"></div>
+        <p class="small muted" style="margin-top:10px">Udział w produkcji krajowej netto. Zmiana r/r w punktach procentowych. Zakres: najniższy i najwyższy udział w tym samym okresie z lat <span class="y5"></span>, kreska = średnia, kółko puste = rok temu.</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="h-trend">
+      <div class="head">
+        <h2 id="h-trend">Trend tygodniowy na tle 5 lat</h2>
+        <select id="trend-series" aria-label="Seria na wykresie trendu"></select>
+      </div>
+      <div class="panel" style="display:grid;gap:10px">
+        <div class="legend" id="trend-legend"></div>
+        <div class="chart" id="trend"></div>
+        <p class="small muted" id="trend-note"></p>
+      </div>
+    </section>
+
+    <section aria-labelledby="h-price" id="price-sec">
+      <div class="head"><h2 id="h-price">Ceny energii</h2><span class="small muted" id="price-label"></span></div>
+      <div class="grid2">
+        <div class="panel" style="display:grid;gap:10px">
+          <div class="legend" id="price-legend"></div>
+          <div class="chart" id="price-chart"></div>
+          <p class="small muted" id="price-note"></p>
+        </div>
+        <div class="panel" id="capture"></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="h-fc" id="fc-sec">
+      <div class="head"><h2 id="h-fc">Prognoza na 7 dni</h2><span class="small muted" id="fc-label"></span></div>
+      <div class="legend" id="fc-legend"></div>
+      <div class="fc-grid" id="fc"></div>
+      <p class="small muted" id="fc-note"></p>
+    </section>
+
+    <div class="grid2">
+      <section aria-labelledby="h-daily">
+        <div class="head"><h2 id="h-daily">Produkcja dzienna</h2><span class="small muted" id="daily-span"></span></div>
+        <div class="panel" style="display:grid;gap:10px">
+          <div class="legend" id="daily-legend"></div>
+          <div class="chart" id="daily"></div>
+        </div>
+      </section>
+      <section aria-labelledby="h-monthly">
+        <div class="head">
+          <h2 id="h-monthly">Miks miesięczny</h2>
+          <div class="seg" role="group" aria-label="Jednostka">
+            <button type="button" id="m-abs" aria-pressed="true">GWh</button>
+            <button type="button" id="m-pct" aria-pressed="false">%</button>
+          </div>
+        </div>
+        <div class="panel" style="display:grid;gap:10px">
+          <div class="legend" id="monthly-legend"></div>
+          <div class="chart" id="monthly"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+  <div class="panel" id="no-daily" hidden></div>
+
+  <section aria-labelledby="h-cmp">
+    <div class="head">
+      <h2 id="h-cmp">Porównanie krajów</h2>
+      <span class="small muted" id="cmp-label"></span>
+    </div>
+    <div class="tablebox"><table id="cmp"></table></div>
+    <p class="small muted">Kliknij wiersz, aby wybrać kraj. Kolor liczby w kolumnach udziałów: powyżej (▲) lub poniżej (▼) zakresu z 5 lat.</p>
+  </section>
+
+  <section aria-labelledby="h-movers">
+    <div class="head"><h2 id="h-movers">Największe zmiany</h2><span class="small muted">ostatni pełny tydzień i miesiąc</span></div>
+    <div class="movers" id="movers"></div>
+  </section>
+
+  <section aria-labelledby="h-es">
+    <div class="head"><h2 id="h-es">Dane oficjalne Eurostatu</h2><span class="small muted" id="es-label"></span></div>
+    <div class="grid2">
+      <div class="panel" id="es-kpi"></div>
+      <div class="panel" style="display:grid;gap:10px">
+        <div class="legend" id="es-legend"></div>
+        <div class="chart" id="es-chart"></div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-ctl">
+    <div class="head"><h2 id="h-ctl">Kontrola danych</h2></div>
+    <div class="tablebox"><table id="ctl"></table></div>
+    <div class="notes" id="run-log"></div>
+  </section>
+
+  <footer>
+    <p>Dane dzienne: <a href="https://energy-charts.info" target="_blank" rel="noopener">Energy-Charts.info</a> (Fraunhofer ISE, licencja CC BY 4.0), na podstawie ENTSO-E Transparency Platform i operatorów sieci. Dane miesięczne oficjalne: <a href="https://ec.europa.eu/eurostat/databrowser/view/nrg_cb_pem/default/table" target="_blank" rel="noopener">Eurostat nrg_cb_pem i nrg_cb_em</a>.</p>
+    <p>Produkcja = publiczna produkcja netto (bez części autoprodukcji przemysłowej). Zużycie = obciążenie sieci według ENTSO-E (z pompowaniem i stratami). Saldo wymiany wyliczone z bilansu: zużycie − (produkcja − pompowanie). Dni z pokryciem danych poniżej 80% są pomijane.</p>
+    <p>Ceny: rynek dnia następnego (day-ahead) z Energy-Charts, tylko strefy udostępnione na licencji CC BY 4.0 (źródło SMARD / Bundesnetzagentur). Dla krajów z kilkoma strefami: średnia prosta stref. Cena ważona produkcją = przychód z MWh danego źródła przy cenach day-ahead (cena godzinowa × produkcja / produkcja).</p>
+    <p>Emisyjność: szacunek emisji bezpośrednich CO₂ ze spalania na kWh produkcji krajowej netto, ze współczynników dla paliw (<span id="factors"></span> t CO₂/MWh; biomasa = 0). Nie obejmuje emisji z importu ani cyklu życia.</p>
+    <p>Prognozy: Energy-Charts (prognozy operatorów i ENTSO-E). Porównanie z tymi samymi dniami kalendarza (±3 dni) w poprzednich 5 latach.</p>
+  </footer>
+</div>
+
+<script>
+const DATA = /*__DATA__*/null;
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const fmt0 = new Intl.NumberFormat("pl-PL", { maximumFractionDigits: 0 });
+  const fmt1 = new Intl.NumberFormat("pl-PL", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const fmt2 = new Intl.NumberFormat("pl-PL", { maximumFractionDigits: 2 });
+  const MONTHS = ["sty", "lut", "mar", "kwi", "maj", "cze", "lip", "sie", "wrz", "paź", "lis", "gru"];
+  const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const G = DATA.groups, GK = G.map((g) => g.key);
+  const glabel = Object.fromEntries(G.map((g) => [g.key, g.label]));
+  const dlabel = Object.fromEntries(DATA.details.map((d) => [d.key, d.label]));
+  const col = (k) => css("--s-" + k) || css("--s-total");
+  const isNum = (v) => typeof v === "number" && isFinite(v);
+  const UNIT = (k) => (k.startsWith("share_") || k.startsWith("capture_rate_")) ? "%"
+    : k === "intensity" ? "g/kWh" : k === "co2" ? "kt" : k === "price_neg_h" ? "h"
+    : (k.startsWith("price_") || k.startsWith("capture_")) ? "€/MWh" : "GWh";
+  function fmtU(v, u) {
+    if (!isNum(v)) return "–";
+    if (u === "GWh") return energy(v);
+    if (u === "%") return fmt1.format(v) + "%";
+    if (u === "kt") return Math.abs(v) >= 1000 ? fmt2.format(v / 1000) + " Mt" : fmt0.format(v) + " kt";
+    if (u === "g/kWh") return fmt0.format(v) + " g/kWh";
+    if (u === "h") return fmt0.format(v) + " h";
+    return fmt1.format(v) + " €/MWh";
+  }
+
+  function energy(v, unit) {
+    if (!isNum(v)) return "–";
+    const a = Math.abs(v);
+    if (unit === "GWh") return fmt0.format(v);
+    if (a >= 10000) return fmt1.format(v / 1000) + " TWh";
+    if (a >= 100) return fmt0.format(v) + " GWh";
+    return fmt1.format(v) + " GWh";
+  }
+  function energyParts(v) {
+    if (!isNum(v)) return ["–", ""];
+    const a = Math.abs(v);
+    if (a >= 10000) return [fmt1.format(v / 1000), "TWh"];
+    if (a >= 100) return [fmt0.format(v), "GWh"];
+    return [fmt1.format(v), "GWh"];
+  }
+  const pct = (v) => (isNum(v) ? fmt1.format(v) + "%" : "–");
+  function dPct(cur, ref) {
+    if (!isNum(cur) || !isNum(ref) || ref === 0) return { t: "–", c: "" };
+    const d = (cur / ref - 1) * 100;
+    return { t: (d > 0 ? "+" : d < 0 ? "−" : "") + fmt1.format(Math.abs(d)) + "%", c: d > 0.05 ? "d-up" : d < -0.05 ? "d-down" : "" };
+  }
+  function dPP(cur, ref) {
+    if (!isNum(cur) || !isNum(ref)) return { t: "–", c: "" };
+    const d = cur - ref;
+    return { t: (d > 0 ? "+" : d < 0 ? "−" : "") + fmt1.format(Math.abs(d)) + " p.p.", c: d > 0.05 ? "d-up" : d < -0.05 ? "d-down" : "" };
+  }
+  function dAbs(cur, ref) {
+    if (!isNum(cur) || !isNum(ref)) return { t: "–", c: "" };
+    const d = cur - ref;
+    return { t: (d > 0 ? "+" : d < 0 ? "−" : "") + energy(Math.abs(d)), c: d > 0 ? "d-up" : d < 0 ? "d-down" : "" };
+  }
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const fdate = (s) => { const [y, m, d] = s.split("-"); return `${d}.${m}.${y}`; };
+
+  // ---------- stan ----------
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem("mix." + k); return v === null ? d : v; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem("mix." + k, v); } catch (e) { /* bez zapisu */ } },
+  };
+  const codes = DATA.countries.map((c) => c.code);
+  const hash = (location.hash || "").replace("#", "").toUpperCase();
+  const S = {
+    country: codes.includes(hash) ? hash : (codes.includes(store.get("country", "")) ? store.get("country") : (codes.includes("EU") ? "EU" : codes[0])),
+    period: ["week", "month", "ytd"].includes(store.get("period", "")) ? store.get("period") : "week",
+    details: false, pct: false,
+    trend: store.get("trend", "load"),
+    sort: { key: "load", dir: -1 },
+  };
+  const cname = (c) => (DATA.countries.find((x) => x.code === c) || {}).name || c;
+
+  // ---------- nagłówek ----------
+  const m = DATA.meta;
+  $("stamp").textContent = `Dane do ${fdate(m.ref)} · wygenerowano ${m.generated.replace("T", " ").replace("Z", " UTC")}`;
+  if (m.demo) {
+    $("demo").hidden = false;
+    $("demo").textContent = "Podgląd na danych demonstracyjnych: dzienne wartości zostały wygenerowane z miesięcznych danych Eurostatu z losową zmiennością wiatru i słońca. Prawdziwe dane dzienne pojawią się po pierwszym przebiegu automatu.";
+  }
+  document.querySelectorAll(".y5").forEach((e) => (e.textContent = m.years5));
+  const LBL_F = { lignite: "węgiel brunatny", hard_coal: "kamienny", peat_shale: "torf/łupki", gas: "gaz", oil: "ropa", waste: "odpady", misc: "inne" };
+  $("factors").textContent = Object.entries(DATA.factors || {}).map(([k, v]) => `${LBL_F[k] || k} ${fmt2.format(v)}`).join(", ");
+
+  // ---------- wybór kraju ----------
+  const sel = $("country");
+  const grpOrder = ["agregat", "UE", "spoza UE"];
+  grpOrder.forEach((g) => {
+    const list = DATA.countries.filter((c) => c.group === g);
+    if (!list.length) return;
+    const og = document.createElement("optgroup");
+    og.label = g === "agregat" ? "Łącznie" : g === "UE" ? "Państwa UE" : "Spoza UE";
+    list.forEach((c) => {
+      const o = document.createElement("option");
+      o.value = c.code;
+      o.textContent = c.name + (c.daily || c.source ? "" : " (tylko miesięcznie)");
+      og.appendChild(o);
+    });
+    sel.appendChild(og);
+  });
+  sel.value = S.country;
+  sel.addEventListener("change", () => setCountry(sel.value));
+  function setCountry(c) {
+    S.country = c; sel.value = c; store.set("country", c);
+    try { history.replaceState(null, "", "#" + c.toLowerCase()); } catch (e) { /* bez zmiany adresu */ }
+    renderCountry(); renderTable();
+  }
+  document.querySelectorAll("#period button").forEach((b) => b.addEventListener("click", () => {
+    S.period = b.dataset.p; store.set("period", S.period); renderCountry(); renderTable();
+  }));
+  $("mix-groups").addEventListener("click", () => { S.details = false; renderMix(); });
+  $("mix-details").addEventListener("click", () => { S.details = true; renderMix(); });
+  $("m-abs").addEventListener("click", () => { S.pct = false; renderMonthly(); });
+  $("m-pct").addEventListener("click", () => { S.pct = true; renderMonthly(); });
+
+  // ---------- serie trendu ----------
+  const TREND = [
+    ["load", "Zużycie"], ["gen_total", "Produkcja łącznie"], ["net_import", "Saldo wymiany (import +)"],
+    ["share_renewable", "Udział OZE w produkcji, %"], ["share_fossil", "Udział paliw kopalnych, %"],
+    ["renewable", "OZE łącznie"], ["fossil", "Paliwa kopalne łącznie"],
+    ...GK.map((k) => [k, glabel[k]]),
+    ["lignite", "Węgiel brunatny"], ["hard_coal", "Węgiel kamienny"], ["wind_onshore", "Wiatr na lądzie"], ["wind_offshore", "Wiatr na morzu"],
+    ["intensity", "Emisyjność, g CO₂/kWh"], ["co2", "Emisje CO₂"],
+    ["price_avg", "Cena energii day-ahead, €/MWh"], ["capture_solar", "Cena ważona: słońce, €/MWh"],
+    ["capture_wind", "Cena ważona: wiatr, €/MWh"], ["price_neg_h", "Godziny z ujemną ceną"],
+  ];
+  const ts = $("trend-series");
+  TREND.forEach(([k, l]) => { const o = document.createElement("option"); o.value = k; o.textContent = l; ts.appendChild(o); });
+  if (!TREND.some((t) => t[0] === S.trend)) S.trend = "load";
+  ts.value = S.trend;
+  ts.addEventListener("change", () => { S.trend = ts.value; store.set("trend", S.trend); renderTrend(); });
+
+  // ---------- pomocnicze: zakres 5 lat ----------
+  function rangeHTML(v, lo, hi, color) {
+    // v = [cur, prev, ly, avg, min, max]
+    if (!v || !isNum(v[0])) return "";
+    const vals = [v[0], v[2], v[3], v[4], v[5]].filter(isNum);
+    let a = lo ?? Math.min(...vals), b = hi ?? Math.max(...vals);
+    if (b - a < 1e-9) { a -= 1; b += 1; }
+    const pad = (b - a) * 0.08; a -= pad; b += pad;
+    const x = (t) => Math.max(0, Math.min(100, ((t - a) / (b - a)) * 100));
+    let h = '<div class="range" aria-hidden="true"><div class="track"></div>';
+    if (isNum(v[4]) && isNum(v[5])) h += `<div class="span" style="left:${x(v[4])}%;width:${Math.max(1, x(v[5]) - x(v[4]))}%"></div>`;
+    if (isNum(v[3])) h += `<div class="avg" style="left:${x(v[3])}%"></div>`;
+    if (isNum(v[2])) h += `<div class="lyd" style="left:${x(v[2])}%"></div>`;
+    h += `<div class="cur" style="left:${x(v[0])}%;background:${color}"></div></div>`;
+    return h;
+  }
+  function outside(v) {
+    if (!v || !isNum(v[0]) || !isNum(v[4]) || !isNum(v[5])) return "";
+    if (v[0] > v[5]) return "hi";
+    if (v[0] < v[4]) return "lo";
+    return "";
+  }
+
+  function priceNote() {
+    const p = (DATA.prices || {})[S.country];
+    if (!p) return S.country === "EU" ? "brak ceny dla agregatu UE" : "brak strefy cenowej w źródle";
+    if (!p.zones.length) return "ceny tej strefy tylko do użytku prywatnego";
+    if (p.partial) return "tylko strefa " + p.zones.join(", ") + " (z " + p.all.length + ")";
+    if (p.zones.length > 1) return "średnia stref " + p.zones.join(", ");
+    return "strefa " + p.zones[0];
+  }
+
+  // ---------- KPI ----------
+  function renderKPIs() {
+    const s = DATA.summary[S.country][S.period];
+    const est = (DATA.countries.find((c) => c.code === S.country) || {}).est_load;
+    const P = S.period;
+    const prevLbl = P === "week" ? "t/t" : "m/m";
+    const tiles = [
+      { k: "load", label: "Zużycie" + (est ? " (szac.)" : ""), kind: "e" },
+      { k: "gen_total", label: "Produkcja krajowa", kind: "e" },
+      { k: "share_renewable", label: "Udział OZE w produkcji", kind: "p" },
+      { k: "net_import", label: "Saldo wymiany", kind: "n" },
+      { k: "price_avg", label: "Cena day-ahead", kind: "u", note: priceNote() },
+      { k: "intensity", label: "Emisyjność produkcji", kind: "u", note: isNum((s.co2 || [])[0]) ? "emisje " + fmtU(s.co2[0], "kt") + " CO₂ (szac.)" : "" },
+    ];
+    $("kpis").innerHTML = tiles.map((t) => {
+      const v = s[t.k] || [];
+      let valHTML, d;
+      if (t.kind === "p") { valHTML = isNum(v[0]) ? `${fmt1.format(v[0])}<small>%</small>` : "–"; d = dPP; }
+      else if (t.kind === "n") {
+        const [n, u] = energyParts(isNum(v[0]) ? Math.abs(v[0]) : null);
+        const word = !isNum(v[0]) ? "" : v[0] >= 0 ? "import netto" : "eksport netto";
+        valHTML = `${n}<small>${u} ${word}</small>`; d = dAbs;
+      } else if (t.kind === "u") {
+        const u = UNIT(t.k);
+        valHTML = isNum(v[0]) ? `${u === "g/kWh" ? fmt0.format(v[0]) : fmt1.format(v[0])}<small>${u}</small>` : "–"; d = dPct;
+      } else { const [n, u] = energyParts(v[0]); valHTML = `${n}<small>${u}</small>`; d = dPct; }
+      const rows = [];
+      if (P !== "ytd") rows.push([prevLbl, d(v[0], v[1])]);
+      rows.push(["r/r", d(v[0], v[2])]);
+      rows.push(["śr. 5 lat", d(v[0], v[3])]);
+      const o = outside(v);
+      const chip = o ? `<span class="chip ${o}">${o === "hi" ? "powyżej" : "poniżej"} zakresu 5 lat</span>` : "";
+      const color = t.k === "share_renewable" ? col("wind") : css("--s-total");
+      return `<div class="panel kpi">
+        <div class="label">${t.label}</div>
+        <div class="value">${valHTML}</div>
+        <dl class="deltas">${rows.map(([a, b]) => `<dt>${a}</dt><dd class="${b.c}">${b.t}</dd>`).join("")}</dl>
+        ${rangeHTML(v, null, null, color)}${chip}
+        ${t.note ? `<div class="note">${esc(t.note)}</div>` : ""}
+      </div>`;
+    }).join("");
+  }
+
+  // ---------- miks ----------
+  function renderMix() {
+    $("mix-groups").setAttribute("aria-pressed", String(!S.details));
+    $("mix-details").setAttribute("aria-pressed", String(S.details));
+    const s = DATA.summary[S.country][S.period];
+    const gen = s.gen_total[0];
+    const rows = [];
+    GK.forEach((g) => {
+      rows.push({ k: g, label: glabel[g], color: col(g), sub: false, v: s[g], sh: s["share_" + g] });
+      if (S.details) {
+        DATA.details.filter((d) => d.group === g && d.key !== g).forEach((d) => {
+          const v = s[d.key];
+          if (!v || !isNum(v[0]) || (v[0] === 0 && !isNum(v[2]))) return;
+          if (v[0] === 0 && (v[2] || 0) === 0) return;
+          const share = (x) => (isNum(x) && isNum(gen) && gen > 0 ? (100 * x) / gen : null);
+          const gl = s.gen_total;
+          const shv = [share(v[0]), null, isNum(v[2]) && isNum(gl[2]) && gl[2] > 0 ? (100 * v[2]) / gl[2] : null, null, null, null];
+          rows.push({ k: d.key, label: d.label, color: col(g), sub: true, v, sh: shv });
+        });
+      }
+    });
+    const maxShare = Math.max(1, ...rows.map((r) => (r.sh && isNum(r.sh[0]) ? r.sh[0] : 0)));
+    let html = `<div class="mix-row head-row"><span>Źródło</span><span>Udział</span><span class="v">%</span><span class="v">r/r</span><span class="rng">Zakres 5 lat</span></div>`;
+    rows.forEach((r) => {
+      const sh = r.sh || [];
+      const w = isNum(sh[0]) ? (sh[0] / maxShare) * 100 : 0;
+      const dd = dPP(sh[0], sh[2]);
+      html += `<div class="mix-row${r.sub ? " sub" : ""}">
+        <span class="name">${r.sub ? "" : `<span class="sw" style="background:${r.color}"></span>`}<span>${esc(r.label)}</span></span>
+        <span class="bar" title="${esc(energy(r.v && r.v[0]))}"><i style="width:${w}%;background:${r.color};opacity:${r.sub ? 0.55 : 1}"></i></span>
+        <span class="v">${pct(sh[0])}</span>
+        <span class="v ${dd.c}">${dd.t.replace(" p.p.", "")}</span>
+        <span class="rng">${r.sub ? `<span class="small gwh">${energy(r.v && r.v[0])}</span>` : rangeHTML(sh, 0, null, r.color)}</span>
+      </div>`;
+    });
+    html += `<div class="mix-row"><span class="name"><b>Razem produkcja</b></span><span></span><span class="v">100%</span><span class="v ${dPct(gen, s.gen_total[2]).c}">${dPct(gen, s.gen_total[2]).t}</span><span class="rng small gwh">${energy(gen)}</span></div>`;
+    $("mix").innerHTML = html;
+  }
+
+  // ---------- wykresy SVG ----------
+  const NS = "http://www.w3.org/2000/svg";
+  function niceTicks(min, max, n) {
+    if (!(max > min)) { max = min + 1; }
+    const span = max - min, step0 = span / n, mag = Math.pow(10, Math.floor(Math.log10(step0)));
+    const err = step0 / mag;
+    const step = (err >= 7.5 ? 10 : err >= 3.5 ? 5 : err >= 1.5 ? 2 : 1) * mag;
+    const a = Math.floor(min / step) * step, b = Math.ceil(max / step) * step;
+    const t = []; for (let v = a; v <= b + step / 2; v += step) t.push(+v.toFixed(10));
+    return t;
+  }
+  function tickFmt(v, ticks) {
+    if (v === 0) return "0";
+    const a = Math.max(...ticks.map(Math.abs));
+    if (a >= 10000) return fmt1.format(v / 1000).replace(/,0$/, "") + "k";
+    if (a >= 1000) return fmt2.format(v / 1000) + "k";
+    return fmt2.format(v);
+  }
+  function mk(tag, attrs, parent) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function frame(el, h) {
+    el.innerHTML = "";
+    const W = Math.max(280, el.clientWidth || 600), H = h;
+    const svg = mk("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img" });
+    el.appendChild(svg);
+    const tip = document.createElement("div"); tip.className = "tip"; tip.hidden = true; el.appendChild(tip);
+    return { svg, tip, W, H };
+  }
+  function yAxis(svg, ticks, y, L, R, unit) {
+    ticks.forEach((t) => {
+      mk("line", { x1: L, x2: R, y1: y(t), y2: y(t), stroke: t === 0 ? css("--axis") : css("--line"), "stroke-width": 1 }, svg);
+      const tx = mk("text", { x: L - 6, y: y(t) + 4, "text-anchor": "end" }, svg);
+      tx.textContent = tickFmt(t, ticks);
+    });
+    if (unit) { const u = mk("text", { x: L - 6, y: 9, "text-anchor": "end" }, svg); u.textContent = unit; }
+  }
+  function placeTip(tip, el, x, y, html) {
+    tip.innerHTML = html; tip.hidden = false;
+    const w = tip.offsetWidth, W = el.clientWidth;
+    let left = x + 14; if (left + w > W) left = x - w - 14; if (left < 0) left = 0;
+    tip.style.left = left + "px"; tip.style.top = Math.max(0, y - 10) + "px";
+  }
+  function legend(el, items) {
+    el.innerHTML = items.map((it) => `<span>${it.band ? '<i class="bd"></i>' : it.line ? `<i class="ln" style="background:${it.color}"></i>` : `<i class="sw" style="background:${it.color}"></i>`}${esc(it.label)}</span>`).join("");
+  }
+
+  function renderTrend() {
+    const el = $("trend");
+    const w = (DATA.weekly[S.country] || {})[S.trend];
+    const unit = UNIT(S.trend);
+    const isShare = unit === "%";
+    const color = GK.includes(S.trend) ? col(S.trend) : css("--s-total");
+    legend($("trend-legend"), [
+      { line: 1, color, label: String(DATA.meta.year) },
+      { line: 1, color: css("--ly"), label: String(DATA.meta.year - 1) },
+      { line: 1, color: css("--muted"), label: "średnia " + DATA.meta.years5 },
+      { band: 1, label: "zakres min–maks " + DATA.meta.years5 },
+    ]);
+    if (!w) { el.innerHTML = '<p class="empty">Brak danych dla tej serii.</p>'; return; }
+    const H = el.clientWidth < 520 ? 220 : 270;
+    const { svg, tip, W } = frame(el, H);
+    const L = 46, R = W - 34, T = 24, B = H - 24;
+    const all = [...w.cur, ...w.ly, ...w.min, ...w.max].filter(isNum);
+    if (!all.length) { el.innerHTML = '<p class="empty">Brak danych dla tej serii.</p>'; return; }
+    let lo = Math.min(...all), hi = Math.max(...all);
+    const padY = (hi - lo) * 0.08 || 1;
+    lo -= padY; hi += padY;
+    if (isShare) { lo = Math.max(0, lo); hi = Math.min(100, hi); }
+    else if (S.trend !== "net_import" && Math.min(...all) >= 0) lo = Math.max(0, lo);
+    const ticks = niceTicks(lo, hi, 4);
+    const y0 = ticks[0], y1 = ticks[ticks.length - 1];
+    const x = (i) => L + (i / 52) * (R - L);
+    const y = (v) => B - ((v - y0) / (y1 - y0)) * (B - T);
+    yAxis(svg, ticks, y, L, R, unit);
+    // osie miesięcy
+    const mweeks = [1, 5, 9, 14, 18, 22, 27, 31, 36, 40, 44, 49];
+    const every = (R - L) / 12 < 34 ? 2 : 1;
+    mweeks.forEach((wk, i) => { if (i % every) return; const t = mk("text", { x: x(wk - 1), y: H - 6, "text-anchor": "start" }, svg); t.textContent = MONTHS[i]; });
+    // pasmo min-maks
+    let seg = [];
+    const flush = () => {
+      if (seg.length > 1) {
+        const pts = seg.map((i) => `${x(i)},${y(w.max[i])}`).concat(seg.slice().reverse().map((i) => `${x(i)},${y(w.min[i])}`));
+        mk("polygon", { points: pts.join(" "), fill: css("--band"), stroke: "none" }, svg);
+      }
+      seg = [];
+    };
+    for (let i = 0; i < 53; i++) { if (isNum(w.min[i]) && isNum(w.max[i])) seg.push(i); else flush(); }
+    flush();
+    const path = (arr, stroke, width) => {
+      let d = "", pen = false;
+      arr.forEach((v, i) => { if (isNum(v)) { d += (pen ? "L" : "M") + x(i).toFixed(1) + "," + y(v).toFixed(1); pen = true; } else pen = false; });
+      if (d) mk("path", { d, fill: "none", stroke, "stroke-width": width, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+    };
+    path(w.avg, css("--muted"), 1.5);
+    path(w.ly, css("--ly"), 2);
+    path(w.cur, color, 2.5);
+    let last = -1; w.cur.forEach((v, i) => { if (isNum(v)) last = i; });
+    if (last >= 0) {
+      mk("circle", { cx: x(last), cy: y(w.cur[last]), r: 4.5, fill: color, stroke: css("--surface"), "stroke-width": 2 }, svg);
+      const lb = mk("text", { x: Math.min(x(last) + 8, R - 2), y: y(w.cur[last]) - 8, "text-anchor": x(last) + 8 > R - 40 ? "end" : "start" }, svg);
+      lb.style.fill = css("--ink"); lb.style.fontWeight = "600";
+      lb.textContent = fmtU(w.cur[last], unit);
+    }
+    if (S.trend === "net_import") $("trend-note").textContent = "Wartości dodatnie: import netto, ujemne: eksport netto.";
+    else if (isShare) $("trend-note").textContent = "Udział w tygodniowej produkcji krajowej netto.";
+    else if (S.trend === "intensity") $("trend-note").textContent = "Szacunek emisji bezpośrednich CO₂ na kWh produkcji krajowej netto (tydzień ISO).";
+    else if (S.trend === "co2") $("trend-note").textContent = "Suma tygodniowa szacowanych emisji CO₂ z produkcji energii elektrycznej.";
+    else if (S.trend === "price_avg") $("trend-note").textContent = "Średnia tygodniowa ceny day-ahead (" + priceNote() + ").";
+    else if (S.trend.startsWith("capture_")) $("trend-note").textContent = "Średnia cena uzyskana przez źródło: ceny godzinowe ważone jego produkcją.";
+    else if (S.trend === "price_neg_h") $("trend-note").textContent = "Liczba godzin w tygodniu z ceną day-ahead poniżej zera.";
+    else $("trend-note").textContent = "Suma tygodniowa (tydzień ISO, pon.–niedz.).";
+    // warstwa interakcji
+    const cross = mk("line", { y1: T, y2: B, stroke: css("--axis"), "stroke-width": 1, visibility: "hidden" }, svg);
+    const hit = mk("rect", { x: L, y: T, width: R - L, height: B - T, fill: "transparent" }, svg);
+    const show = (evt) => {
+      const r = svg.getBoundingClientRect();
+      const px = ((evt.clientX - r.left) / r.width) * W;
+      const i = Math.max(0, Math.min(52, Math.round(((px - L) / (R - L)) * 52)));
+      cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("visibility", "visible");
+      const f = (v) => fmtU(v, unit);
+      placeTip(tip, el, (x(i) / W) * r.width, (T / H) * r.height + 10,
+        `<b>Tydzień ${i + 1}</b>
+        <div class="r"><span><i class="ln" style="width:10px;height:2px;background:${color}"></i>${DATA.meta.year}</span><span>${f(w.cur[i])}</span></div>
+        <div class="r"><span><i class="ln" style="width:10px;height:2px;background:${css("--ly")}"></i>${DATA.meta.year - 1}</span><span>${f(w.ly[i])}</span></div>
+        <div class="r"><span>średnia 5 lat</span><span>${f(w.avg[i])}</span></div>
+        <div class="r"><span>min–maks</span><span>${isNum(w.min[i]) ? f(w.min[i]) + " – " + f(w.max[i]) : "–"}</span></div>`);
+    };
+    hit.addEventListener("pointermove", show);
+    hit.addEventListener("pointerdown", show);
+    hit.addEventListener("pointerleave", () => { tip.hidden = true; cross.setAttribute("visibility", "hidden"); });
+  }
+
+  function stacked(el, labels, series, opts) {
+    // series: [{key,label,color,values}] od dołu; opts: {line:{label,values,color}, pct, H, xlab(i)}
+    const H = opts.H || (el.clientWidth < 520 ? 210 : 250);
+    const { svg, tip, W } = frame(el, H);
+    const n = labels.length;
+    const L = 46, R = W - 8, T = 24, B = H - 24;
+    const totals = labels.map((_, i) => series.reduce((a, s) => a + (isNum(s.values[i]) ? s.values[i] : 0), 0));
+    const lineVals = opts.line ? opts.line.values.filter(isNum) : [];
+    const hi = opts.pct ? 100 : Math.max(1, ...totals, ...lineVals);
+    const ticks = opts.pct ? [0, 25, 50, 75, 100] : niceTicks(0, hi, 4);
+    const y1 = ticks[ticks.length - 1];
+    const y = (v) => B - (v / y1) * (B - T);
+    yAxis(svg, ticks, y, L, R, opts.pct ? "%" : "GWh");
+    const slot = (R - L) / n;
+    const bw = Math.min(24, Math.max(1.5, slot - (slot > 6 ? 2 : 1)));
+    const gap = slot > 6 ? 2 : 0.6;
+    const x = (i) => L + slot * i + (slot - bw) / 2;
+    for (let i = 0; i < n; i++) {
+      if (!(totals[i] > 0)) continue;
+      let acc = 0;
+      const segs = series.map((s) => ({ s, v: isNum(s.values[i]) ? (opts.pct ? (100 * s.values[i]) / totals[i] : s.values[i]) : 0 })).filter((q) => q.v > 0);
+      segs.forEach((q, j) => {
+        const top = j === segs.length - 1;
+        const y0p = y(acc), y1p = y(acc + q.v);
+        let h = y0p - y1p - (top ? 0 : gap);
+        if (h < 0.4) { acc += q.v; return; }
+        const rx = top && bw >= 8 ? 4 : 0;
+        if (rx) {
+          const xx = x(i), yy = y1p, ww = bw, hh = h, r = Math.min(rx, hh);
+          mk("path", { d: `M${xx},${yy + hh}V${yy + r}Q${xx},${yy} ${xx + r},${yy}H${xx + ww - r}Q${xx + ww},${yy} ${xx + ww},${yy + r}V${yy + hh}Z`, fill: q.s.color }, svg);
+        } else {
+          mk("rect", { x: x(i), y: y1p + (top ? 0 : gap), width: bw, height: h, fill: q.s.color }, svg);
+        }
+        acc += q.v;
+      });
+    }
+    if (opts.line && !opts.pct) {
+      let d = "", pen = false;
+      opts.line.values.forEach((v, i) => { if (isNum(v)) { d += (pen ? "L" : "M") + (x(i) + bw / 2).toFixed(1) + "," + y(v).toFixed(1); pen = true; } else pen = false; });
+      if (d) mk("path", { d, fill: "none", stroke: opts.line.color, "stroke-width": 2, "stroke-linejoin": "round" }, svg);
+    }
+    const step = Math.ceil(n / Math.max(3, Math.floor((R - L) / 70)));
+    for (let i = 0; i < n; i += step) { const t = mk("text", { x: x(i), y: H - 6, "text-anchor": "start" }, svg); t.textContent = opts.xlab(i); }
+    const hl = mk("rect", { x: 0, y: T, width: slot, height: B - T, fill: css("--band"), visibility: "hidden" }, svg);
+    svg.insertBefore(hl, svg.firstChild.nextSibling);
+    const hit = mk("rect", { x: L, y: T, width: R - L, height: B - T, fill: "transparent" }, svg);
+    const show = (evt) => {
+      const r = svg.getBoundingClientRect();
+      const px = ((evt.clientX - r.left) / r.width) * W;
+      const i = Math.max(0, Math.min(n - 1, Math.floor((px - L) / slot)));
+      hl.setAttribute("x", L + slot * i); hl.setAttribute("visibility", "visible");
+      const t = totals[i];
+      let h = `<b>${esc(opts.tlab(i))}</b>`;
+      series.slice().reverse().forEach((s) => {
+        const v = s.values[i];
+        if (!isNum(v) || v <= 0) return;
+        h += `<div class="r"><span><i class="sw" style="width:8px;height:8px;background:${s.color}"></i>${esc(s.label)}</span><span>${opts.pct ? pct((100 * v) / t) : energy(v)}</span></div>`;
+      });
+      h += `<div class="r"><span><b>Produkcja</b></span><span><b>${energy(t)}</b></span></div>`;
+      if (opts.line && isNum(opts.line.values[i])) h += `<div class="r"><span>${esc(opts.line.label)}</span><span>${energy(opts.line.values[i])}</span></div>`;
+      placeTip(tip, el, ((L + slot * i + slot) / W) * r.width, 10, h);
+    };
+    hit.addEventListener("pointermove", show);
+    hit.addEventListener("pointerdown", show);
+    hit.addEventListener("pointerleave", () => { tip.hidden = true; hl.setAttribute("visibility", "hidden"); });
+  }
+
+  const groupLegend = (extra) => [...G.map((g) => ({ color: col(g.key), label: g.label })), ...(extra || [])];
+
+  function renderDaily() {
+    const d = DATA.daily[S.country];
+    if (!d) return;
+    legend($("daily-legend"), groupLegend([{ line: 1, color: css("--ink"), label: "Zużycie" }]));
+    $("daily-span").textContent = `${fdate(d.dates[0])} – ${fdate(d.dates[d.dates.length - 1])}`;
+    stacked($("daily"), d.dates, G.map((g) => ({ key: g.key, label: g.label, color: col(g.key), values: d[g.key] })), {
+      line: { label: "Zużycie", values: d.load, color: css("--ink") },
+      xlab: (i) => { const [, mm, dd] = d.dates[i].split("-"); return `${+dd} ${MONTHS[+mm - 1]}`; },
+      tlab: (i) => fdate(d.dates[i]),
+    });
+  }
+  function renderMonthly() {
+    $("m-abs").setAttribute("aria-pressed", String(!S.pct));
+    $("m-pct").setAttribute("aria-pressed", String(S.pct));
+    const d = DATA.monthly[S.country];
+    if (!d) return;
+    legend($("monthly-legend"), groupLegend(S.pct ? [] : [{ line: 1, color: css("--ink"), label: "Zużycie" }]));
+    stacked($("monthly"), d.months, G.map((g) => ({ key: g.key, label: g.label, color: col(g.key), values: d[g.key] })), {
+      pct: S.pct, line: { label: "Zużycie", values: d.load, color: css("--ink") },
+      xlab: (i) => { const [yy, mm] = d.months[i].split("-"); return `${MONTHS[+mm - 1]} ${yy.slice(2)}`; },
+      tlab: (i) => { const [yy, mm] = d.months[i].split("-"); return `${MONTHS[+mm - 1]} ${yy}`; },
+    });
+  }
+
+  // ---------- wykres liniowy z pasmem ----------
+  function lineChart(el, o) {
+    // o: {n, lines:[{values,color,width,dash,label}], band:{lo,hi}, unit, xlab(i), tlab(i), split, H, rows(i)}
+    const H = o.H || (el.clientWidth < 520 ? 200 : 230);
+    const { svg, tip, W } = frame(el, H);
+    const L = 46, R = W - 12, T = 24, B = H - 24;
+    const all = [];
+    o.lines.forEach((l) => l.values.forEach((v) => isNum(v) && all.push(v)));
+    if (o.band) { o.band.lo.forEach((v) => isNum(v) && all.push(v)); o.band.hi.forEach((v) => isNum(v) && all.push(v)); }
+    if (!all.length) { el.innerHTML = '<p class="empty">Brak danych.</p>'; return; }
+    let lo = Math.min(...all), hi = Math.max(...all);
+    const pad = (hi - lo) * 0.08 || 1;
+    lo = Math.min(...all) >= 0 && o.unit !== "€/MWh" ? Math.max(0, lo - pad) : lo - pad;
+    hi += pad;
+    const ticks = niceTicks(lo, hi, 4);
+    const y0 = ticks[0], y1 = ticks[ticks.length - 1];
+    const x = (i) => L + (o.n > 1 ? (i / (o.n - 1)) * (R - L) : (R - L) / 2);
+    const y = (v) => B - ((v - y0) / (y1 - y0)) * (B - T);
+    yAxis(svg, ticks, y, L, R, o.unit === "€/MWh" ? "€/MWh" : o.unit);
+    if (o.split != null) {
+      const sx = (x(o.split - 1) + x(o.split)) / 2;
+      mk("rect", { x: sx, y: T, width: R - sx, height: B - T, fill: css("--accent-soft"), opacity: 0.6 }, svg);
+      const t = mk("text", { x: sx + 4, y: T + 12 }, svg); t.textContent = "prognoza";
+    }
+    if (o.band) {
+      let seg = [];
+      const flush = () => {
+        if (seg.length > 1) {
+          const pts = seg.map((i) => `${x(i)},${y(o.band.hi[i])}`).concat(seg.slice().reverse().map((i) => `${x(i)},${y(o.band.lo[i])}`));
+          mk("polygon", { points: pts.join(" "), fill: css("--band") }, svg);
+        }
+        seg = [];
+      };
+      for (let i = 0; i < o.n; i++) { if (isNum(o.band.lo[i]) && isNum(o.band.hi[i])) seg.push(i); else flush(); }
+      flush();
+    }
+    o.lines.forEach((l) => {
+      let d = "", pen = false;
+      l.values.forEach((v, i) => { if (isNum(v)) { d += (pen ? "L" : "M") + x(i).toFixed(1) + "," + y(v).toFixed(1); pen = true; } else pen = false; });
+      if (d) {
+        const p = mk("path", { d, fill: "none", stroke: l.color, "stroke-width": l.width || 2, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+        if (l.dash) p.setAttribute("stroke-dasharray", "5 4");
+      }
+    });
+    const step = Math.ceil(o.n / Math.max(3, Math.floor((R - L) / 70)));
+    for (let i = 0; i < o.n; i += step) { const t = mk("text", { x: x(i), y: H - 6, "text-anchor": i === 0 ? "start" : "middle" }, svg); t.textContent = o.xlab(i); }
+    const cross = mk("line", { y1: T, y2: B, stroke: css("--axis"), "stroke-width": 1, visibility: "hidden" }, svg);
+    const hit = mk("rect", { x: L, y: T, width: R - L, height: B - T, fill: "transparent" }, svg);
+    const show = (evt) => {
+      const r = svg.getBoundingClientRect();
+      const px = ((evt.clientX - r.left) / r.width) * W;
+      const i = Math.max(0, Math.min(o.n - 1, Math.round(((px - L) / (R - L)) * (o.n - 1))));
+      cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("visibility", "visible");
+      let h = `<b>${esc(o.tlab(i))}</b>`;
+      o.rows(i).forEach(([lbl, val, color]) => {
+        h += `<div class="r"><span>${color ? `<i class="ln" style="width:10px;height:2px;background:${color}"></i>` : ""}${esc(lbl)}</span><span>${val}</span></div>`;
+      });
+      placeTip(tip, el, (x(i) / W) * r.width, 10, h);
+    };
+    hit.addEventListener("pointermove", show);
+    hit.addEventListener("pointerdown", show);
+    hit.addEventListener("pointerleave", () => { tip.hidden = true; cross.setAttribute("visibility", "hidden"); });
+  }
+  const dayLab = (ds) => { const [, mm, dd] = ds.split("-"); return `${+dd} ${MONTHS[+mm - 1]}`; };
+  const WEEKDAYS = ["niedz.", "pon.", "wt.", "śr.", "czw.", "pt.", "sob."];
+  const dayLong = (ds) => `${WEEKDAYS[new Date(ds + "T12:00:00").getDay()]} ${fdate(ds)}`;
+
+  // ---------- ceny ----------
+  function renderPrices() {
+    const d = DATA.daily[S.country];
+    const pinfo = (DATA.prices || {})[S.country];
+    const has = d && d.price_avg && d.price_avg.some(isNum);
+    $("price-label").textContent = priceNote();
+    if (!has) {
+      $("price-legend").innerHTML = "";
+      $("price-chart").innerHTML = `<p class="empty">${pinfo && !pinfo.zones.length
+        ? "Ceny tej strefy Energy-Charts udostępnia tylko do użytku prywatnego. Można je włączyć w ustawieniach (price_licenses), jeśli repozytorium i dashboard są prywatne."
+        : S.country === "EU" ? "Dla agregatu UE nie ma jednej ceny. Wybierz kraj." : "Brak danych o cenach dla tego kraju."}</p>`;
+      $("price-note").textContent = "";
+      $("capture").innerHTML = '<p class="muted">Ceny ważone produkcją pojawią się, gdy będą dostępne ceny day-ahead.</p>';
+      return;
+    }
+    const ink = css("--s-total");
+    legend($("price-legend"), [{ line: 1, color: ink, label: "średnia dzienna" }, { band: 1, label: "najniższa–najwyższa cena w ciągu dnia" }]);
+    lineChart($("price-chart"), {
+      n: d.dates.length, unit: "€/MWh",
+      lines: [{ values: d.price_avg, color: ink, width: 2 }],
+      band: { lo: d.price_min, hi: d.price_max },
+      xlab: (i) => dayLab(d.dates[i]), tlab: (i) => dayLong(d.dates[i]),
+      rows: (i) => [["średnia", fmtU(d.price_avg[i], "€/MWh"), ink], ["min–maks", isNum(d.price_min[i]) ? fmt1.format(d.price_min[i]) + " – " + fmt1.format(d.price_max[i]) : "–"],
+        ["godziny < 0 €", isNum(d.price_neg_h[i]) ? fmt1.format(d.price_neg_h[i]) + " h" : "–"]],
+    });
+    let note = "Ostatnie " + d.dates.length + " dni. ";
+    const zd = pinfo && pinfo.zone_daily ? Object.entries(pinfo.zone_daily) : [];
+    if (zd.length) {
+      note += "Średnia z ostatnich 30 dni w strefach: " + zd.map(([z, v]) => {
+        const t = v.slice(-30).filter(isNum); return `${z} ${t.length ? fmt1.format(t.reduce((a, b) => a + b, 0) / t.length) : "–"} €/MWh`;
+      }).join(", ") + ".";
+    }
+    $("price-note").textContent = note;
+    // ceny ważone
+    const s = DATA.summary[S.country][S.period];
+    const P = S.period;
+    const row = (lbl, key, extraKey) => {
+      const v = s[key] || [];
+      const a = dPct(v[0], v[2]), b = dPct(v[0], v[3]);
+      const ex = extraKey && s[extraKey] && isNum(s[extraKey][0]) ? `<span class="muted small"> (${fmt0.format(s[extraKey][0])}% średniej)</span>` : "";
+      return `<tr><td>${lbl}</td><td>${fmtU(v[0], "€/MWh")}${ex}</td><td class="${a.c}">${a.t}</td><td class="${b.c}">${b.t}</td></tr>`;
+    };
+    const nh = s.price_neg_h || [];
+    const dh = (a, b) => (isNum(a) && isNum(b) ? (a - b > 0 ? "+" : a - b < 0 ? "−" : "") + fmt0.format(Math.abs(a - b)) + " h" : "–");
+    $("capture").innerHTML = `<div style="display:grid;gap:10px"><h3>Ceny ważone produkcją · ${esc(DATA.meta.periods[P].short)}</h3>
+      <div style="overflow-x:auto"><table class="cap"><thead><tr><th></th><th>wartość</th><th>r/r</th><th>vs śr. 5 lat</th></tr></thead><tbody>
+      ${row("Cena średnia (base)", "price_avg")}
+      ${row("Ważona zużyciem", "capture_load")}
+      ${row(`<i class="sw" style="display:inline-block;margin-right:6px;background:${col("solar")}"></i>Słońce`, "capture_solar", "capture_rate_solar")}
+      ${row(`<i class="sw" style="display:inline-block;margin-right:6px;background:${col("wind")}"></i>Wiatr`, "capture_wind", "capture_rate_wind")}
+      <tr><td>Godziny z ceną &lt; 0</td><td>${fmtU(nh[0], "h")}</td><td>${dh(nh[0], nh[2])}</td><td>${dh(nh[0], nh[3])}</td></tr>
+      </tbody></table></div>
+      <p class="small muted">Cena ważona produkcją to średnia cena, po jakiej sprzedałaby się cała produkcja źródła na rynku dnia następnego. Procent w nawiasie: relacja do ceny średniej (capture rate).</p></div>`;
+  }
+
+  // ---------- prognozy ----------
+  const METHOD = { "v2:week-ahead": "prognoza tygodniowa", "v1:current": "prognoza bieżąca", "v1:day-ahead": "prognoza na dzień następny", "v2:current": "prognoza bieżąca", "v2:day-ahead": "prognoza na dzień następny" };
+  function renderForecast() {
+    const f = (DATA.forecast || {})[S.country];
+    if (!f) {
+      $("fc-label").textContent = "";
+      $("fc-legend").innerHTML = "";
+      $("fc").innerHTML = `<div class="panel"><p class="muted">${S.country === "EU" ? "Prognozy są dostępne dla pojedynczych krajów. Wybierz kraj." : "Energy-Charts nie publikuje prognoz dla tego kraju (sprawdzane raz w tygodniu)."}</p></div>`;
+      $("fc-note").textContent = "";
+      return;
+    }
+    $("fc-label").textContent = "wydana " + f.issued.replace("T", " ").replace("Z", " UTC");
+    legend($("fc-legend"), [{ line: 1, color: css("--ink-2"), label: "dane rzeczywiste" }, { line: 1, color: css("--ink-2"), label: "prognoza (linia przerywana)" },
+      { line: 1, color: css("--muted"), label: "średnia " + DATA.meta.years5 }, { band: 1, label: "zakres min–maks " + DATA.meta.years5 }]);
+    const items = [["wind", "Wiatr", col("wind")], ["solar", "Słońce", col("solar")], ["load", "Zużycie", css("--s-total")]].filter(([k]) => f[k]);
+    $("fc").innerHTML = items.map(([k, lbl]) => `<div class="panel fc-card"><h3>${lbl}</h3><p class="sum" id="fc-sum-${k}"></p><div class="chart" id="fc-${k}"></div></div>`).join("");
+    const nR = f.recent.dates.length;
+    const dates = f.recent.dates.concat(f.days);
+    items.forEach(([k, lbl, color]) => {
+      const act = (f.recent[k] || []).concat(f.days.map(() => null));
+      const fcv = f.recent.dates.map((_, i) => (i === nR - 1 ? (f.recent[k] || [])[nR - 1] ?? null : null)).concat(f[k]);
+      const band = f.band[k] || { avg: [], min: [], max: [] };
+      lineChart($("fc-" + k), {
+        n: dates.length, unit: "GWh", split: nR, H: 190,
+        lines: [{ values: band.avg, color: css("--muted"), width: 1.5 }, { values: act, color, width: 2.5 }, { values: fcv, color, width: 2.5, dash: true }],
+        band: { lo: band.min, hi: band.max },
+        xlab: (i) => dayLab(dates[i]), tlab: (i) => dayLong(dates[i]) + (i >= nR ? " · prognoza" : ""),
+        rows: (i) => [[i >= nR ? "prognoza" : "rzeczywiste", fmtU(i >= nR ? f[k][i - nR] : act[i], "GWh"), color], ["średnia 5 lat", fmtU(band.avg[i], "GWh")], ["min–maks", isNum(band.min[i]) ? fmtU(band.min[i], "GWh") + " – " + fmtU(band.max[i], "GWh") : "–"]],
+      });
+      const n7 = Math.min(7, f.days.length);
+      const sum = f[k].slice(0, n7).filter(isNum);
+      const av = band.avg.slice(nR, nR + n7).filter(isNum);
+      let txt = `Następne ${n7} dni: ${fmtU(sum.reduce((a, b) => a + b, 0), "GWh")}`;
+      if (sum.length === n7 && av.length === n7) {
+        const dd = (sum.reduce((a, b) => a + b, 0) / av.reduce((a, b) => a + b, 0) - 1) * 100;
+        txt += `, ${dd >= 0 ? "+" : "−"}${fmt0.format(Math.abs(dd))}% względem średniej z 5 lat dla tych dni`;
+      }
+      $("fc-sum-" + k).textContent = txt + ".";
+    });
+    const m = Object.entries(f.methods || {}).map(([k, v]) => `${{ solar: "słońce", wind_onshore: "wiatr na lądzie", wind_offshore: "wiatr na morzu", load: "zużycie" }[k] || k}: ${METHOD[v] || v}`);
+    $("fc-note").textContent = "Źródło: Energy-Charts. " + (m.length ? m.join("; ") + ". " : "") + "Pasmo i średnia: te same dni kalendarza (±3 dni) w latach " + DATA.meta.years5 + ".";
+  }
+
+  // ---------- tabela krajów ----------
+  const COLS = [
+    { key: "name", label: "Kraj" },
+    { key: "load", label: "Zużycie, GWh", v: (s) => s.load[0], f: (v) => energy(v, "GWh") },
+    { key: "load_yoy", label: "Zużycie r/r", v: (s) => (isNum(s.load[0]) && isNum(s.load[2]) && s.load[2] ? (s.load[0] / s.load[2] - 1) * 100 : null), f: (v) => (isNum(v) ? (v > 0 ? "+" : v < 0 ? "−" : "") + fmt1.format(Math.abs(v)) + "%" : "–") },
+    { key: "gen_total", label: "Produkcja, GWh", v: (s) => s.gen_total[0], f: (v) => energy(v, "GWh") },
+    { key: "net_import", label: "Saldo (import +), GWh", v: (s) => s.net_import[0], f: (v) => (isNum(v) ? (v > 0 ? "+" : v < 0 ? "−" : "") + fmt0.format(Math.abs(v)) : "–") },
+    { key: "mix", label: "Miks", mix: true },
+    { key: "share_renewable", label: "OZE", share: true },
+    { key: "ren_yoy", label: "OZE r/r, p.p.", v: (s) => (isNum(s.share_renewable[0]) && isNum(s.share_renewable[2]) ? s.share_renewable[0] - s.share_renewable[2] : null), f: (v) => (isNum(v) ? (v > 0 ? "+" : v < 0 ? "−" : "") + fmt1.format(Math.abs(v)) : "–") },
+    { key: "price_avg", label: "Cena, €/MWh", v: (s) => (s.price_avg || [])[0], f: (v) => (isNum(v) ? fmt1.format(v) : "–") },
+    { key: "intensity", label: "Emisyjność, g/kWh", v: (s) => (s.intensity || [])[0], f: (v) => (isNum(v) ? fmt0.format(v) : "–") },
+    ...GK.map((g) => ({ key: "share_" + g, label: glabel[g], share: true, color: g })),
+  ];
+  function renderTable() {
+    const P = S.period;
+    $("cmp-label").textContent = DATA.meta.periods[P].label;
+    const rows = DATA.countries.filter((c) => DATA.summary[c.code]).map((c) => ({ c, s: DATA.summary[c.code][P] }));
+    const sk = COLS.find((c) => c.key === S.sort.key) || COLS[1];
+    const val = (r, col) => (col.key === "name" ? r.c.name : col.share ? r.s[col.key][0] : col.v ? col.v(r.s) : null);
+    rows.sort((a, b) => {
+      if (a.c.code === "EU") return -1; if (b.c.code === "EU") return 1;
+      const va = val(a, sk), vb = val(b, sk);
+      if (sk.key === "name") return S.sort.dir * String(va).localeCompare(String(vb), "pl");
+      if (!isNum(va)) return 1; if (!isNum(vb)) return -1;
+      return S.sort.dir * (va - vb);
+    });
+    let h = "<thead><tr>" + COLS.map((c) => {
+      if (c.mix) return `<th>${c.label}</th>`;
+      const srt = S.sort.key === c.key ? (S.sort.dir < 0 ? "descending" : "ascending") : "none";
+      const sw = c.color ? `<i class="sw" style="display:inline-block;margin-right:4px;background:${col(c.color)}"></i>` : "";
+      return `<th><button type="button" data-k="${c.key}" aria-sort="${srt}">${sw}${esc(c.label)}${c.share ? ", %" : ""}</button></th>`;
+    }).join("") + "</tr></thead><tbody>";
+    rows.forEach(({ c, s }) => {
+      const gen = s.gen_total[0];
+      h += `<tr data-c="${c.code}" tabindex="0" class="${c.code === S.country ? "sel" : ""}">`;
+      COLS.forEach((col_) => {
+        if (col_.key === "name") { h += `<td>${esc(c.name)}${s._complete ? "" : ' <span class="muted small">(niepełne)</span>'}</td>`; return; }
+        if (col_.mix) {
+          h += `<td><div class="mini" title="Miks produkcji">${GK.map((g) => (isNum(s[g][0]) && gen > 0 && s[g][0] > 0 ? `<i style="width:${(100 * s[g][0]) / gen}%;background:${col(g)}"></i>` : "")).join("")}</div></td>`;
+          return;
+        }
+        if (col_.share) {
+          const v = s[col_.key]; const o = outside(v);
+          h += `<td class="${o === "hi" ? "cell-hi" : o === "lo" ? "cell-lo" : ""}${isNum(v[0]) ? "" : " na"}">${isNum(v[0]) ? fmt1.format(v[0]) + (o === "hi" ? " ▲" : o === "lo" ? " ▼" : "") : "–"}</td>`;
+          return;
+        }
+        const v = col_.v(s);
+        h += `<td class="${isNum(v) ? "" : "na"}">${col_.f(v)}</td>`;
+      });
+      h += "</tr>";
+    });
+    h += "</tbody>";
+    const t = $("cmp"); t.innerHTML = h;
+    t.querySelectorAll("th button").forEach((b) => b.addEventListener("click", () => {
+      const k = b.dataset.k;
+      S.sort = { key: k, dir: S.sort.key === k ? -S.sort.dir : (k === "name" ? 1 : -1) };
+      renderTable();
+    }));
+    t.querySelectorAll("tbody tr").forEach((tr) => {
+      tr.addEventListener("click", () => setCountry(tr.dataset.c));
+      tr.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCountry(tr.dataset.c); } });
+    });
+  }
+
+  // ---------- największe zmiany ----------
+  function renderMovers() {
+    const M = DATA.movers || [];
+    if (!M.length) { $("movers").innerHTML = '<p class="muted">Brak wyraźnych zmian w ostatnim tygodniu i miesiącu.</p>'; return; }
+    $("movers").innerHTML = M.map((it) => {
+      const per = it.period === "week" ? DATA.meta.periods.week.short : DATA.meta.periods.month.short;
+      let what, tag;
+      if (it.type === "int_yoy") { what = `Emisyjność ${fmt0.format(it.cur)} g CO₂/kWh, ${it.delta > 0 ? "+" : "−"}${fmt1.format(Math.abs(it.delta))}% rok do roku`; tag = `<span class="chip">${per}</span>`; }
+      else if (it.type === "load_yoy") { what = `Zużycie ${it.delta > 0 ? "+" : "−"}${fmt1.format(Math.abs(it.delta))}% rok do roku`; tag = `<span class="chip">${per}</span>`; }
+      else if (it.type === "yoy") { what = `${esc(it.label)}: ${fmt1.format(it.cur)}% produkcji, ${it.delta > 0 ? "+" : "−"}${fmt1.format(Math.abs(it.delta))} p.p. rok do roku`; tag = `<span class="chip">${per}</span>`; }
+      else { what = `${esc(it.label)}: ${fmt1.format(it.cur)}% produkcji, ${it.type === "max5" ? "najwięcej" : "najmniej"} od 5 lat (poprz. ${it.type === "max5" ? "maks." : "min."} ${fmt1.format(it.ref)}%)`; tag = `<span class="chip ${it.type === "max5" ? "hi" : "lo"}">${per} · ${it.type === "max5" ? "powyżej" : "poniżej"} zakresu 5 lat</span>`; }
+      const sw = ["load", "renewable", "intensity"].includes(it.series) ? "" : `<i class="sw" style="display:inline-block;margin-right:6px;background:${col(it.series)}"></i>`;
+      return `<button type="button" class="panel mover" data-c="${it.code}" style="text-align:left;cursor:pointer;font:inherit;color:inherit"><span class="who">${sw}${esc(it.name)}</span><span class="what">${what}</span><span class="tag">${tag}</span></button>`;
+    }).join("");
+    $("movers").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { setCountry(b.dataset.c); window.scrollTo({ top: 0, behavior: "smooth" }); }));
+  }
+
+  // ---------- Eurostat ----------
+  function renderEurostat() {
+    const e = (DATA.eurostat || {})[S.country];
+    const box = $("es-kpi");
+    if (!e || e.stale || !e.months) {
+      $("es-label").textContent = "";
+      box.innerHTML = `<p class="muted">${e && e.stale ? `Eurostat ma dla tego kraju dane tylko do ${esc(e.stale)}.` : "Eurostat nie publikuje miesięcznych danych dla tego kraju."}</p>`;
+      $("es-chart").innerHTML = ""; $("es-legend").innerHTML = "";
+      return;
+    }
+    const [yy, mm] = e.last.split("-");
+    $("es-label").textContent = `najnowszy miesiąc: ${MONTHS[+mm - 1]} ${yy}`;
+    const L = e.latest;
+    const row = (lbl, v, kind) => {
+      const d = kind === "p" ? dPP : dPct;
+      const val = kind === "p" ? pct(v[0]) : energy(v[0]);
+      const a = d(v[0], v[1]), b = d(v[0], v[2]);
+      return `<tr><td>${lbl}</td><td>${val}</td><td class="${a.c}">${a.t}</td><td class="${b.c}">${b.t}</td></tr>`;
+    };
+    let h = `<div style="overflow-x:auto"><table><thead><tr><th>${MONTHS[+mm - 1]} ${yy}</th><th>wartość</th><th>r/r</th><th>vs śr. 5 lat</th></tr></thead><tbody>`;
+    h += row("Zużycie krajowe", L.consumption, "e");
+    h += row("Produkcja netto", L.total, "e");
+    h += row("Udział OZE", L.share_renewable, "p");
+    GK.forEach((g) => { if (L["share_" + g] && isNum(L["share_" + g][0]) && L["share_" + g][0] > 0.05) h += row(`<i class="sw" style="display:inline-block;margin-right:6px;background:${col(g)}"></i>${esc(glabel[g])}`, L["share_" + g], "p"); });
+    h += "</tbody></table></div>";
+    const day = DATA.monthly[S.country];
+    if (day) {
+      const i = day.months.indexOf(e.last);
+      if (i >= 0 && isNum(day.gen_total[i]) && isNum(L.total[0])) {
+        const diff = (day.gen_total[i] / L.total[0] - 1) * 100;
+        h += `<p class="small muted" style="margin-top:10px">Produkcja z danych dziennych za ten miesiąc: ${energy(day.gen_total[i])} (${diff > 0 ? "+" : "−"}${fmt1.format(Math.abs(diff))}% względem Eurostatu; różnica wynika głównie z autoprodukcji przemysłowej, której nie obejmują dane dzienne).</p>`;
+      }
+    }
+    box.innerHTML = h;
+    legend($("es-legend"), groupLegend([{ line: 1, color: css("--ink"), label: "Zużycie" }]));
+    stacked($("es-chart"), e.months, G.map((g) => ({ key: g.key, label: g.label, color: col(g.key), values: e[g.key] })), {
+      line: { label: "Zużycie", values: e.consumption, color: css("--ink") },
+      xlab: (i) => { const [y2, m2] = e.months[i].split("-"); return `${MONTHS[+m2 - 1]} ${y2.slice(2)}`; },
+      tlab: (i) => { const [y2, m2] = e.months[i].split("-"); return `${MONTHS[+m2 - 1]} ${y2}`; },
+    });
+  }
+
+  // ---------- kontrola ----------
+  function renderControl() {
+    let h = '<thead><tr><th>Kraj</th><th class="t">Źródło</th><th>Ostatni dzień</th><th>Dni z danymi (30)</th><th>Historia od</th><th class="t">Zużycie</th><th class="t">Ceny</th><th class="t">Prognozy</th><th class="t">Uwagi</th></tr></thead><tbody>';
+    DATA.countries.forEach((c) => {
+      const k = DATA.control[c.code] || {};
+      const notes = [];
+      if (k.error) notes.push(esc(k.error));
+      if (k.unknown && k.unknown.length) notes.push("nierozpoznane typy: " + esc(k.unknown.join(", ")));
+      if (k.history_complete === false) notes.push("historia 5 lat w trakcie uzupełniania");
+      if (k.status) notes.push(esc(k.status));
+      const lag = k.last ? Math.round((new Date(DATA.meta.ref) - new Date(k.last)) / 864e5) : null;
+      h += `<tr><td>${esc(c.name)}</td><td style="text-align:left">${esc(k.source || "")}</td>
+        <td class="${lag > 2 ? "cell-hi" : ""}">${k.last ? fdate(k.last) : "–"}</td>
+        <td class="${isNum(k.days30) && k.days30 < 28 ? "cell-hi" : ""}">${isNum(k.days30) ? k.days30 : "–"}</td>
+        <td>${k.first ? fdate(k.first) : "–"}</td><td style="text-align:left">${esc(k.load || "–")}</td><td style="text-align:left">${esc(k.prices || "–")}</td><td style="text-align:left">${esc(k.forecast || "–")}</td>
+        <td style="text-align:left;white-space:normal;min-width:220px">${notes.join("; ") || '<span class="muted">OK</span>'}</td></tr>`;
+    });
+    $("ctl").innerHTML = h + "</tbody>";
+    const log = (DATA.meta.run && DATA.meta.run.log) || [];
+    $("run-log").innerHTML = (DATA.meta.run && isNum(DATA.meta.run.requests) ? `<p>Ostatni przebieg: ${DATA.meta.run.requests} zapytań do Energy-Charts.</p>` : "") +
+      (log.length ? "<p>Komunikaty:</p>" + log.slice(0, 20).map((l) => `<p>· ${esc(l)}</p>`).join("") : "");
+  }
+
+  // ---------- render ----------
+  function renderCountry() {
+    document.querySelectorAll("#period button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.p === S.period)));
+    $("period-label").textContent = DATA.meta.periods[S.period].label;
+    const has = !!DATA.summary[S.country];
+    $("daily-part").hidden = !has;
+    $("no-daily").hidden = has;
+    if (!has) {
+      const src = (DATA.countries.find((c) => c.code === S.country) || {}).source;
+      $("no-daily").innerHTML = src
+        ? `<p><b>${esc(cname(S.country))}</b>: dane dzienne pojawią się po pierwszym przebiegu automatu. Poniżej oficjalne dane miesięczne Eurostatu.</p>`
+        : `<p><b>${esc(cname(S.country))}</b>: brak danych dziennych w Energy-Charts. Poniżej oficjalne dane miesięczne Eurostatu.</p>`;
+    } else {
+      renderKPIs(); renderMix(); renderTrend(); renderPrices(); renderForecast(); renderDaily(); renderMonthly();
+    }
+    renderEurostat();
+  }
+  renderCountry(); renderTable(); renderMovers(); renderControl();
+  let rt;
+  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (DATA.summary[S.country]) { renderTrend(); renderPrices(); renderForecast(); renderDaily(); renderMonthly(); } renderEurostat(); }, 150); });
+  try {
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { renderCountry(); renderTable(); renderMovers(); });
+    new MutationObserver(() => { renderCountry(); renderTable(); renderMovers(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  } catch (e) { /* starsze przeglądarki */ }
+})();
+</script>
