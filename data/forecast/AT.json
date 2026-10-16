@@ -1,0 +1,1 @@
+{"issued": "2026-10-16T12:57Z", "days": ["2026-10-16", "2026-10-17", "2026-10-18"], "methods": {"solar": "v1:current", "wind_onshore": "v1:current", "load": "v1:day-ahead"}, "solar": [17.62, 14.25, 11.18], "wind_onshore": [1.76, null, null], "load": [162.1, 139.25, 127.18], "wind": [1.76, null, null]}

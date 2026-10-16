@@ -1,0 +1,1284 @@
+{
+ "AT": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T12:55+00:00",
+  "names": [
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil gas",
+   "Geothermal",
+   "Hydro Run-of-River",
+   "Hydro pumped storage",
+   "Hydro pumped storage consumption",
+   "Hydro water reservoir",
+   "Load",
+   "Others",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Waste",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": "AT"
+ },
+ "BE": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T12:57+00:00",
+  "names": [
+   "Battery",
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil gas",
+   "Fossil oil",
+   "Hydro Run-of-River",
+   "Hydro pumped storage",
+   "Hydro pumped storage consumption",
+   "Load",
+   "Nuclear",
+   "Others",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Waste",
+   "Wind offshore",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": "BE"
+ },
+ "BG": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T12:59+00:00",
+  "names": [
+   "Battery",
+   "Battery Consumption",
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil brown coal / lignite",
+   "Fossil gas",
+   "Fossil hard coal",
+   "Hydro Run-of-River",
+   "Hydro pumped storage",
+   "Hydro water reservoir",
+   "Load",
+   "Nuclear",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Waste",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": ""
+ },
+ "CH": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T14:06+00:00",
+  "names": [
+   "Cross border electricity trading",
+   "Hydro Run-of-River",
+   "Hydro pumped storage",
+   "Hydro water reservoir",
+   "Load",
+   "Nuclear",
+   "Others",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": "CH"
+ },
+ "CY": {
+  "cursor": "2023-09-08",
+  "floor": "2024-09-08",
+  "history_complete": true,
+  "last_ok": "2026-10-16T13:05+00:00",
+  "names": [
+   "Biomass",
+   "Fossil oil",
+   "Load",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": ""
+ },
+ "CZ": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T13:08+00:00",
+  "names": [
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil brown coal / lignite",
+   "Fossil coal-derived gas",
+   "Fossil gas",
+   "Fossil hard coal",
+   "Fossil oil",
+   "Hydro Run-of-River",
+   "Hydro pumped storage",
+   "Hydro pumped storage consumption",
+   "Hydro water reservoir",
+   "Load",
+   "Nuclear",
+   "Other renewables",
+   "Others",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Waste",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": "CZ"
+ },
+ "DE": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T13:42+00:00",
+  "names": [
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil brown coal / lignite",
+   "Fossil coal-derived gas",
+   "Fossil gas",
+   "Fossil hard coal",
+   "Fossil oil",
+   "Geothermal",
+   "Hydro Run-of-River",
+   "Hydro pumped storage",
+   "Hydro pumped storage consumption",
+   "Hydro water reservoir",
+   "Load",
+   "Nuclear",
+   "Others",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Waste",
+   "Wind offshore",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": "DE-LU"
+ },
+ "DK": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T13:12+00:00",
+  "names": [
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil gas",
+   "Fossil hard coal",
+   "Fossil oil",
+   "Load",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Waste",
+   "Wind offshore",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": "DK1,DK2"
+ },
+ "EE": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T13:14+00:00",
+  "names": [
+   "Battery",
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil coal-derived gas",
+   "Fossil gas",
+   "Fossil oil shale",
+   "Fossil peat",
+   "Hydro Run-of-River",
+   "Load",
+   "Other renewables",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Waste",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": ""
+ },
+ "ES": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T13:25+00:00",
+  "names": [
+   "Battery",
+   "Battery Consumption",
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil gas",
+   "Fossil hard coal",
+   "Fossil oil",
+   "Hydro Run-of-River",
+   "Hydro pumped storage",
+   "Hydro pumped storage consumption",
+   "Hydro water reservoir",
+   "Load",
+   "Nuclear",
+   "Other renewables",
+   "Others",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Waste",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": ""
+ },
+ "EU": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T12:54+00:00",
+  "names": [
+   "Battery",
+   "Battery Consumption",
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil brown coal / lignite",
+   "Fossil coal-derived gas",
+   "Fossil gas",
+   "Fossil hard coal",
+   "Fossil oil",
+   "Fossil oil shale",
+   "Fossil peat",
+   "Geothermal",
+   "Hydro Run-of-River",
+   "Hydro pumped storage",
+   "Hydro pumped storage consumption",
+   "Hydro water reservoir",
+   "Load",
+   "Nuclear",
+   "Other renewables",
+   "Others",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Waste",
+   "Wind offshore",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": ""
+ },
+ "FI": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T13:18+00:00",
+  "names": [
+   "Battery",
+   "Battery Consumption",
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil gas",
+   "Fossil hard coal",
+   "Fossil oil",
+   "Fossil peat",
+   "Hydro Run-of-River",
+   "Load",
+   "Nuclear",
+   "Other renewables",
+   "Others",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Waste",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": ""
+ },
+ "FR": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T13:20+00:00",
+  "names": [
+   "Battery",
+   "Battery Consumption",
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil gas",
+   "Fossil hard coal",
+   "Fossil oil",
+   "Hydro Run-of-River",
+   "Hydro pumped storage",
+   "Hydro pumped storage consumption",
+   "Hydro water reservoir",
+   "Load",
+   "Nuclear",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Waste",
+   "Wind offshore",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": "FR"
+ },
+ "GR": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T13:23+00:00",
+  "names": [
+   "Battery",
+   "Battery Consumption",
+   "Cross border electricity trading",
+   "Fossil brown coal / lignite",
+   "Fossil gas",
+   "Hydro pumped storage",
+   "Hydro pumped storage consumption",
+   "Hydro water reservoir",
+   "Load",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": ""
+ },
+ "HR": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T13:03+00:00",
+  "names": [
+   "Battery",
+   "Battery Consumption",
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil gas",
+   "Fossil hard coal",
+   "Fossil oil",
+   "Geothermal",
+   "Hydro Run-of-River",
+   "Hydro pumped storage",
+   "Hydro pumped storage consumption",
+   "Hydro water reservoir",
+   "Load",
+   "Other renewables",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Waste",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": ""
+ },
+ "HU": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T14:00+00:00",
+  "names": [
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil brown coal / lignite",
+   "Fossil gas",
+   "Fossil hard coal",
+   "Fossil oil",
+   "Geothermal",
+   "Hydro Run-of-River",
+   "Hydro water reservoir",
+   "Load",
+   "Nuclear",
+   "Other renewables",
+   "Others",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Waste",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": "HU"
+ },
+ "IE": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T13:31+00:00",
+  "names": [
+   "Cross border electricity trading",
+   "Fossil gas",
+   "Fossil hard coal",
+   "Fossil oil",
+   "Fossil peat",
+   "Hydro Run-of-River",
+   "Hydro pumped storage",
+   "Hydro pumped storage consumption",
+   "Load",
+   "Others",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": ""
+ },
+ "IT": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T14:02+00:00",
+  "names": [
+   "Battery",
+   "Battery Consumption",
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil coal-derived gas",
+   "Fossil gas",
+   "Fossil hard coal",
+   "Fossil oil",
+   "Geothermal",
+   "Hydro Run-of-River",
+   "Hydro pumped storage",
+   "Hydro pumped storage consumption",
+   "Hydro water reservoir",
+   "Load",
+   "Other renewables",
+   "Others",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Waste",
+   "Wind offshore",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": "IT-North"
+ },
+ "LT": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T13:32+00:00",
+  "names": [
+   "Battery",
+   "Battery Consumption",
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil gas",
+   "Hydro Run-of-River",
+   "Hydro pumped storage",
+   "Hydro pumped storage consumption",
+   "Load",
+   "Others",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Waste",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": ""
+ },
+ "LU": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T13:36+00:00",
+  "names": [
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil gas",
+   "Hydro Run-of-River",
+   "Hydro water reservoir",
+   "Load",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Waste",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": "DE-LU"
+ },
+ "LV": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T13:39+00:00",
+  "names": [
+   "Battery",
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil gas",
+   "Hydro Run-of-River",
+   "Load",
+   "Others",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": ""
+ },
+ "NL": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T13:28+00:00",
+  "names": [
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil gas",
+   "Fossil hard coal",
+   "Load",
+   "Nuclear",
+   "Others",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Waste",
+   "Wind offshore",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": "NL"
+ },
+ "NO": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T14:05+00:00",
+  "names": [
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil gas",
+   "Hydro Run-of-River",
+   "Hydro pumped storage",
+   "Hydro pumped storage consumption",
+   "Hydro water reservoir",
+   "Load",
+   "Other renewables",
+   "Others",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Waste",
+   "Wind offshore",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": "NO2"
+ },
+ "PL": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T13:44+00:00",
+  "names": [
+   "Battery",
+   "Battery Consumption",
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil brown coal / lignite",
+   "Fossil coal-derived gas",
+   "Fossil gas",
+   "Fossil hard coal",
+   "Fossil oil",
+   "Hydro Run-of-River",
+   "Hydro pumped storage",
+   "Hydro pumped storage consumption",
+   "Hydro water reservoir",
+   "Load",
+   "Other renewables",
+   "Others",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Wind offshore",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": "PL"
+ },
+ "PT": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T13:46+00:00",
+  "names": [
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil gas",
+   "Fossil hard coal",
+   "Hydro Run-of-River",
+   "Hydro pumped storage",
+   "Hydro pumped storage consumption",
+   "Hydro water reservoir",
+   "Load",
+   "Others",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Wind offshore",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": ""
+ },
+ "RO": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T13:48+00:00",
+  "names": [
+   "Battery",
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil brown coal / lignite",
+   "Fossil gas",
+   "Fossil hard coal",
+   "Hydro Run-of-River",
+   "Hydro water reservoir",
+   "Load",
+   "Nuclear",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": ""
+ },
+ "SE": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T13:57+00:00",
+  "names": [
+   "Cross border electricity trading",
+   "Fossil gas",
+   "Hydro water reservoir",
+   "Load",
+   "Nuclear",
+   "Others",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": "SE4"
+ },
+ "SI": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T13:54+00:00",
+  "names": [
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil brown coal / lignite",
+   "Fossil gas",
+   "Fossil oil",
+   "Hydro Run-of-River",
+   "Hydro pumped storage",
+   "Load",
+   "Nuclear",
+   "Other renewables",
+   "Others",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Waste",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": "SI"
+ },
+ "SK": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T13:50+00:00",
+  "names": [
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil brown coal / lignite",
+   "Fossil gas",
+   "Fossil hard coal",
+   "Fossil oil",
+   "Hydro Run-of-River",
+   "Hydro pumped storage",
+   "Hydro pumped storage consumption",
+   "Hydro water reservoir",
+   "Load",
+   "Nuclear",
+   "Other renewables",
+   "Others",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": ""
+ },
+ "UK": {
+  "cursor": "2021-01-01",
+  "history_complete": true,
+  "last_ok": "2026-10-16T14:10+00:00",
+  "names": [
+   "Biomass",
+   "Cross border electricity trading",
+   "Fossil gas",
+   "Fossil hard coal",
+   "Fossil oil",
+   "Hydro Run-of-River",
+   "Hydro pumped storage",
+   "Import Balance",
+   "Load",
+   "Nuclear",
+   "Others",
+   "Renewable share of generation",
+   "Renewable share of load",
+   "Residual load",
+   "Solar",
+   "Wind offshore",
+   "Wind onshore"
+  ],
+  "unknown": [],
+  "zones_sig": ""
+ },
+ "forecast": {
+  "AT": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "current"
+    ],
+    "wind_onshore": [
+     "v1",
+     "current"
+    ]
+   }
+  },
+  "BE": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "current"
+    ],
+    "wind_offshore": [
+     "v1",
+     "current"
+    ],
+    "wind_onshore": [
+     "v1",
+     "current"
+    ]
+   }
+  },
+  "BG": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "day-ahead"
+    ],
+    "wind_onshore": [
+     "v1",
+     "day-ahead"
+    ]
+   }
+  },
+  "CH": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "day-ahead"
+    ],
+    "wind_onshore": [
+     "v1",
+     "day-ahead"
+    ]
+   }
+  },
+  "CY": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "current"
+    ],
+    "wind_onshore": [
+     "v1",
+     "current"
+    ]
+   }
+  },
+  "CZ": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "day-ahead"
+    ]
+   }
+  },
+  "DE": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "current"
+    ],
+    "wind_offshore": [
+     "v1",
+     "current"
+    ],
+    "wind_onshore": [
+     "v1",
+     "current"
+    ]
+   }
+  },
+  "DK": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "current"
+    ],
+    "wind_offshore": [
+     "v1",
+     "current"
+    ],
+    "wind_onshore": [
+     "v1",
+     "current"
+    ]
+   }
+  },
+  "EE": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "day-ahead"
+    ],
+    "wind_onshore": [
+     "v1",
+     "day-ahead"
+    ]
+   }
+  },
+  "ES": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "current"
+    ],
+    "wind_onshore": [
+     "v1",
+     "current"
+    ]
+   }
+  },
+  "FI": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "current"
+    ],
+    "wind_onshore": [
+     "v1",
+     "current"
+    ]
+   }
+  },
+  "FR": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "current"
+    ],
+    "wind_offshore": [
+     "v1",
+     "current"
+    ],
+    "wind_onshore": [
+     "v1",
+     "current"
+    ]
+   }
+  },
+  "GR": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "current"
+    ],
+    "wind_onshore": [
+     "v1",
+     "current"
+    ]
+   }
+  },
+  "HR": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "current"
+    ],
+    "wind_onshore": [
+     "v1",
+     "current"
+    ]
+   }
+  },
+  "HU": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "current"
+    ],
+    "wind_onshore": [
+     "v1",
+     "current"
+    ]
+   }
+  },
+  "IE": {
+   "available": false,
+   "checked": "2026-10-16"
+  },
+  "IT": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "current"
+    ],
+    "wind_onshore": [
+     "v1",
+     "current"
+    ]
+   }
+  },
+  "LT": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "current"
+    ],
+    "wind_onshore": [
+     "v1",
+     "day-ahead"
+    ]
+   }
+  },
+  "LU": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "day-ahead"
+    ],
+    "wind_onshore": [
+     "v1",
+     "day-ahead"
+    ]
+   }
+  },
+  "LV": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "current"
+    ],
+    "wind_onshore": [
+     "v1",
+     "current"
+    ]
+   }
+  },
+  "NL": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "day-ahead"
+    ],
+    "wind_offshore": [
+     "v1",
+     "day-ahead"
+    ],
+    "wind_onshore": [
+     "v1",
+     "day-ahead"
+    ]
+   }
+  },
+  "NO": {
+   "available": false,
+   "checked": "2026-10-16"
+  },
+  "PL": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "current"
+    ],
+    "wind_offshore": [
+     "v1",
+     "current"
+    ],
+    "wind_onshore": [
+     "v1",
+     "current"
+    ]
+   }
+  },
+  "PT": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "current"
+    ],
+    "wind_offshore": [
+     "v1",
+     "current"
+    ],
+    "wind_onshore": [
+     "v1",
+     "current"
+    ]
+   }
+  },
+  "RO": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "current"
+    ],
+    "wind_onshore": [
+     "v1",
+     "current"
+    ]
+   }
+  },
+  "SE": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "current"
+    ],
+    "wind_onshore": [
+     "v1",
+     "current"
+    ]
+   }
+  },
+  "SI": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "current"
+    ]
+   }
+  },
+  "SK": {
+   "available": true,
+   "checked": "2026-10-16",
+   "methods": {
+    "load": [
+     "v1",
+     "day-ahead"
+    ],
+    "solar": [
+     "v1",
+     "day-ahead"
+    ],
+    "wind_onshore": [
+     "v1",
+     "day-ahead"
+    ]
+   }
+  },
+  "UK": {
+   "available": false,
+   "checked": "2026-10-16"
+  }
+ }
+}
