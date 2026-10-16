@@ -27,7 +27,7 @@ Działa w chmurze GitHub (GitHub Actions), raz dziennie, bez niczego na Twoim ko
    - Folder `.github` jest ukryty i często się nie przenosi. Sprawdź, czy w repozytorium jest `.github/workflows/daily.yml`. Jeśli nie: **Add file → Create new file**, nazwa `.github/workflows/daily.yml`, treść z pliku `workflow_daily.yml` z paczki.
 3. **Uprawnienia**: **Settings → Actions → General → Workflow permissions** → **Read and write permissions** → **Save**.
 4. **Strona**: **Settings → Pages → Build and deployment → Source** → **GitHub Actions**.
-5. **Pierwsze uruchomienie**: zakładka **Actions** → **Miks energii - aktualizacja dzienna** → **Run workflow**, w polu limitu czasu wpisz **240**. Pobranie 5 lat historii produkcji i cen dla 30 krajów oraz sprawdzenie, które kraje mają prognozy, trwa ok. 2,5 godziny, bo źródło pozwala na 2 zapytania na minutę.
+5. **Pierwsze uruchomienie**: zakładka **Actions** → **Miks energii - aktualizacja dzienna** → **Run workflow**, zostaw domyślny limit czasu **240**. Pobranie 5 lat historii produkcji i cen dla 30 krajów oraz sprawdzenie, które kraje mają prognozy, trwa ok. 2,5 godziny, bo źródło pozwala na 2 zapytania na minutę.
 6. **Adres dashboardu**: po zakończeniu przebiegu jest w **Settings → Pages** (np. `https://<twoja-nazwa>.github.io/miks-energii/`). Ten sam adres działa na telefonie. Kraj można podać w adresie, np. `…/#pl`.
 
 Następne przebiegi startują same codziennie o 05:23 UTC (07:23 latem, 06:23 zimą w Polsce) i trwają ok. 20–30 minut. Godzinę zmienisz w `.github/workflows/daily.yml` (linia `cron`).
