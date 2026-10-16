@@ -370,3 +370,26 @@ def calendar_band(e: pd.DataFrame, dates: list[str], key: str, n_years: int, min
         else:
             out["avg"].append(None); out["min"].append(None); out["max"].append(None)
     return out
+
+
+def detect_break(e: pd.DataFrame, ref: dt.date, col: str = "load", window: int = 21,
+                 threshold: float = 0.25) -> dict | None:
+    """Nagła, trwała zmiana poziomu serii w ostatnich 90 dniach (np. zmiana metodologii
+    w źródle). Porównuje średnie z `window` dni przed i po każdym dniu."""
+    if e.empty or col not in e:
+        return None
+    s = e[col].loc[pd.Timestamp(ref) - pd.Timedelta(days=90 + window):pd.Timestamp(ref)].dropna()
+    if len(s) < 2 * window:
+        return None
+    best = None
+    for t in s.index[window:-14]:
+        before = s.loc[t - pd.Timedelta(days=window):t - pd.Timedelta(days=1)].mean()
+        after = s.loc[t:t + pd.Timedelta(days=window - 1)].mean()
+        if before <= 0 or pd.isna(after):
+            continue
+        r = after / before - 1
+        if best is None or abs(r) > abs(best[1]):
+            best = (t, r)
+    if best and abs(best[1]) >= threshold:
+        return {"date": best[0].strftime("%Y-%m-%d"), "change": round(100 * best[1], 1), "series": col}
+    return None

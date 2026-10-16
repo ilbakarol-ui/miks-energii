@@ -123,6 +123,39 @@ def _complete_from(df: pd.DataFrame, has_zones: bool, price_floor: str | None) -
     return df.index[i].date()
 
 
+def bad_ranges(df: pd.DataFrame, zones: list[dict], st: dict, target: dt.date, until: dt.date,
+               settings: dict) -> list[tuple[dt.date, dt.date]]:
+    """Zakresy dni z brakującymi lub niepełnymi danymi (produkcja albo ceny)."""
+    start = target
+    if st.get("floor"):
+        start = max(start, dt.date.fromisoformat(st["floor"]))
+    if df.empty or start > until:
+        return []
+    idx = pd.date_range(pd.Timestamp(start), pd.Timestamp(until), freq="D")
+    d = df.reindex(idx)
+    bad = d["cov"].fillna(0) < settings["min_day_coverage"]
+    if zones:
+        pf = pd.Timestamp(st["price_floor"]) if st.get("price_floor") else None
+        nop = d["price_avg"].isna()
+        if pf is not None:
+            nop = nop & (d.index >= pf)
+        bad = bad | nop
+    days = list(d.index[bad.to_numpy()])
+    out, cur = [], None
+    max_len = settings["backfill_chunk_days"]
+    for t in days:
+        t = t.date()
+        if cur and (t - cur[1]).days <= 4 and (t - cur[0]).days < max_len:
+            cur[1] = t
+        else:
+            if cur:
+                out.append(tuple(cur))
+            cur = [t, t]
+    if cur:
+        out.append(tuple(cur))
+    return out
+
+
 def _cursor(st: dict, df: pd.DataFrame, zones: list[dict], c: dict) -> dt.date:
     """Data, od której historia została już przetworzona (backfill idzie wstecz od niej).
     Przy pierwszym użyciu albo po zmianie listy stref cenowych - wyliczana z danych."""
@@ -189,7 +222,7 @@ def update_all(settings: dict, budget_minutes: float | None = None, only: list[s
                 st.pop("last_error", None)
             elif budget.can_request():
                 st["last_error"] = log[-1] if log else "błąd"
-        if with_forecasts and settings.get("forecasts", True) and code != "EU":
+        if with_forecasts and settings.get("forecasts_energycharts", False) and code != "EU":
             try:
                 fc = forecast.update_country(client, c, state, log, budget.can_request)
                 if fc:
@@ -234,6 +267,34 @@ def update_all(settings: dict, budget_minutes: float | None = None, only: list[s
                 nxt.append(c)
         store.write_state(state)
         pending = nxt
+
+    # 3) naprawa luk w historii: dni bez danych lub z niepełnym pokryciem (np. po
+    #    zmianie rozdzielczości w źródle) - każdy zakres próbowany najwyżej raz na 7 dni
+    today = dt.date.today()
+    repaired = 0
+    for c in countries:
+        if not budget.can_request():
+            break
+        code = c["code"]
+        st = state.setdefault(code, {})
+        zones = zones_by_country.get(code, [])
+        tried = {k: v for k, v in st.get("repair", {}).items()
+                 if (today - dt.date.fromisoformat(v)).days < 30}
+        until = _today(c["tz"]) - dt.timedelta(days=settings["refetch_days"] + 1)
+        for a, b in bad_ranges(data[code], zones, st, target, until, settings):
+            key = f"{a}_{b}"
+            if key in tried and (today - dt.date.fromisoformat(tried[key])).days < 7:
+                continue
+            if not budget.can_request():
+                break
+            new, names, ok, zd = fetch_range(client, c, zones, a, b, settings, budget, log)
+            if ok:
+                tried[key] = today.isoformat()
+                repaired += 1
+            if not new.empty:
+                save(c, new, names, zd)
+        st["repair"] = tried
+        store.write_state(state)
 
     done = {}
     for c in countries:

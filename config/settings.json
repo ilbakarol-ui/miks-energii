@@ -19,5 +19,8 @@
   "price_licenses": [
     "cc_by"
   ],
-  "forecasts": true
+  "forecasts": true,
+  "weather_forecast": true,
+  "weather_history_days": 420,
+  "forecasts_energycharts": false
 }

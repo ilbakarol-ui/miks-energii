@@ -14,6 +14,7 @@ import pandas as pd
 
 from . import store
 from .categories import DETAIL_KEYS, PRICE_COLS
+from .energycharts import durations_h
 
 CAPTURE = {"solar": ["solar"], "wind": ["wind_onshore", "wind_offshore"], "gen": None, "load": ["load"]}
 
@@ -68,11 +69,8 @@ def parse_price(payload: dict) -> pd.Series:
 
 
 def _durations(index: pd.DatetimeIndex) -> np.ndarray:
-    secs = index.as_unit("s").asi8
-    step = np.diff(secs)
-    med = float(np.median(step)) if len(step) else 3600.0
-    dur = np.append(step, med).astype(float)
-    return np.where((dur <= 0) | (dur > 3 * med), med, dur)
+    """Czas trwania punktów w sekundach (lokalnie, odporne na mieszane rozdzielczości)."""
+    return durations_h(index) * 3600.0
 
 
 def combine_zones(series: list[pd.Series]) -> pd.Series:
@@ -87,17 +85,36 @@ def combine_zones(series: list[pd.Series]) -> pd.Series:
 
 
 def align_to(price: pd.Series, index: pd.DatetimeIndex) -> pd.Series:
-    """Cena dla każdego punktu produkcji: przy cenie gęstszej niż dane - średnia z okresu,
-    przy rzadszej - ostatnia obowiązująca cena (cena dotyczy okresu od znacznika czasu)."""
+    """Średnia cena w okresie każdego punktu produkcji [t, t + czas trwania).
+
+    Cena dotyczy okresu od swojego znacznika czasu do następnego. Obie serie są
+    rozkładane na siatkę 15-minutową, więc działa to przy każdym połączeniu
+    rozdzielczości (1 h / 15 min, także zmiennym w obrębie zakresu)."""
     if price.empty or len(index) == 0:
         return pd.Series(np.nan, index=index)
-    p_step = float(np.median(np.diff(price.index.as_unit("s").asi8))) if len(price) > 1 else 3600.0
-    i_step = float(np.median(np.diff(index.as_unit("s").asi8))) if len(index) > 1 else 3600.0
-    if p_step < i_step:
-        price = price.resample(f"{int(i_step)}s", origin="epoch").mean()
-    limit = max(1, int(round(max(p_step, i_step) / max(i_step, 1))))
-    out = price.reindex(price.index.union(index)).ffill(limit=limit).reindex(index)
-    return out
+    q = pd.Timedelta("15min")
+    start = min(price.index[0], index[0]).floor("15min")
+    end = max(price.index[-1], index[-1]).ceil("15min") + pd.Timedelta(hours=2)
+    grid = pd.date_range(start, end, freq="15min")
+    # cena na siatce: każdy punkt ceny obowiązuje przez swój czas trwania
+    pdur = np.maximum(1, np.round(durations_h(price.index) * 4)).astype(int)
+    vals = np.full(len(grid), np.nan)
+    pos = ((price.index - start) // q).to_numpy().astype(int)
+    pv = price.to_numpy()
+    for k in range(int(pdur.max())):
+        m = pdur > k
+        idx = pos[m] + k
+        ok = idx < len(grid)
+        vals[idx[ok]] = pv[m][ok]
+    have = ~np.isnan(vals)
+    cs = np.concatenate([[0.0], np.cumsum(np.where(have, vals, 0.0))])
+    cn = np.concatenate([[0], np.cumsum(have)])
+    i0 = ((index - start) // q).to_numpy().astype(int)
+    n = np.maximum(1, np.round(durations_h(index) * 4)).astype(int)
+    i1 = np.minimum(i0 + n, len(grid))
+    cnt = cn[i1] - cn[i0]
+    avg = np.where(cnt > 0, (cs[i1] - cs[i0]) / np.maximum(cnt, 1), np.nan)
+    return pd.Series(avg, index=index)
 
 
 def daily_prices(price: pd.Series, mw: pd.DataFrame, tz: str) -> pd.DataFrame:

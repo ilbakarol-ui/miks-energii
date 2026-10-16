@@ -197,7 +197,7 @@ footer a, .notes a { color: var(--accent); }
 <div class="wrap">
   <header class="top">
     <div style="display:grid;gap:4px">
-      <span class="eyebrow">UE-27 · Norwegia · Szwajcaria · Wielka Brytania</span>
+      <span class="eyebrow">UE-27 · Norwegia · Szwajcaria · Irlandia Północna</span>
       <h1>Miks energii w Europie</h1>
     </div>
     <p class="stamp" id="stamp"></p>
@@ -215,6 +215,7 @@ footer a, .notes a { color: var(--accent); }
   </div>
 
   <div id="daily-part" style="display:grid;gap:28px">
+    <div class="demo" id="break-note" hidden></div>
     <section aria-labelledby="h-kpi">
       <h2 id="h-kpi" class="visually-hidden" hidden>Wskaźniki</h2>
       <div class="kpis" id="kpis"></div>
@@ -326,7 +327,8 @@ footer a, .notes a { color: var(--accent); }
     <p>Produkcja = publiczna produkcja netto (bez części autoprodukcji przemysłowej). Zużycie = obciążenie sieci według ENTSO-E (z pompowaniem i stratami). Saldo wymiany wyliczone z bilansu: zużycie − (produkcja − pompowanie). Dni z pokryciem danych poniżej 80% są pomijane.</p>
     <p>Ceny: rynek dnia następnego (day-ahead) z Energy-Charts, tylko strefy udostępnione na licencji CC BY 4.0 (źródło SMARD / Bundesnetzagentur). Dla krajów z kilkoma strefami: średnia prosta stref. Cena ważona produkcją = przychód z MWh danego źródła przy cenach day-ahead (cena godzinowa × produkcja / produkcja).</p>
     <p>Emisyjność: szacunek emisji bezpośrednich CO₂ ze spalania na kWh produkcji krajowej netto, ze współczynników dla paliw (<span id="factors"></span> t CO₂/MWh; biomasa = 0). Nie obejmuje emisji z importu ani cyklu życia.</p>
-    <p>Prognozy: Energy-Charts (prognozy operatorów i ENTSO-E). Porównanie z tymi samymi dniami kalendarza (±3 dni) w poprzednich 5 latach.</p>
+    <p>Prognozy: dane pogodowe <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (CC BY 4.0) przeliczone na produkcję i zużycie modelem regresji dopasowanym do historii kraju. Porównanie z tymi samymi dniami kalendarza (±3 dni) w poprzednich 5 latach.</p>
+    <p>Wielka Brytania: Energy-Charts publikuje pod kodem UK tylko dane Irlandii Północnej, dlatego dashboard tak ją opisuje.</p>
   </footer>
 </div>
 
@@ -940,12 +942,12 @@ const DATA = /*__DATA__*/null;
     if (!f) {
       $("fc-label").textContent = "";
       $("fc-legend").innerHTML = "";
-      $("fc").innerHTML = `<div class="panel"><p class="muted">${S.country === "EU" ? "Prognozy są dostępne dla pojedynczych krajów. Wybierz kraj." : "Energy-Charts nie publikuje prognoz dla tego kraju (sprawdzane raz w tygodniu)."}</p></div>`;
+      $("fc").innerHTML = `<div class="panel"><p class="muted">${S.country === "EU" ? "Prognoza dla UE pojawia się, gdy są prognozy dla wszystkich krajów UE. Wybierz kraj." : "Brak prognozy dla tego kraju (zbyt krótka historia danych albo brak prognozy pogody w tym przebiegu)."}</p></div>`;
       $("fc-note").textContent = "";
       return;
     }
     $("fc-label").textContent = "wydana " + f.issued.replace("T", " ").replace("Z", " UTC");
-    legend($("fc-legend"), [{ line: 1, color: css("--ink-2"), label: "dane rzeczywiste" }, { line: 1, color: css("--ink-2"), label: "prognoza (linia przerywana)" },
+    legend($("fc-legend"), [{ line: 1, color: css("--ink-2"), label: "dane rzeczywiste" }, { line: 1, color: css("--ink-2"), label: "prognoza modelu (linia przerywana)" },
       { line: 1, color: css("--muted"), label: "średnia " + DATA.meta.years5 }, { band: 1, label: "zakres min–maks " + DATA.meta.years5 }]);
     const items = [["wind", "Wiatr", col("wind")], ["solar", "Słońce", col("solar")], ["load", "Zużycie", css("--s-total")]].filter(([k]) => f[k]);
     $("fc").innerHTML = items.map(([k, lbl]) => `<div class="panel fc-card"><h3>${lbl}</h3><p class="sum" id="fc-sum-${k}"></p><div class="chart" id="fc-${k}"></div></div>`).join("");
@@ -965,15 +967,15 @@ const DATA = /*__DATA__*/null;
       const n7 = Math.min(7, f.days.length);
       const sum = f[k].slice(0, n7).filter(isNum);
       const av = band.avg.slice(nR, nR + n7).filter(isNum);
-      let txt = `Następne ${n7} dni: ${fmtU(sum.reduce((a, b) => a + b, 0), "GWh")}`;
+      let txt = `Dziś i ${n7 - 1} kolejnych dni: ${fmtU(sum.reduce((a, b) => a + b, 0), "GWh")}`;
       if (sum.length === n7 && av.length === n7) {
         const dd = (sum.reduce((a, b) => a + b, 0) / av.reduce((a, b) => a + b, 0) - 1) * 100;
         txt += `, ${dd >= 0 ? "+" : "−"}${fmt0.format(Math.abs(dd))}% względem średniej z 5 lat dla tych dni`;
       }
-      $("fc-sum-" + k).textContent = txt + ".";
+      const er = (f.errors || {})[k];
+      $("fc-sum-" + k).textContent = txt + "." + (isNum(er) ? ` Błąd modelu: ±${fmt0.format(er)}%.` : "");
     });
-    const m = Object.entries(f.methods || {}).map(([k, v]) => `${{ solar: "słońce", wind_onshore: "wiatr na lądzie", wind_offshore: "wiatr na morzu", load: "zużycie" }[k] || k}: ${METHOD[v] || v}`);
-    $("fc-note").textContent = "Źródło: Energy-Charts. " + (m.length ? m.join("; ") + ". " : "") + "Pasmo i średnia: te same dni kalendarza (±3 dni) w latach " + DATA.meta.years5 + ".";
+    $("fc-note").textContent = "Prognoza pogody z Open-Meteo (wiatr na 100 m, promieniowanie, temperatura) przeliczona na produkcję i zużycie modelem dopasowanym do historii tego kraju (wiatr: 120 dni, słońce: 60 dni, zużycie: 365 dni). Błąd modelu: średni błąd z ostatnich 28 dni przy znanej pogodzie; błąd samej prognozy pogody rośnie z każdym dniem. Pasmo i średnia: te same dni kalendarza (±3 dni) w latach " + DATA.meta.years5 + ".";
   }
 
   // ---------- tabela krajów ----------
@@ -1110,6 +1112,7 @@ const DATA = /*__DATA__*/null;
       if (k.unknown && k.unknown.length) notes.push("nierozpoznane typy: " + esc(k.unknown.join(", ")));
       if (k.history_complete === false) notes.push("historia 5 lat w trakcie uzupełniania");
       if (k.status) notes.push(esc(k.status));
+      if (k.break) notes.push(`skok zużycia w źródle od ${fdate(k.break.date)} (${k.break.change > 0 ? "+" : ""}${fmt1.format(k.break.change)}%)`);
       const lag = k.last ? Math.round((new Date(DATA.meta.ref) - new Date(k.last)) / 864e5) : null;
       h += `<tr><td>${esc(c.name)}</td><td style="text-align:left">${esc(k.source || "")}</td>
         <td class="${lag > 2 ? "cell-hi" : ""}">${k.last ? fdate(k.last) : "–"}</td>
@@ -1136,6 +1139,9 @@ const DATA = /*__DATA__*/null;
         ? `<p><b>${esc(cname(S.country))}</b>: dane dzienne pojawią się po pierwszym przebiegu automatu. Poniżej oficjalne dane miesięczne Eurostatu.</p>`
         : `<p><b>${esc(cname(S.country))}</b>: brak danych dziennych w Energy-Charts. Poniżej oficjalne dane miesięczne Eurostatu.</p>`;
     } else {
+      const br = (DATA.breaks || {})[S.country];
+      $("break-note").hidden = !br;
+      if (br) $("break-note").textContent = `Uwaga: od ${fdate(br.date)} zużycie w danych źródła zmieniło się nagle o ${fmt1.format(br.change)}% i utrzymuje się na nowym poziomie. To najpewniej zmiana sposobu raportowania w źródle, a nie realna zmiana zużycia, więc porównania r/r i z 5 latami mogą być zafałszowane. Oficjalne dane miesięczne są w panelu Eurostatu.`;
       renderKPIs(); renderMix(); renderTrend(); renderPrices(); renderForecast(); renderDaily(); renderMonthly();
     }
     renderEurostat();

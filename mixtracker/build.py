@@ -96,7 +96,7 @@ def forecast_block(fc: dict, e: pd.DataFrame, ref: dt.date, n_years: int, min_ye
     recent_idx = pd.date_range(pd.Timestamp(ref) - pd.Timedelta(days=13), pd.Timestamp(ref), freq="D")
     rb = e.reindex(recent_idx) if not e.empty else pd.DataFrame(index=recent_idx)
     recent_dates = [d.strftime("%Y-%m-%d") for d in recent_idx]
-    out = {"issued": fc["issued"], "days": days, "methods": fc.get("methods", {}),
+    out = {"issued": fc["issued"], "days": days, "methods": fc.get("methods", {}), "errors": fc.get("errors", {}),
            "recent": {"dates": recent_dates}, "band": {}}
     for key in ["solar", "wind", "load"]:
         if fc.get(key) is None:
@@ -118,7 +118,7 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
     state = store.read_state()
 
     summary, weekly, daily, monthly, control = {}, {}, {}, {}, {}
-    est_load, fcast, price_info = {}, {}, {}
+    est_load, fcast, price_info, breaks = {}, {}, {}, {}
     zones_ok = prices.load_zones(settings.get("price_licenses", ["cc_by"]))
     zones_all = prices.all_zones()
     for c in countries:
@@ -145,6 +145,9 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
         if allz:
             price_info[code] = {"zones": used, "all": allz, "partial": bool(used) and len(used) < len(allz),
                                 "zone_daily": _zone_recent(used, ref, settings["daily_chart_days"]) if len(used) > 1 else {}}
+        brk = trends.detect_break(e, ref)
+        if brk:
+            breaks[code] = brk
         fst = state.get("forecast", {}).get(code, {})
         good = df.index[df["cov"] >= min_cov]
         last30 = df.loc[pd.Timestamp(ref) - pd.Timedelta(days=29):pd.Timestamp(ref), "cov"]
@@ -159,8 +162,8 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
             "history_complete": st.get("history_complete"),
             "years5": summary[code]["month"]["_years5"],
             "prices": ", ".join(used) if used else ("brak (strefy tylko do użytku prywatnego)" if allz else "brak strefy"),
-            "forecast": ("dostępna" if fst.get("available") else
-                         ("brak w źródle" if fst.get("available") is False else "nie sprawdzano")) if code != "EU" else "–",
+            "forecast": _fc_status(fc),
+            "break": brk,
         }
 
     names = {c["code"]: c["name"] for c in countries}
@@ -183,7 +186,9 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
         "weekly": weekly,
         "daily": daily,
         "monthly": monthly,
-        "movers": trends.movers(summary, names, GROUPS, settings["movers_count"]),
+        "movers": trends.movers({k: v for k, v in summary.items() if k not in breaks}, names, GROUPS,
+                                settings["movers_count"]),
+        "breaks": breaks,
         "eurostat": eurostat_block(eurostat_df, countries, n_years),
         "forecast": fcast,
         "prices": price_info,
@@ -191,6 +196,16 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
         "control": control,
     }
     return payload
+
+
+FC_LABEL = {"wind": "wiatr", "solar": "słońce", "load": "zużycie"}
+
+
+def _fc_status(fc: dict | None) -> str:
+    if not fc:
+        return "brak"
+    errs = [f"{FC_LABEL[k]} {v:.0f}%" for k, v in (fc.get("errors") or {}).items() if v is not None and k in FC_LABEL]
+    return "model pogodowy" + (" (błąd: " + ", ".join(errs) + ")" if errs else "")
 
 
 def _zone_recent(zones: list[str], ref: dt.date, days: int) -> dict:

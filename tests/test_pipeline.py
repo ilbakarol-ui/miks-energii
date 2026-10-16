@@ -262,6 +262,7 @@ def test_migration_adds_prices_and_forecast(tmp_store):
     store.write_daily("PL", old)
     st = {"PL": {"floor": start.isoformat()}}
     store.write_state(st)
+    settings["forecasts_energycharts"] = True
     client = FakeClient(data_from=start)
     update.update_all(settings, budget_minutes=5, only=["PL"], client=client)
     df = store.read_daily("PL")
@@ -270,3 +271,95 @@ def test_migration_adds_prices_and_forecast(tmp_store):
     fc = json.loads((store.FORECAST / "PL.json").read_text())
     assert fc["solar"][0] == pytest.approx(24.0) and fc["wind"][0] == pytest.approx(48.0)
     assert (store.FORECAST / "archive.csv").exists()
+
+
+def test_mixed_resolution():
+    """Zakres z danymi godzinowymi i 15-minutowymi (zmiana rozdzielczości w źródle)."""
+    a = fake_payload("pl", dt.date(2025, 9, 28), dt.date(2025, 9, 30), step_min=60)
+    b = fake_payload("pl", dt.date(2025, 10, 1), dt.date(2025, 10, 3), step_min=15)
+    merged = {"unix_seconds": a["unix_seconds"] + b["unix_seconds"],
+              "production_types": [{"name": x["name"], "data": x["data"] + y["data"]}
+                                   for x, y in zip(a["production_types"], b["production_types"])]}
+    mw, _ = parse_public_power(merged)
+    d = to_daily(mw, "Europe/Warsaw")
+    assert (d["cov"] == 1.0).all()
+    assert d["hard_coal"].round(3).eq(2000 * 24).all()
+    # ceny: godzinowe do 30.09, 15-minutowe od 1.10
+    pa = fake_price(dt.date(2025, 9, 28), dt.date(2025, 9, 30), step_min=60)
+    pb = fake_price(dt.date(2025, 10, 1), dt.date(2025, 10, 3), step_min=15)
+    price = prices.parse_price({"unix_seconds": pa["unix_seconds"] + pb["unix_seconds"],
+                                "price": pa["price"] + pb["price"], "unit": "EUR / MWh"})
+    dp = prices.daily_prices(price, mw, "Europe/Warsaw")
+    exp = (11 * 50 + 12 * 150 - 10) / 24
+    assert dp["price_avg"].notna().all()
+    assert dp.loc["2025-09-29", "price_avg"] == pytest.approx(exp)
+    assert 1000 * dp.loc["2025-10-02", "pw_load"] / dp.loc["2025-10-02", "pq_load"] == pytest.approx(exp)
+    assert 1000 * dp.loc["2025-09-29", "pw_solar"] / dp.loc["2025-09-29", "pq_solar"] == pytest.approx((11 * 50 - 10) / 12)
+
+
+def test_repair_bad_ranges(tmp_store):
+    """Dni zapisane z błędnym pokryciem są wykrywane i pobierane ponownie."""
+    settings = store.load_settings()
+    start = dt.date(dt.date.today().year - 1, 6, 1)
+    client = FakeClient(data_from=start)
+    update.update_all(settings, budget_minutes=5, only=["PL"], client=client)
+    df = store.read_daily("PL")
+    bad = df.index[(df.index >= pd.Timestamp(start) + pd.Timedelta(days=40)) & (df.index < pd.Timestamp(start) + pd.Timedelta(days=50))]
+    df.loc[bad, "cov"] = 0.25
+    df.loc[bad[:3], "price_avg"] = np.nan
+    store.write_daily("PL", df)
+    st = store.read_state(); st["PL"]["floor"] = start.isoformat(); store.write_state(st)
+    ranges = update.bad_ranges(df, [{"zone": "PL"}], st["PL"], dt.date(2021, 1, 1), dt.date.today() - dt.timedelta(days=20), settings)
+    assert ranges == [(bad[0].date(), bad[-1].date())]
+    client2 = FakeClient(data_from=start)
+    update.update_all(settings, budget_minutes=5, only=["PL"], client=client2)
+    df2 = store.read_daily("PL")
+    assert (df2.loc[bad, "cov"] == 1.0).all() and df2.loc[bad, "price_avg"].notna().all()
+    # ponowny przebieg: nic do naprawy, brak dodatkowych zapytań poza bieżącymi
+    client3 = FakeClient(data_from=start)
+    update.update_all(settings, budget_minutes=5, only=["PL"], client=client3)
+    assert client3.calls.count("power") == 1
+
+
+def test_weather_model():
+    from mixtracker import weather
+    rng = np.random.default_rng(1)
+    idx = pd.date_range("2025-06-01", "2026-10-15", freq="D")
+    f = pd.DataFrame({"ws": rng.uniform(2, 14, len(idx)), "ghi": rng.uniform(0.5, 7, len(idx)),
+                      "temp": 10 + 10 * np.sin(np.arange(len(idx)) / 58)}, index=idx)
+    f["cf"] = weather.turbine_cf(f["ws"])
+    f["hdd"] = (15.5 - f["temp"]).clip(lower=0)
+    f["cdd"] = (f["temp"] - 22).clip(lower=0)
+    e = pd.DataFrame(index=idx)
+    e["wind"] = 5 + 80 * f["cf"]
+    e["solar"] = 6 * f["ghi"]
+    e["load"] = 400 + 8 * f["hdd"] - 60 * (idx.dayofweek == 6)
+    e["gen_total"] = e["wind"] + e["solar"] + 300
+    hist = f.loc[:"2026-10-15"]
+    fut = f.loc["2026-10-09":"2026-10-15"].copy()
+    fut.index = pd.date_range("2026-10-16", periods=7, freq="D")
+    fc = weather.forecast_country("PL", hist[weather.FEATURES], fut[weather.FEATURES], e, dt.date(2026, 10, 16))
+    assert len(fc["days"]) == 7 and fc["days"][0] == "2026-10-16"
+    assert fc["wind"][0] == pytest.approx(5 + 80 * fut["cf"].iloc[0], rel=1e-3)
+    assert fc["solar"][3] == pytest.approx(6 * fut["ghi"].iloc[3], rel=1e-3)
+    assert fc["errors"]["load"] < 0.5 and fc["errors"]["wind"] < 0.5
+
+
+def test_weather_daily_features():
+    from mixtracker import weather
+    idx = pd.date_range("2026-10-15 22:00", periods=48, freq="h", tz="UTC")
+    df = pd.DataFrame({"wind_speed_100m": 12.0, "shortwave_radiation": 100.0, "temperature_2m": 5.0}, index=idx)
+    pts = [{"lat": 0, "lon": 0, "kind": "all"}, {"lat": 0, "lon": 0, "kind": "wind"}]
+    d = weather.daily_features([df, df.assign(wind_speed_100m=3.0)], pts, "Europe/Warsaw")
+    assert list(d.index.strftime("%Y-%m-%d")) == ["2026-10-16", "2026-10-17"]
+    assert d["cf"].iloc[0] == pytest.approx(0.5) and d["ghi"].iloc[0] == pytest.approx(2.4)
+    assert d["hdd"].iloc[0] == pytest.approx(10.5)
+
+
+def test_detect_break():
+    idx = pd.date_range("2026-06-01", "2026-10-15", freq="D")
+    e = pd.DataFrame({"load": np.where(idx < pd.Timestamp("2026-09-18"), 330.0, 220.0)}, index=idx)
+    b = trends.detect_break(e, dt.date(2026, 10, 15))
+    assert b["date"] == "2026-09-18" and b["change"] == pytest.approx(-33.3, abs=0.1)
+    e2 = pd.DataFrame({"load": 300 + 10 * np.sin(np.arange(len(idx)) / 7)}, index=idx)
+    assert trends.detect_break(e2, dt.date(2026, 10, 15)) is None

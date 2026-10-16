@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 
 from . import store
-from .energycharts import Client, FetchError
+from .energycharts import Client, FetchError, durations_h
 
 TYPES = ["solar", "wind_onshore", "wind_offshore", "load"]
 # (wersja API, typ prognozy) w kolejności prób
@@ -65,11 +65,7 @@ def daily_energy(s: pd.Series, tz: str, min_cov: float = 0.95) -> pd.Series:
     """Energia dzienna (GWh) dla dni z pokryciem >= min_cov."""
     if s.empty:
         return pd.Series(dtype=float)
-    secs = s.index.as_unit("s").asi8
-    step = np.diff(secs)
-    med = float(np.median(step)) if len(step) else 3600.0
-    dur = np.append(step, med).astype(float)
-    dur = np.where((dur <= 0) | (dur > 3 * med), med, dur) / 3600.0
+    dur = durations_h(s.index)
     day = pd.Index(s.index.tz_convert(ZoneInfo(tz)).date)
     e = pd.Series(s.to_numpy() * dur, index=day).groupby(level=0).sum() / 1000.0
     h = pd.Series(dur, index=day).groupby(level=0).sum()

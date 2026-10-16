@@ -166,6 +166,21 @@ def _add(cols, cat, arr):
         cols[cat] = arr
 
 
+def durations_h(index: pd.DatetimeIndex) -> np.ndarray:
+    """Czas trwania każdego punktu w godzinach = odstęp do następnego punktu.
+
+    Źródło miesza rozdzielczości (1 h i 15 min, zmiana w 2024-2025), więc odstęp liczony
+    jest lokalnie dla każdego punktu. Odstęp > 1 h (luka w danych) albo brak następnego
+    punktu -> odstęp poprzedniego punktu.
+    """
+    if len(index) == 0:
+        return np.array([], dtype=float)
+    secs = index.as_unit("s").asi8
+    step = pd.Series(np.append(np.diff(secs).astype(float), np.nan))
+    step[(step <= 0) | (step > 3600)] = np.nan
+    return (step.ffill().bfill().fillna(3600.0) / 3600.0).to_numpy()
+
+
 def to_daily(mw: pd.DataFrame, tz: str, min_cov: float = 0.8) -> pd.DataFrame:
     """Całkuje moc (MW) do energii (MWh) w dniach czasu lokalnego kraju.
 
@@ -177,11 +192,7 @@ def to_daily(mw: pd.DataFrame, tz: str, min_cov: float = 0.8) -> pd.DataFrame:
     if mw.empty:
         return pd.DataFrame()
     t = mw.index
-    secs = t.as_unit("s").asi8
-    step = np.diff(secs)
-    med = float(np.median(step)) if len(step) else 3600.0
-    dur = np.append(step, med).astype(float)
-    dur = np.where((dur <= 0) | (dur > 3 * med), med, dur) / 3600.0  # godziny
+    dur = durations_h(t)  # godziny
     local = t.tz_convert(ZoneInfo(tz))
     day = pd.Index(local.date, name="date")
 

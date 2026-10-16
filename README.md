@@ -1,6 +1,6 @@
 # Miks energii w Europie
 
-Codziennie aktualizowany dashboard: produkcja energii elektrycznej według źródeł, zużycie, ceny day-ahead, emisyjność i prognozy na 7 dni w krajach UE-27 oraz w Norwegii, Szwajcarii i Wielkiej Brytanii. Pokazuje trendy tydzień do tygodnia, miesiąc do miesiąca, rok do roku i na tle średniej oraz zakresu z ostatnich 5 lat.
+Codziennie aktualizowany dashboard: produkcja energii elektrycznej według źródeł, zużycie, ceny day-ahead, emisyjność i prognozy na 7 dni w krajach UE-27 oraz w Norwegii, Szwajcarii i Irlandii Północnej (Energy-Charts nie ma danych dla całej Wielkiej Brytanii). Pokazuje trendy tydzień do tygodnia, miesiąc do miesiąca, rok do roku i na tle średniej oraz zakresu z ostatnich 5 lat.
 
 Działa w chmurze GitHub (GitHub Actions), raz dziennie, bez niczego na Twoim komputerze i bez kluczy API. Gotowa strona jest publikowana pod stałym adresem na GitHub Pages.
 
@@ -11,12 +11,12 @@ Działa w chmurze GitHub (GitHub Actions), raz dziennie, bez niczego na Twoim ko
 - **Miks produkcji**: udział 8 grup źródeł (gaz, jądrowa, węgiel, biomasa i inne OZE, ropa/odpady/inne, woda, wiatr, słońce), zmiana r/r w p.p. i pozycja względem 5 lat. Przełącznik **Szczegóły** rozbija grupy, np. węgiel brunatny i kamienny, wiatr na lądzie i na morzu.
 - **Trend tygodniowy na tle 5 lat**: bieżący rok, poprzedni rok, średnia i pasmo min–maks. Do wyboru zużycie, produkcja, saldo, udział OZE, udział paliw kopalnych, każde źródło osobno, emisyjność, emisje CO₂, cena, ceny ważone produkcją słońca i wiatru oraz godziny z ujemną ceną.
 - **Ceny energii**: średnia dzienna z 90 dni z zakresem min–maks w ciągu dnia oraz tabela cen ważonych produkcją (słońce, wiatr, zużycie) z relacją do ceny średniej i liczbą godzin z ceną poniżej zera, r/r i względem 5 lat.
-- **Prognoza na 7 dni**: wiatr, słońce i zużycie z ostatnimi 14 dniami rzeczywistymi, na tle średniej i zakresu z tych samych dni kalendarza w ostatnich 5 latach, z podsumowaniem „następne 7 dni: X GWh, +Y% względem średniej”.
+- **Prognoza na 7 dni**: wiatr, słońce i zużycie z modelu pogodowego, z ostatnimi 14 dniami rzeczywistymi i błędem modelu, na tle średniej i zakresu z tych samych dni kalendarza w ostatnich 5 latach, z podsumowaniem „następne 7 dni: X GWh, +Y% względem średniej”.
 - **Produkcja dzienna** (90 dni) i **miks miesięczny** (25 miesięcy, w GWh albo %), z linią zużycia.
 - **Porównanie krajów**: tabela z sortowaniem, z ceną i emisyjnością. Udziały poza zakresem z 5 lat są oznaczone ▲/▼.
 - **Największe zmiany**: automatyczna lista, np. udział wiatru +10 p.p. r/r albo udział gazu najwyższy od 5 lat.
 - **Dane oficjalne Eurostatu**: najnowszy opublikowany miesiąc (zwykle sprzed 2–3 miesięcy), r/r i względem średniej 5 lat, porównanie z danymi dziennymi. Tylko tutaj jest Malta, bo nie ma dla niej danych dziennych.
-- **Kontrola danych**: ostatni dzień z danymi dla każdego kraju, luki, źródło zużycia i nierozpoznane typy produkcji.
+- **Kontrola danych**: ostatni dzień z danymi dla każdego kraju, luki, źródło zużycia, ceny, prognozy, nierozpoznane typy produkcji i wykryte nagłe skoki w danych źródła (np. zmiana sposobu raportowania).
 
 ## Uruchomienie (jednorazowo, ok. 15 minut)
 
@@ -60,7 +60,11 @@ Jeśli pierwszy przebieg wpiszesz z mniejszym limitem, historia uzupełni się s
   - Jeśli repozytorium i dashboard są prywatne i używasz ich tylko na własne potrzeby, możesz włączyć wszystkie strefy: w `config/settings.json` ustaw `"price_licenses": ["cc_by", "private"]`. Historia cen nowych stref dociągnie się sama w kolejnych przebiegach.
   - **Cena ważona produkcją** (capture price) = Σ(cena × produkcja) / Σ produkcja, z danych 15-minutowych lub godzinowych. Relacja do ceny średniej to capture rate.
 - **Emisyjność**: szacunek emisji bezpośrednich CO₂ ze spalania na kWh produkcji krajowej netto, ze współczynników dla paliw w `config/emission_factors.json` (np. węgiel brunatny 1,10, kamienny 0,90, gaz 0,40 t CO₂/MWh; biomasa = 0 jak w EU ETS). Nie obejmuje emisji z importu ani cyklu życia. Współczynniki możesz zmienić; wynik przeliczy się przy następnym przebiegu dla całej historii.
-- **Prognozy**: Energy-Charts /public_power_forecast (prognozy operatorów i ENTSO-E). Tracker najpierw próbuje prognozy tygodniowej, potem bieżącej, a dla zużycia prognozy na dzień następny, więc horyzont zależy od kraju (dashboard pokazuje, jaki typ prognozy użyto). Kraje bez prognoz w źródle są sprawdzane ponownie raz w tygodniu.
+- **Prognozy na 7 dni**: Energy-Charts ma prognozy tylko na 1–2 dni, więc tracker liczy własne.
+  - Pogoda z [Open-Meteo](https://open-meteo.com) (CC BY 4.0) dla kilku punktów w każdym kraju (`config/weather_points.csv`): wiatr na 100 m, promieniowanie słoneczne, temperatura. Historia (ERA5) zapisuje się w `data/weather/`.
+  - Model dla każdego kraju dopasowany do jego historii: wiatr z krzywej mocy turbiny (ostatnie 120 dni), słońce z promieniowania (60 dni), zużycie z dni grzewczych/chłodniczych i dnia tygodnia (365 dni). Prognoza UE-27 to suma krajów.
+  - Błąd modelu: średni błąd z ostatnich 28 dni przy znanej pogodzie. Błąd samej prognozy pogody dochodzi do tego i rośnie z każdym dniem. Model nie zna świąt.
+  - Opcjonalnie można włączyć prognozy operatorów z Energy-Charts (1–2 dni): `"forecasts_energycharts": true`, ale wydłuża to przebieg o ok. 50 minut.
 - **Dane miesięczne oficjalne**: Eurostat `nrg_cb_pem` (produkcja netto wg paliwa) i `nrg_cb_em` (energia dostępna na rynek krajowy, import, eksport). Brak dla Szwajcarii, dla Wielkiej Brytanii tylko do 2020.
 - **Średnia i zakres 5 lat**: ten sam tydzień ISO albo ten sam miesiąc w 5 poprzednich latach (w 2026: lata 2021–2025). Wymagane są co najmniej 3 lata danych.
 
@@ -69,7 +73,9 @@ Ustawienia (odstęp między zapytaniami, limit czasu, liczba dni do ponownego po
 ## Ograniczenia
 
 - Energy-Charts pozwala na ok. 2 zapytania na minutę na każdy rodzaj danych (produkcja, ceny, prognozy osobno), więc codzienny przebieg trwa ok. 20–30 minut. Nie skracaj `request_interval_seconds` poniżej 30.
-- Nie wszystkie kraje mają prognozy w Energy-Charts. Które mają, okaże się w pierwszym przebiegu (kolumna „Prognozy” w Kontroli danych).
+- **Wielka Brytania**: kod UK w Energy-Charts obejmuje tylko Irlandię Północną. Pełne dane Wielkiej Brytanii wymagałyby osobnego źródła (Elexon/NESO).
+- **Holandia**: od 18.09.2026 źródło raportuje zużycie i „inne” źródła inaczej (skok o ok. −30%), a produkcja ze słońca jest w nim zaniżona. Dashboard wykrywa takie skoki automatycznie i ostrzega przy kraju; porównania r/r są wtedy niewiarygodne.
+- Dni z brakującymi lub niepełnymi danymi są pobierane ponownie automatycznie (każdy zakres najwyżej raz na 7 dni).
 - Bez cen na wolnej licencji (np. Hiszpania, Rumunia, kraje bałtyckie) kafelek ceny i sekcja cen pokazują wyjaśnienie zamiast liczb.
 - Dla Malty nie ma danych dziennych w żadnym darmowym źródle, jest tylko w panelu Eurostatu.
 - Klasyfikacja źródeł opiera się na nazwach typów produkcji z Energy-Charts. Gdy źródło doda nową nazwę, pojawi się ona w Kontroli danych jako nierozpoznana.

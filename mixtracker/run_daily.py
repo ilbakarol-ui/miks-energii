@@ -9,7 +9,7 @@ import os
 import sys
 import time
 
-from . import build, eurostat, store, update
+from . import build, eurostat, store, trends, update, weather
 
 
 def summary_md(payload: dict, run: dict) -> str:
@@ -63,6 +63,7 @@ def main(argv=None):
     ap.add_argument("--only", default="", help="lista kodów krajów, np. PL,DE")
     ap.add_argument("--skip-fetch", action="store_true")
     ap.add_argument("--skip-eurostat", action="store_true")
+    ap.add_argument("--skip-weather", action="store_true")
     args = ap.parse_args(argv)
     settings = store.load_settings()
     t0 = time.time()
@@ -70,6 +71,12 @@ def main(argv=None):
     if not args.skip_fetch:
         only = [x.strip().upper() for x in args.only.split(",") if x.strip()] or None
         run = update.update_all(settings, args.budget, only)
+    if settings.get("weather_forecast", True) and not args.skip_weather:
+        countries = [c for c in store.load_countries() if c["ec"]]
+        frames = {c["code"]: store.read_daily(c["code"]) for c in countries}
+        wlog = run.setdefault("log", [])
+        fcs = weather.update(settings, frames, trends.derive, countries, wlog)
+        run["forecasts"] = sorted(fcs)
     es_df, es_err = (None, None) if args.skip_eurostat else eurostat.update(settings["history_years"])
     if args.skip_eurostat:
         import pandas as pd
