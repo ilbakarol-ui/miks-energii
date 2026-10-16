@@ -21,7 +21,19 @@ FORECAST = DATA / "forecast"
 def load_countries(path: Path | None = None) -> list[dict]:
     path = path or ROOT / "config" / "countries.csv"
     with open(path, encoding="utf-8") as f:
-        return list(csv.DictReader(f))
+        rows = list(csv.DictReader(f))
+    for r in rows:
+        if not r.get("source"):
+            r["source"] = "energycharts" if r.get("ec") else "eurostat"
+    return rows
+
+
+SOURCE_LABEL = {"energycharts": "Energy-Charts", "elexon": "Elexon BMRS", "eurostat": "Eurostat (tylko miesięcznie)"}
+
+
+def has_daily(c: dict) -> bool:
+    """Czy kraj ma źródło danych dziennych (Energy-Charts albo Elexon)."""
+    return bool(c.get("ec")) or c.get("source") == "elexon"
 
 
 def load_settings() -> dict:

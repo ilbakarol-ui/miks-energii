@@ -277,7 +277,7 @@ def update(settings: dict, frames: dict[str, pd.DataFrame], derive, countries: l
             _archive(code, fc)
             results[code] = fc
     # UE-27: suma prognoz krajów członkowskich (gdy są wszystkie)
-    members = [c["code"] for c in countries if c.get("group") == "UE" and c["ec"]]
+    members = [c["code"] for c in countries if c.get("group") == "UE" and store.has_daily(c)]
     if members and all(m in results for m in members):
         days = results[members[0]]["days"]
         eu = {"issued": results[members[0]]["issued"], "days": days, "methods": {}, "errors": {}}

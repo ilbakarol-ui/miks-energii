@@ -363,3 +363,41 @@ def test_detect_break():
     assert b["date"] == "2026-09-18" and b["change"] == pytest.approx(-33.3, abs=0.1)
     e2 = pd.DataFrame({"load": 300 + 10 * np.sin(np.arange(len(idx)) / 7)}, index=idx)
     assert trends.detect_break(e2, dt.date(2026, 10, 15)) is None
+
+
+def fake_elexon(dataset, start, end):
+    """Rekordy jak w Elexon Insights: co 30 min, od początku okna publikacji do końca."""
+    idx = pd.date_range(pd.Timestamp(start).ceil("30min"), pd.Timestamp(end), freq="30min", inclusive="left")
+    recs = []
+    for t in idx:
+        if dataset == "AGPT":
+            for name, q in [("Fossil Gas", 10000.0), ("Nuclear", 5000.0), ("Wind Offshore", 6000.0),
+                            ("Wind Onshore", 3000.0), ("Solar", 0.0), ("Biomass", 2000.0), ("Other", 100.0)]:
+                recs.append({"dataset": "AGPT", "documentRevisionNumber": 1, "publishTime": t.isoformat(),
+                             "businessType": "Production", "psrType": name, "quantity": q, "startTime": t.isoformat()})
+            # korekta: późniejsza publikacja dla gazu
+            recs.append({"dataset": "AGPT", "documentRevisionNumber": 2, "publishTime": (t + pd.Timedelta(hours=1)).isoformat(),
+                         "businessType": "Production", "psrType": "Fossil Gas", "quantity": 11000.0, "startTime": t.isoformat()})
+        else:
+            recs.append({"dataset": "ATL", "documentRevisionNumber": 1, "publishTime": t.isoformat(),
+                         "quantity": 28000.0, "startTime": t.isoformat()})
+    return recs
+
+
+def test_elexon_gb(tmp_store, monkeypatch):
+    from mixtracker import elexon
+    monkeypatch.setattr(elexon, "_get", fake_elexon)
+    monkeypatch.setattr(elexon.time, "sleep", lambda s: None)
+    d, names = elexon.fetch_days(dt.date(2025, 10, 25), dt.date(2025, 10, 27))   # 26.10.2025 - zmiana czasu (25 h)
+    assert "Wind Offshore" in names
+    assert d.loc["2025-10-25", "gas"] == pytest.approx(11000 * 24)
+    assert d.loc["2025-10-26", "gas"] == pytest.approx(11000 * 25)
+    assert d.loc["2025-10-25", "wind_offshore"] == pytest.approx(6000 * 24)
+    assert d.loc["2025-10-25", "load"] == pytest.approx(28000 * 24)
+    assert (d["cov"] == 1.0).all()
+    settings = store.load_settings()
+    settings["history_years"] = 0          # historia tylko od 1 stycznia bieżącego roku
+    res = elexon.update(settings, [], budget_minutes=5)
+    df = store.read_daily("GB")
+    assert res["history_complete"] and df.index.min() == pd.Timestamp(dt.date.today().year, 1, 1)
+    assert df["cov"].min() >= 0.8

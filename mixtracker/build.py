@@ -112,7 +112,7 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
     countries = store.load_countries()
     min_cov = settings["min_day_coverage"]
     n_years, min_years = settings["history_years"], settings["five_year_min_years"]
-    frames = {c["code"]: store.read_daily(c["code"], folder) for c in countries if c["ec"]}
+    frames = {c["code"]: store.read_daily(c["code"], folder) for c in countries if store.has_daily(c)}
     ref = _ref_date(frames, min_cov) or (today or dt.date.today()) - dt.timedelta(days=1)
     periods = trends.reference_periods(ref)
     state = store.read_state()
@@ -126,8 +126,8 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
         df = frames.get(code)
         st = state.get(code, {})
         if df is None or df.empty:
-            control[code] = {"source": "Eurostat (tylko miesięcznie)" if not c["ec"] else "Energy-Charts",
-                             "status": "brak danych dziennych" if not c["ec"] else "brak danych",
+            control[code] = {"source": store.SOURCE_LABEL.get(c.get("source", ""), c.get("source", "")),
+                             "status": "brak danych dziennych" if not store.has_daily(c) else "brak danych",
                              "error": st.get("last_error")}
             continue
         e, est = trends.derive(df, min_cov)
@@ -152,7 +152,7 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
         good = df.index[df["cov"] >= min_cov]
         last30 = df.loc[pd.Timestamp(ref) - pd.Timedelta(days=29):pd.Timestamp(ref), "cov"]
         control[code] = {
-            "source": "Energy-Charts",
+            "source": store.SOURCE_LABEL.get(c.get("source", ""), c.get("source", "")),
             "last": good.max().strftime("%Y-%m-%d") if len(good) else None,
             "first": good.min().strftime("%Y-%m-%d") if len(good) else None,
             "days30": int((last30 >= min_cov).sum()),
@@ -178,7 +178,7 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
             "run": run_info or {},
         },
         "countries": [{"code": c["code"], "name": c["name"], "group": c["group"],
-                       "daily": c["code"] in summary, "source": bool(c["ec"]), "est_load": est_load.get(c["code"], False)}
+                       "daily": c["code"] in summary, "source": store.has_daily(c), "est_load": est_load.get(c["code"], False)}
                       for c in countries],
         "groups": [{"key": k, "label": GROUPS[k][0], "light": GROUPS[k][1], "dark": GROUPS[k][2]} for k in GROUP_KEYS],
         "details": [{"key": k, "label": DETAIL[k][0], "group": DETAIL[k][1], "ren": DETAIL[k][2]} for k in DETAIL_KEYS],

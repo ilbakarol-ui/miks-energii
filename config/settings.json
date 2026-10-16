@@ -22,5 +22,6 @@
   "forecasts": true,
   "weather_forecast": true,
   "weather_history_days": 420,
-  "forecasts_energycharts": false
+  "forecasts_energycharts": false,
+  "elexon_budget_minutes": 40
 }

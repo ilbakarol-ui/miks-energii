@@ -1,32 +1,33 @@
-code,name,ec,eurostat,tz,group
-EU,UE-27 (łącznie),eu,EU27_2020,Europe/Brussels,agregat
-AT,Austria,at,AT,Europe/Vienna,UE
-BE,Belgia,be,BE,Europe/Brussels,UE
-BG,Bułgaria,bg,BG,Europe/Sofia,UE
-HR,Chorwacja,hr,HR,Europe/Zagreb,UE
-CY,Cypr,cy,CY,Asia/Nicosia,UE
-CZ,Czechy,cz,CZ,Europe/Prague,UE
-DK,Dania,dk,DK,Europe/Copenhagen,UE
-EE,Estonia,ee,EE,Europe/Tallinn,UE
-FI,Finlandia,fi,FI,Europe/Helsinki,UE
-FR,Francja,fr,FR,Europe/Paris,UE
-GR,Grecja,gr,EL,Europe/Athens,UE
-ES,Hiszpania,es,ES,Europe/Madrid,UE
-NL,Holandia,nl,NL,Europe/Amsterdam,UE
-IE,Irlandia,ie,IE,Europe/Dublin,UE
-LT,Litwa,lt,LT,Europe/Vilnius,UE
-LU,Luksemburg,lu,LU,Europe/Luxembourg,UE
-LV,Łotwa,lv,LV,Europe/Riga,UE
-MT,Malta,,MT,Europe/Malta,UE
-DE,Niemcy,de,DE,Europe/Berlin,UE
-PL,Polska,pl,PL,Europe/Warsaw,UE
-PT,Portugalia,pt,PT,Europe/Lisbon,UE
-RO,Rumunia,ro,RO,Europe/Bucharest,UE
-SK,Słowacja,sk,SK,Europe/Bratislava,UE
-SI,Słowenia,si,SI,Europe/Ljubljana,UE
-SE,Szwecja,se,SE,Europe/Stockholm,UE
-HU,Węgry,hu,HU,Europe/Budapest,UE
-IT,Włochy,it,IT,Europe/Rome,UE
-NO,Norwegia,no,NO,Europe/Oslo,spoza UE
-CH,Szwajcaria,ch,,Europe/Zurich,spoza UE
-UK,Irlandia Północna (UK),uk,UK,Europe/London,spoza UE
+code,name,ec,eurostat,tz,group,source
+EU,UE-27 (łącznie),eu,EU27_2020,Europe/Brussels,agregat,energycharts
+AT,Austria,at,AT,Europe/Vienna,UE,energycharts
+BE,Belgia,be,BE,Europe/Brussels,UE,energycharts
+BG,Bułgaria,bg,BG,Europe/Sofia,UE,energycharts
+HR,Chorwacja,hr,HR,Europe/Zagreb,UE,energycharts
+CY,Cypr,cy,CY,Asia/Nicosia,UE,energycharts
+CZ,Czechy,cz,CZ,Europe/Prague,UE,energycharts
+DK,Dania,dk,DK,Europe/Copenhagen,UE,energycharts
+EE,Estonia,ee,EE,Europe/Tallinn,UE,energycharts
+FI,Finlandia,fi,FI,Europe/Helsinki,UE,energycharts
+FR,Francja,fr,FR,Europe/Paris,UE,energycharts
+GR,Grecja,gr,EL,Europe/Athens,UE,energycharts
+ES,Hiszpania,es,ES,Europe/Madrid,UE,energycharts
+NL,Holandia,nl,NL,Europe/Amsterdam,UE,energycharts
+IE,Irlandia,ie,IE,Europe/Dublin,UE,energycharts
+LT,Litwa,lt,LT,Europe/Vilnius,UE,energycharts
+LU,Luksemburg,lu,LU,Europe/Luxembourg,UE,energycharts
+LV,Łotwa,lv,LV,Europe/Riga,UE,energycharts
+MT,Malta,,MT,Europe/Malta,UE,eurostat
+DE,Niemcy,de,DE,Europe/Berlin,UE,energycharts
+PL,Polska,pl,PL,Europe/Warsaw,UE,energycharts
+PT,Portugalia,pt,PT,Europe/Lisbon,UE,energycharts
+RO,Rumunia,ro,RO,Europe/Bucharest,UE,energycharts
+SK,Słowacja,sk,SK,Europe/Bratislava,UE,energycharts
+SI,Słowenia,si,SI,Europe/Ljubljana,UE,energycharts
+SE,Szwecja,se,SE,Europe/Stockholm,UE,energycharts
+HU,Węgry,hu,HU,Europe/Budapest,UE,energycharts
+IT,Włochy,it,IT,Europe/Rome,UE,energycharts
+NO,Norwegia,no,NO,Europe/Oslo,spoza UE,energycharts
+CH,Szwajcaria,ch,,Europe/Zurich,spoza UE,energycharts
+UK,Irlandia Północna (UK),uk,,Europe/London,spoza UE,energycharts
+GB,Wielka Brytania,,UK,Europe/London,spoza UE,elexon

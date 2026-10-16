@@ -9,7 +9,7 @@ import os
 import sys
 import time
 
-from . import build, eurostat, store, trends, update, weather
+from . import build, elexon, eurostat, store, trends, update, weather
 
 
 def summary_md(payload: dict, run: dict) -> str:
@@ -68,11 +68,18 @@ def main(argv=None):
     settings = store.load_settings()
     t0 = time.time()
     run = {"requests": 0, "log": []}
+    only = [x.strip().upper() for x in args.only.split(",") if x.strip()] or None
     if not args.skip_fetch:
-        only = [x.strip().upper() for x in args.only.split(",") if x.strip()] or None
         run = update.update_all(settings, args.budget, only)
+    if not args.skip_fetch and any(c.get("source") == "elexon" for c in store.load_countries()):
+        if not only or "GB" in only:
+            try:
+                gb = elexon.update(settings, run.setdefault("log", []), settings.get("elexon_budget_minutes", 40))
+                run.setdefault("history_complete", {})["GB"] = gb["history_complete"]
+            except Exception as e:
+                run.setdefault("log", []).append(f"GB: błąd Elexon: {type(e).__name__}: {e}")
     if settings.get("weather_forecast", True) and not args.skip_weather:
-        countries = [c for c in store.load_countries() if c["ec"]]
+        countries = [c for c in store.load_countries() if store.has_daily(c)]
         frames = {c["code"]: store.read_daily(c["code"]) for c in countries}
         wlog = run.setdefault("log", [])
         fcs = weather.update(settings, frames, trends.derive, countries, wlog)

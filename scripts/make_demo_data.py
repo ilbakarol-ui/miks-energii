@@ -33,7 +33,7 @@ def main(out: Path, end: dt.date):
     rng = np.random.default_rng(7)
     start = dt.date(end.year - 5, 1, 1)
     days = pd.date_range(start, end, freq="D")
-    countries = [c for c in store.load_countries() if c["ec"]]
+    countries = [c for c in store.load_countries() if store.has_daily(c)]
     zones = prices.load_zones(["cc_by"])
     for c in countries:
         code = c["code"]
