@@ -26,6 +26,10 @@
   --s-gas: #eb6834; --s-nuclear: #6250d6; --s-coal: #e34948; --s-bio: #008300;
   --s-other: #e87ba4; --s-hydro: #2a78d6; --s-wind: #1baf7a; --s-solar: #eda100;
   --s-total: #134a66;
+  --land: #e4e8ea;
+  --nodata: #c9d0d4;
+  --neg: #f2a37f;
+  --m1: #cde2fb; --m2: #9ec5f4; --m3: #6da7ec; --m4: #3987e5; --m5: #2a78d6; --m6: #1c5cab; --m7: #104281; --m8: #0d2f55;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -36,6 +40,8 @@
     --up: #ef8a68; --down: #7cb7e0;
     --s-gas: #d95926; --s-nuclear: #9085e9; --s-coal: #e66767; --s-bio: #008300;
     --s-other: #d55181; --s-hydro: #3987e5; --s-wind: #199e70; --s-solar: #c98500; --s-total: #8cc8e4;
+    --land: #20272c; --nodata: #3a434a; --neg: #c86a45;
+    --m1: #173a66; --m2: #1c5cab; --m3: #256abf; --m4: #2a78d6; --m5: #3987e5; --m6: #6da7ec; --m7: #9ec5f4; --m8: #cde2fb;
     color-scheme: dark;
   }
 }
@@ -46,6 +52,8 @@
   --up: #ef8a68; --down: #7cb7e0;
   --s-gas: #d95926; --s-nuclear: #9085e9; --s-coal: #e66767; --s-bio: #008300;
   --s-other: #d55181; --s-hydro: #3987e5; --s-wind: #199e70; --s-solar: #c98500; --s-total: #8cc8e4;
+    --land: #20272c; --nodata: #3a434a; --neg: #c86a45;
+    --m1: #173a66; --m2: #1c5cab; --m3: #256abf; --m4: #2a78d6; --m5: #3987e5; --m6: #6da7ec; --m7: #9ec5f4; --m8: #cde2fb;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -176,6 +184,28 @@ td .mini i { display: block; height: 100%; }
 td.na, .na { color: var(--muted); }
 .cell-hi { color: var(--up); } .cell-lo { color: var(--down); }
 
+.map-wrap { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(240px, 1fr); gap: 12px; align-items: start; }
+@media (max-width: 820px) { .map-wrap { grid-template-columns: 1fr; } }
+.map-box { position: relative; min-width: 0; }
+.map-box svg { display: block; width: 100%; height: auto; }
+.map-box path.c { stroke: var(--surface); stroke-width: 0.7; cursor: pointer; }
+.map-box path.c:hover, .map-box path.c.sel { stroke: var(--ink); stroke-width: 1.6; }
+.map-box path.bg { fill: var(--land); stroke: var(--surface); stroke-width: 0.5; }
+.map-box text { font-family: var(--font-ui); font-size: 11px; font-weight: 600; pointer-events: none; font-variant-numeric: tabular-nums; }
+.map-ctl { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.map-ctl .nav { display: inline-flex; gap: 4px; align-items: center; }
+.map-ctl .nav button { background: var(--surface); border: 1px solid var(--axis); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+.map-ctl .nav button:disabled { opacity: 0.4; cursor: default; }
+.map-ctl .day { min-width: 150px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+.mlegend { display: flex; flex-wrap: wrap; gap: 2px; font-size: 11.5px; color: var(--ink-2); align-items: flex-end; }
+.mlegend span { display: grid; gap: 3px; min-width: 38px; text-align: center; }
+.mlegend i { display: block; height: 10px; border-radius: 2px; }
+.rank { display: grid; gap: 4px; font-size: 13.5px; }
+.rank .r { display: grid; grid-template-columns: minmax(90px, 1fr) 1.2fr 64px; gap: 8px; align-items: center; cursor: pointer; padding: 2px 4px; border-radius: 6px; }
+.rank .r:hover, .rank .r.sel { background: var(--accent-soft); }
+.rank .bar { height: 10px; }
+.rank .bar i { display: block; height: 100%; border-radius: 0 3px 3px 0; }
+.rank .v { text-align: right; font-variant-numeric: tabular-nums; }
 .movers { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 10px; }
 .mover { display: grid; gap: 4px; padding: 12px 14px; }
 .mover .who { font-weight: 600; }
@@ -290,6 +320,35 @@ footer a, .notes a { color: var(--accent); }
     </div>
   </div>
   <div class="panel" id="no-daily" hidden></div>
+
+  <section aria-labelledby="h-map" id="map-sec">
+    <div class="head">
+      <h2 id="h-map">Mapa cen day-ahead</h2>
+      <div class="map-ctl">
+        <div class="nav">
+          <button type="button" id="map-prev" aria-label="Poprzedni dzień">‹</button>
+          <span class="day" id="map-day"></span>
+          <button type="button" id="map-next" aria-label="Następny dzień">›</button>
+        </div>
+        <div class="seg" role="group" aria-label="Okres uśrednienia">
+          <button type="button" data-w="1" aria-pressed="true">Dzień</button>
+          <button type="button" data-w="7" aria-pressed="false">Śr. 7 dni</button>
+          <button type="button" data-w="30" aria-pressed="false">Śr. 30 dni</button>
+        </div>
+      </div>
+    </div>
+    <div class="map-wrap">
+      <div class="panel" style="display:grid;gap:10px">
+        <div class="map-box" id="map"></div>
+        <div class="mlegend" id="map-legend"></div>
+      </div>
+      <div class="panel" style="display:grid;gap:10px">
+        <h3 id="rank-title">Ranking</h3>
+        <div class="rank" id="rank"></div>
+        <p class="small muted" id="map-note"></p>
+      </div>
+    </div>
+  </section>
 
   <section aria-labelledby="h-cmp">
     <div class="head">
@@ -442,7 +501,7 @@ const DATA = /*__DATA__*/null;
   function setCountry(c) {
     S.country = c; sel.value = c; store.set("country", c);
     try { history.replaceState(null, "", "#" + c.toLowerCase()); } catch (e) { /* bez zmiany adresu */ }
-    renderCountry(); renderTable();
+    renderCountry(); renderTable(); renderMap();
   }
   document.querySelectorAll("#period button").forEach((b) => b.addEventListener("click", () => {
     S.period = b.dataset.p; store.set("period", S.period); renderCountry(); renderTable();
@@ -978,6 +1037,128 @@ const DATA = /*__DATA__*/null;
     $("fc-note").textContent = "Prognoza pogody z Open-Meteo (wiatr na 100 m, promieniowanie, temperatura) przeliczona na produkcję i zużycie modelem dopasowanym do historii tego kraju (wiatr: 120 dni, słońce: 60 dni, zużycie: 365 dni). Błąd modelu: średni błąd z ostatnich 28 dni przy znanej pogodzie; błąd samej prognozy pogody rośnie z każdym dniem. Pasmo i średnia: te same dni kalendarza (±3 dni) w latach " + DATA.meta.years5 + ".";
   }
 
+  // ---------- mapa cen day-ahead ----------
+  const PM = DATA.price_map || {};
+  const BINS = [0, 40, 70, 100, 130, 160, 200, 250];   // €/MWh; poniżej 0 osobny kolor
+  const MAPSTATE = { i: (PM.dates || []).length - 1, w: 1 };
+  try { const w = +store.get("mapw", "1"); if ([1, 7, 30].includes(w)) MAPSTATE.w = w; } catch (e) { /* domyślnie */ }
+  function binOf(v) {
+    if (!isNum(v)) return null;
+    if (v < 0) return 0;
+    let k = 1;
+    for (let j = 1; j < BINS.length; j++) if (v >= BINS[j]) k = j + 1;
+    return k;   // 1..8
+  }
+  const binColor = (k) => (k === 0 ? css("--neg") : css("--m" + k));
+  function ink(k) {
+    const hex = binColor(k).replace("#", "");
+    const [r, g, b] = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.3 ? "#11161a" : "#ffffff";
+  }
+  function windowAvg(arr, i, w) {
+    const vals = [];
+    for (let j = Math.max(0, i - w + 1); j <= i; j++) if (isNum(arr[j])) vals.push(arr[j]);
+    if (vals.length < Math.ceil(w * 0.8)) return null;
+    return vals.reduce((a, b) => a + b, 0) / vals.length;
+  }
+  function mapValue(code) {
+    const c = (PM.countries || {})[code];
+    if (!c || !c.avg) return null;
+    return windowAvg(c.avg, MAPSTATE.i, MAPSTATE.w);
+  }
+  function zoneValue(z, key) {
+    const a = ((PM.zones || {})[z] || {})[key || "price_avg"];
+    return a ? windowAvg(a, MAPSTATE.i, MAPSTATE.w) : null;
+  }
+  function dayLabel() {
+    const d = PM.dates[MAPSTATE.i];
+    if (MAPSTATE.w === 1) return dayLong(d);
+    return `${fdate(PM.dates[Math.max(0, MAPSTATE.i - MAPSTATE.w + 1)])} – ${fdate(d)}`;
+  }
+  function renderMap() {
+    const sec = $("map-sec");
+    if (!PM.dates || !PM.dates.length || !PM.geo || !PM.geo.countries) { sec.hidden = true; return; }
+    sec.hidden = false;
+    $("map-day").textContent = dayLabel();
+    $("map-prev").disabled = MAPSTATE.i <= 0;
+    $("map-next").disabled = MAPSTATE.i >= PM.dates.length - 1;
+    document.querySelectorAll("#map-sec .seg button").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.w === MAPSTATE.w)));
+    const G = PM.geo;
+    let svg = `<svg viewBox="0 0 ${G.w} ${G.h}" role="img" aria-label="Mapa średnich cen energii day-ahead w Europie">`;
+    svg += G.bg.map((d) => `<path class="bg" d="${d}"></path>`).join("");
+    const vals = {};
+    for (const [code, d] of Object.entries(G.countries)) {
+      const v = mapValue(code);
+      vals[code] = v;
+      const k = binOf(v);
+      const fill = k === null ? css("--nodata") : binColor(k);
+      svg += `<path class="c${code === S.country ? " sel" : ""}" data-c="${code}" d="${d}" style="fill:${fill}"></path>`;
+    }
+    for (const [code, [x, y, area]] of Object.entries(G.labels || {})) {
+      const v = vals[code];
+      if (!isNum(v) || area < 140) continue;
+      const k = binOf(v);
+      svg += `<text x="${x}" y="${y + 4}" text-anchor="middle" style="fill:${ink(k)}">${fmt0.format(v)}</text>`;
+    }
+    svg += "</svg>";
+    const box = $("map");
+    box.innerHTML = svg;
+    const tip = document.createElement("div"); tip.className = "tip"; tip.hidden = true; box.appendChild(tip);
+    box.querySelectorAll("path.c").forEach((p) => {
+      const code = p.dataset.c;
+      const show = (evt) => {
+        const r = box.getBoundingClientRect();
+        const info = (PM.countries || {})[code] || {};
+        let h = `<b>${esc(cname(code))}</b>`;
+        if (info.zones && info.zones.length) {
+          h += `<div class="r"><span>${MAPSTATE.w === 1 ? "średnia dnia" : "średnia " + MAPSTATE.w + " dni"}</span><span>${fmtU(vals[code], "€/MWh")}</span></div>`;
+          info.zones.forEach((z) => {
+            if (info.zones.length > 1) h += `<div class="r"><span>strefa ${esc(z)}</span><span>${fmtU(zoneValue(z), "€/MWh")}</span></div>`;
+          });
+          if (MAPSTATE.w === 1 && info.zones.length === 1) {
+            const z = info.zones[0];
+            const mn = zoneValue(z, "price_min"), mx = zoneValue(z, "price_max"), ng = zoneValue(z, "price_neg_h");
+            h += `<div class="r"><span>min–maks</span><span>${isNum(mn) ? fmt1.format(mn) + " – " + fmt1.format(mx) : "–"}</span></div>`;
+            if (isNum(ng) && ng > 0) h += `<div class="r"><span>godziny &lt; 0 €</span><span>${fmt1.format(ng)} h</span></div>`;
+          }
+          if (info.all && info.all.length > info.zones.length) h += `<div class="small muted">tylko ${esc(info.zones.join(", "))} z ${info.all.length} stref</div>`;
+        } else if (info.all && info.all.length) {
+          h += `<div class="small muted">ceny tylko do użytku prywatnego (licencja źródła)</div>`;
+        } else {
+          h += `<div class="small muted">brak danych o cenach</div>`;
+        }
+        placeTip(tip, box, evt.clientX - r.left, Math.max(0, evt.clientY - r.top - 40), h);
+      };
+      p.addEventListener("pointermove", show);
+      p.addEventListener("pointerdown", show);
+      p.addEventListener("pointerleave", () => { tip.hidden = true; });
+      p.addEventListener("click", () => setCountry(code));
+    });
+    // legenda
+    const lab = (j) => (j === 0 ? "< 0" : j === BINS.length ? "≥ " + BINS[j - 1] : `${BINS[j - 1]}–${BINS[j]}`);
+    let lg = `<span><i style="background:${binColor(0)}"></i>${lab(0)}</span>`;
+    for (let j = 1; j <= 8; j++) lg += `<span><i style="background:${binColor(j)}"></i>${lab(j)}</span>`;
+    lg += `<span><i style="background:${css("--nodata")}"></i>brak</span>`;
+    $("map-legend").innerHTML = lg + `<span style="align-self:center;margin-left:6px">€/MWh</span>`;
+    // ranking
+    const rows = Object.entries(vals).filter(([, v]) => isNum(v)).sort((a, b) => b[1] - a[1]);
+    const mx = Math.max(1, ...rows.map(([, v]) => Math.abs(v)));
+    $("rank-title").textContent = MAPSTATE.w === 1 ? "Ranking dnia" : `Ranking, średnia ${MAPSTATE.w} dni`;
+    $("rank").innerHTML = rows.map(([code, v]) => {
+      const k = binOf(v);
+      return `<div class="r${code === S.country ? " sel" : ""}" data-c="${code}" tabindex="0" role="button"><span>${esc(cname(code))}</span><span class="bar"><i style="width:${Math.max(1, (100 * Math.abs(v)) / mx)}%;background:${binColor(k)}"></i></span><span class="v">${fmt1.format(v)}</span></div>`;
+    }).join("") || '<p class="muted">Brak cen dla wybranego okresu.</p>';
+    $("rank").querySelectorAll(".r").forEach((r) => {
+      r.addEventListener("click", () => setCountry(r.dataset.c));
+      r.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCountry(r.dataset.c); } });
+    });
+    const missing = Object.entries(PM.countries || {}).filter(([, c]) => !c.zones.length && c.all.length).map(([k]) => cname(k));
+    $("map-note").textContent = "Średnia z cen rynku dnia następnego (day-ahead). Kraje z kilkoma strefami: średnia prosta stref z danymi. Szare kraje: brak cen na wolnej licencji w źródle" + (missing.length ? ` (${missing.join(", ")})` : "") + ". Ceny na kolejny dzień pojawiają się po publikacji wyników aukcji (ok. 13:00) i są pobierane przy następnym przebiegu.";
+  }
+  $("map-prev").addEventListener("click", () => { MAPSTATE.i = Math.max(0, MAPSTATE.i - 1); renderMap(); });
+  $("map-next").addEventListener("click", () => { MAPSTATE.i = Math.min(PM.dates.length - 1, MAPSTATE.i + 1); renderMap(); });
+  document.querySelectorAll("#map-sec .seg button").forEach((b) => b.addEventListener("click", () => { MAPSTATE.w = +b.dataset.w; store.set("mapw", String(MAPSTATE.w)); renderMap(); }));
+
   // ---------- tabela krajów ----------
   const COLS = [
     { key: "name", label: "Kraj" },
@@ -1146,12 +1327,12 @@ const DATA = /*__DATA__*/null;
     }
     renderEurostat();
   }
-  renderCountry(); renderTable(); renderMovers(); renderControl();
+  renderCountry(); renderTable(); renderMap(); renderMovers(); renderControl();
   let rt;
   window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (DATA.summary[S.country]) { renderTrend(); renderPrices(); renderForecast(); renderDaily(); renderMonthly(); } renderEurostat(); }, 150); });
   try {
-    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { renderCountry(); renderTable(); renderMovers(); });
-    new MutationObserver(() => { renderCountry(); renderTable(); renderMovers(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { renderCountry(); renderTable(); renderMap(); renderMovers(); });
+    new MutationObserver(() => { renderCountry(); renderTable(); renderMap(); renderMovers(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   } catch (e) { /* starsze przeglądarki */ }
 })();
 </script>

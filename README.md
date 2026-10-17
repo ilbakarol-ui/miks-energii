@@ -10,6 +10,7 @@ Działa w chmurze GitHub (GitHub Actions), raz dziennie, bez niczego na Twoim ko
 - **Wskaźniki**: zużycie, produkcja krajowa, udział OZE, saldo wymiany, cena day-ahead i emisyjność (g CO₂/kWh). Przy każdym: zmiana t/t lub m/m, r/r, względem średniej 5 lat i pasek z zakresem min–maks z 5 lat.
 - **Miks produkcji**: udział 8 grup źródeł (gaz, jądrowa, węgiel, biomasa i inne OZE, ropa/odpady/inne, woda, wiatr, słońce), zmiana r/r w p.p. i pozycja względem 5 lat. Przełącznik **Szczegóły** rozbija grupy, np. węgiel brunatny i kamienny, wiatr na lądzie i na morzu.
 - **Trend tygodniowy na tle 5 lat**: bieżący rok, poprzedni rok, średnia i pasmo min–maks. Do wyboru zużycie, produkcja, saldo, udział OZE, udział paliw kopalnych, każde źródło osobno, emisyjność, emisje CO₂, cena, ceny ważone produkcją słońca i wiatru oraz godziny z ujemną ceną.
+- **Mapa cen day-ahead**: Europa pokolorowana średnią ceną rynku dnia następnego, z wyborem dnia (ostatnie 30 dni, także dziś i jutro, jeśli ceny są już opublikowane) albo średnią z 7 lub 30 dni. Obok ranking krajów. Po najechaniu widać strefy, min–maks i godziny z ujemną ceną; kliknięcie wybiera kraj. Skala barw jest stała (te same progi każdego dnia), więc kolory można porównywać między dniami. Szare kraje nie mają cen na wolnej licencji.
 - **Ceny energii**: średnia dzienna z 90 dni z zakresem min–maks w ciągu dnia oraz tabela cen ważonych produkcją (słońce, wiatr, zużycie) z relacją do ceny średniej i liczbą godzin z ceną poniżej zera, r/r i względem 5 lat.
 - **Prognoza na 7 dni**: wiatr, słońce i zużycie z modelu pogodowego, z ostatnimi 14 dniami rzeczywistymi i błędem modelu, na tle średniej i zakresu z tych samych dni kalendarza w ostatnich 5 latach, z podsumowaniem „następne 7 dni: X GWh, +Y% względem średniej”.
 - **Produkcja dzienna** (90 dni) i **miks miesięczny** (25 miesięcy, w GWh albo %), z linią zużycia.
@@ -40,7 +41,7 @@ Jeśli pierwszy przebieg wpiszesz z mniejszym limitem, historia uzupełni się s
 - **Krótkie podsumowanie** dnia (UE-27, największe zmiany) widać na stronie przebiegu w **Actions** i w pliku `data/podsumowanie.md`.
 - **Dane źródłowe** (możesz je otworzyć w Excelu):
   - `data/daily/<KOD>.csv`: MWh dziennie wg kategorii w czasie lokalnym kraju, ceny dzienne i składniki cen ważonych,
-  - `data/prices/<STREFA>.csv`: ceny dzienne strefy (średnia, min, maks, godziny z ceną < 0),
+  - `data/prices/<STREFA>.csv`: ceny dzienne strefy (średnia, min, maks, godziny z ceną < 0), łącznie z dniem dzisiejszym i jutrzejszym, jeśli były już opublikowane w chwili przebiegu,
   - `data/forecast/<KOD>.json`: najnowsza prognoza; `data/forecast/archive.csv`: archiwum prognoz z 400 dni (do oceny trafności),
   - `data/eurostat/monthly.csv`: GWh miesięcznie.
 - **Nierozpoznany typ produkcji** (Kontrola danych): trafia do „Inne”. Dopisz regułę w `mixtracker/categories.py` (funkcja `classify`).

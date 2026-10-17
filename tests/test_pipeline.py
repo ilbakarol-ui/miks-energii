@@ -453,3 +453,20 @@ def test_movers_intensity_threshold():
         return {"week": {**base, "_complete": True}}
     m = trends.movers({"FR": s(16.0, 7.5), "BE": s(183.0, 79.0)}, {"FR": "Francja", "BE": "Belgia"}, {}, 10)
     assert [x["code"] for x in m] == ["BE"]
+
+
+def test_price_ahead_and_map(tmp_store):
+    """Ceny strefowe pobierane do jutra (rynek dnia następnego) i dane mapy cen."""
+    settings = store.load_settings()
+    client = FakeClient(data_from=dt.date.today() - dt.timedelta(days=60))
+    update.update_all(settings, budget_minutes=5, only=["PL"], client=client)
+    tomorrow = update._today("Europe/Warsaw") + dt.timedelta(days=1)
+    z = store.read_zone("PL")
+    assert z.index.max().date() == tomorrow
+    # dane dzienne kraju kończą się na wczoraj (dziś i jutro nie mają jeszcze produkcji)
+    assert store.read_daily("PL").index.max().date() < update._today("Europe/Warsaw")
+    pm = build.price_map(prices.load_zones(["cc_by"]), prices.all_zones(), store.load_countries(), days=10)
+    assert pm["dates"][-1] == tomorrow.isoformat() and len(pm["dates"]) == 10
+    assert pm["countries"]["PL"]["avg"][-1] == pytest.approx((11 * 50 + 12 * 150 - 10) / 24, abs=0.1)
+    assert pm["countries"]["ES"]["zones"] == [] and pm["countries"]["ES"]["all"] == ["ES"]
+    assert "PL" in pm["geo"]["countries"] and pm["geo"]["w"] > 0

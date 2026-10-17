@@ -76,15 +76,19 @@ def _fetch_prices(client, zones, start, end, budget, log, code):
 
 
 def fetch_range(client: Client, c: dict, zones: list[dict], start: dt.date, end: dt.date, settings: dict,
-                budget: Budget, log: list) -> tuple[pd.DataFrame, list[str], bool, dict]:
-    """Produkcja i ceny dla zakresu. Zwraca (dni, nazwy typów, czy kompletnie, {strefa: ceny dzienne})."""
+                budget: Budget, log: list, price_ahead: int = 0) -> tuple[pd.DataFrame, list[str], bool, dict]:
+    """Produkcja i ceny dla zakresu. Zwraca (dni, nazwy typów, czy kompletnie, {strefa: ceny dzienne}).
+
+    price_ahead > 0: ceny strefowe pobierane dodatkowo na tyle dni po `end` (dziś, jutro -
+    rynek dnia następnego publikuje ceny dzień wcześniej); trafiają tylko do plików stref."""
     parts, ok = _fetch_power(client, c, start, end, settings, budget, log)
     frames, names, zone_daily = [], [], {}
     for a, b, mw, nm in parts:
         names += nm
         daily = to_daily(mw, c["tz"], settings["min_day_coverage"])
         if zones:
-            zp, okp = _fetch_prices(client, zones, a, b, budget, log, c["code"])
+            pb = b + dt.timedelta(days=price_ahead) if (price_ahead and b == end) else b
+            zp, okp = _fetch_prices(client, zones, a, pb, budget, log, c["code"])
             ok = ok and okp
             country_price = prices.combine_zones(list(zp.values()))
             pdaily = prices.daily_prices(country_price, mw, c["tz"])
@@ -215,7 +219,8 @@ def update_all(settings: dict, budget_minutes: float | None = None, only: list[s
         st = state.setdefault(code, {})
         zones = zones_by_country.get(code, [])
         for a, b in chunks(start, yesterday, settings["backfill_chunk_days"]):
-            new, names, ok, zd = fetch_range(client, c, zones, a, b, settings, budget, log)
+            new, names, ok, zd = fetch_range(client, c, zones, a, b, settings, budget, log,
+                                             price_ahead=2 if b == yesterday else 0)
             save(c, new, names, zd)
             if ok:
                 st["last_ok"] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="minutes")

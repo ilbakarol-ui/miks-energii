@@ -192,10 +192,49 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
         "eurostat": eurostat_block(eurostat_df, countries, n_years),
         "forecast": fcast,
         "prices": price_info,
+        "price_map": price_map(zones_ok, zones_all, countries),
         "factors": {k: v for k, v in trends.emission_factors().items() if v > 0},
         "control": control,
     }
     return payload
+
+
+MAP_FILE = Path(__file__).with_name("europe_map.json")
+
+
+def price_map(zones_ok: dict, zones_all: dict, countries: list[dict], days: int = 30) -> dict:
+    """Ceny day-ahead do mapy: ostatnie `days` dni dostawy (także dziś/jutro, jeśli opublikowane).
+
+    Kraj z kilkoma strefami: średnia prosta stref z danymi. Zwraca też wartości stref (tooltip)."""
+    zone_frames = {}
+    for code, zs in zones_ok.items():
+        for z in zs:
+            if z["zone"] not in zone_frames:
+                zd = store.read_zone(z["zone"])
+                if not zd.empty:
+                    zone_frames[z["zone"]] = zd
+    if not zone_frames:
+        return {}
+    last = max(df["price_avg"].dropna().index.max() for df in zone_frames.values())
+    idx = pd.date_range(last - pd.Timedelta(days=days - 1), last, freq="D")
+    zones = {}
+    for z, df in zone_frames.items():
+        d = df.reindex(idx)
+        zones[z] = {k: [_r(v, 1) for v in d[k].tolist()] for k in ("price_avg", "price_min", "price_max", "price_neg_h")}
+    out_c = {}
+    for c in countries:
+        code = c["code"]
+        used = [z["zone"] for z in zones_ok.get(code, []) if z["zone"] in zones]
+        allz = [z["zone"] for z in zones_all.get(code, [])]
+        if not used:
+            out_c[code] = {"zones": [], "all": allz, "avg": None}
+            continue
+        arr = np.array([[np.nan if v is None else v for v in zones[z]["price_avg"]] for z in used], dtype=float)
+        with np.errstate(all="ignore"):
+            avg = np.nanmean(arr, axis=0)
+        out_c[code] = {"zones": used, "all": allz, "avg": [_r(v, 1) for v in avg.tolist()]}
+    geo = json.loads(MAP_FILE.read_text(encoding="utf-8")) if MAP_FILE.exists() else {}
+    return {"dates": [d.strftime("%Y-%m-%d") for d in idx], "zones": zones, "countries": out_c, "geo": geo}
 
 
 FC_LABEL = {"wind": "wiatr", "solar": "słońce", "load": "zużycie"}
