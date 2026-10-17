@@ -973,7 +973,7 @@ const DATA = /*__DATA__*/null;
         txt += `, ${dd >= 0 ? "+" : "−"}${fmt0.format(Math.abs(dd))}% względem średniej z 5 lat dla tych dni`;
       }
       const er = (f.errors || {})[k];
-      $("fc-sum-" + k).textContent = txt + "." + (isNum(er) ? ` Błąd modelu: ±${fmt0.format(er)}%.` : "");
+      $("fc-sum-" + k).textContent = txt + "." + (isNum(er) ? ` Błąd modelu: ±${fmt0.format(er)}%${er > 50 ? " (niska trafność, mała produkcja albo nieciągłość danych)" : ""}.` : "");
     });
     $("fc-note").textContent = "Prognoza pogody z Open-Meteo (wiatr na 100 m, promieniowanie, temperatura) przeliczona na produkcję i zużycie modelem dopasowanym do historii tego kraju (wiatr: 120 dni, słońce: 60 dni, zużycie: 365 dni). Błąd modelu: średni błąd z ostatnich 28 dni przy znanej pogodzie; błąd samej prognozy pogody rośnie z każdym dniem. Pasmo i średnia: te same dni kalendarza (±3 dni) w latach " + DATA.meta.years5 + ".";
   }

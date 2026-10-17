@@ -325,7 +325,8 @@ def movers(summary: dict, names: dict, groups_meta: dict, top: int) -> list[dict
             it = s.get("intensity")
             if it and it[0] is not None and it[2]:
                 ch = 100 * (it[0] / it[2] - 1)
-                if abs(ch) >= 12:
+                # przy niskiej emisyjności (np. FR, SE) zmiany procentowe są szumem - wymagany też próg w g/kWh
+                if abs(ch) >= 12 and abs(it[0] - it[2]) >= 40:
                     items.append({"code": code, "name": names[code], "period": kind, "series": "intensity",
                                   "label": "Emisyjność", "type": "int_yoy", "cur": it[0], "ref": it[2],
                                   "delta": round(ch, 1), "score": abs(ch) * 0.5})

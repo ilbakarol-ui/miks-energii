@@ -365,22 +365,28 @@ def test_detect_break():
     assert trends.detect_break(e2, dt.date(2026, 10, 15)) is None
 
 
-def fake_elexon(dataset, start, end):
-    """Rekordy jak w Elexon Insights: co 30 min, od początku okna publikacji do końca."""
-    idx = pd.date_range(pd.Timestamp(start).ceil("30min"), pd.Timestamp(end), freq="30min", inclusive="left")
+def fake_elexon(dataset, params):
+    """Rekordy jak w Elexon Insights. FUELHH po dniach rozliczeniowych, AGPT po czasie publikacji."""
+    if dataset == "FUELHH":
+        a = pd.Timestamp(params["settlementDateFrom"]).tz_localize("Europe/London")
+        b = (pd.Timestamp(params["settlementDateTo"]) + pd.Timedelta(days=1)).tz_localize("Europe/London")
+    else:
+        a, b = pd.Timestamp(params["publishDateTimeFrom"]), pd.Timestamp(params["publishDateTimeTo"])
+    idx = pd.date_range(a.tz_convert("UTC").ceil("30min"), b.tz_convert("UTC"), freq="30min", inclusive="left")
     recs = []
     for t in idx:
-        if dataset == "AGPT":
-            for name, q in [("Fossil Gas", 10000.0), ("Nuclear", 5000.0), ("Wind Offshore", 6000.0),
-                            ("Wind Onshore", 3000.0), ("Solar", 0.0), ("Biomass", 2000.0), ("Other", 100.0)]:
+        if dataset == "FUELHH":
+            for name, q in [("CCGT", 10000.0), ("OCGT", 1000.0), ("NUCLEAR", 5000.0), ("WIND", 9000.0),
+                            ("BIOMASS", 2000.0), ("PS", 0.0), ("INTFR", 2000.0), ("INTNSL", -500.0)]:
+                recs.append({"dataset": "FUELHH", "publishTime": t.isoformat(), "startTime": t.isoformat(),
+                             "fuelType": name, "generation": q})
+            # korekta: późniejsza publikacja dla CCGT
+            recs.append({"dataset": "FUELHH", "publishTime": (t + pd.Timedelta(hours=1)).isoformat(),
+                         "startTime": t.isoformat(), "fuelType": "CCGT", "generation": 10500.0})
+        else:
+            for name, q in [("Solar", 1000.0), ("Wind Offshore", 6000.0), ("Wind Onshore", 3000.0), ("Fossil Gas", 1.0)]:
                 recs.append({"dataset": "AGPT", "documentRevisionNumber": 1, "publishTime": t.isoformat(),
                              "businessType": "Production", "psrType": name, "quantity": q, "startTime": t.isoformat()})
-            # korekta: późniejsza publikacja dla gazu
-            recs.append({"dataset": "AGPT", "documentRevisionNumber": 2, "publishTime": (t + pd.Timedelta(hours=1)).isoformat(),
-                         "businessType": "Production", "psrType": "Fossil Gas", "quantity": 11000.0, "startTime": t.isoformat()})
-        else:
-            recs.append({"dataset": "ATL", "documentRevisionNumber": 1, "publishTime": t.isoformat(),
-                         "quantity": 28000.0, "startTime": t.isoformat()})
     return recs
 
 
@@ -389,15 +395,61 @@ def test_elexon_gb(tmp_store, monkeypatch):
     monkeypatch.setattr(elexon, "_get", fake_elexon)
     monkeypatch.setattr(elexon.time, "sleep", lambda s: None)
     d, names = elexon.fetch_days(dt.date(2025, 10, 25), dt.date(2025, 10, 27))   # 26.10.2025 - zmiana czasu (25 h)
-    assert "Wind Offshore" in names
-    assert d.loc["2025-10-25", "gas"] == pytest.approx(11000 * 24)
-    assert d.loc["2025-10-26", "gas"] == pytest.approx(11000 * 25)
-    assert d.loc["2025-10-25", "wind_offshore"] == pytest.approx(6000 * 24)
-    assert d.loc["2025-10-25", "load"] == pytest.approx(28000 * 24)
-    assert (d["cov"] == 1.0).all()
+    assert "WIND" in names
+    assert d.loc["2025-10-25", "gas"] == pytest.approx(11500 * 24)
+    assert d.loc["2025-10-26", "gas"] == pytest.approx(11500 * 25)
+    assert d.loc["2025-10-25", "wind_offshore"] == pytest.approx(9000 * 24 * 2 / 3)
+    assert d.loc["2025-10-25", "solar"] == pytest.approx(1000 * 24)
+    assert d.loc["2025-10-25", "xborder"] == pytest.approx(1500 * 24)
+    assert d["load"].isna().all() and (d["cov"] == 1.0).all()
+    e, est = trends.derive(d, 0.8)
+    assert est and e.loc["2025-10-25", "load"] == pytest.approx((11500 + 5000 + 9000 + 2000 + 1000 + 1500) * 24 / 1000)
     settings = store.load_settings()
     settings["history_years"] = 0          # historia tylko od 1 stycznia bieżącego roku
     res = elexon.update(settings, [], budget_minutes=5)
     df = store.read_daily("GB")
     assert res["history_complete"] and df.index.min() == pd.Timestamp(dt.date.today().year, 1, 1)
     assert df["cov"].min() >= 0.8
+
+
+def test_weather_update_first_run(tmp_store, monkeypatch):
+    """Pierwszy przebieg: pusty cache pogody + historia z archiwum + prognoza (regresja błędu dtype)."""
+    from mixtracker import weather
+    monkeypatch.setattr(weather, "WEATHER", tmp_store / "weather")
+    rng = np.random.default_rng(2)
+
+    def fake_points(points, url, extra):
+        if "start_date" in extra:
+            a = pd.Timestamp(extra["start_date"]); b = pd.Timestamp(extra["end_date"]) + pd.Timedelta(days=1)
+        else:
+            today = pd.Timestamp.now(tz="UTC").normalize().tz_localize(None)
+            a = today - pd.Timedelta(days=extra["past_days"]); b = today + pd.Timedelta(days=extra["forecast_days"])
+        idx = pd.date_range(a, b, freq="h", inclusive="left", tz="UTC")
+        return [pd.DataFrame({"wind_speed_100m": rng.uniform(2, 14, len(idx)),
+                              "shortwave_radiation": rng.uniform(0, 300, len(idx)),
+                              "temperature_2m": rng.uniform(0, 20, len(idx))}, index=idx) for _ in points]
+
+    monkeypatch.setattr(weather, "fetch_points", fake_points)
+    end = dt.date.today() - dt.timedelta(days=1)
+    idx = pd.date_range(end - dt.timedelta(days=500), end, freq="D")
+    df = pd.DataFrame(0.0, index=idx, columns=store.COLUMNS)
+    df["cov"] = 1.0
+    df["wind_onshore"] = rng.uniform(1e4, 9e4, len(idx)); df["solar"] = rng.uniform(1e4, 5e4, len(idx))
+    df["gas"] = 2e5; df["load"] = 4e5
+    df.index.name = "date"
+    store.write_daily("PL", df)
+    countries = [c for c in store.load_countries() if c["code"] == "PL"]
+    log = []
+    res = weather.update(store.load_settings(), {"PL": store.read_daily("PL")}, trends.derive, countries, log)
+    assert not [m for m in log if "błąd" in m], log
+    assert "PL" in res and len(res["PL"]["days"]) == 7 and all(v is not None for v in res["PL"]["load"])
+    assert set(res["PL"]["errors"]) == {"wind", "solar", "load"}
+
+
+def test_movers_intensity_threshold():
+    def s(cur, ly):
+        base = {k: [None] * 6 for k in ["load"] + ["share_" + g for g in trends.GROUP_KEYS] + ["share_renewable"]}
+        base["intensity"] = [cur, None, ly, None, None, None]
+        return {"week": {**base, "_complete": True}}
+    m = trends.movers({"FR": s(16.0, 7.5), "BE": s(183.0, 79.0)}, {"FR": "Francja", "BE": "Belgia"}, {}, 10)
+    assert [x["code"] for x in m] == ["BE"]

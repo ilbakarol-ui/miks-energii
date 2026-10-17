@@ -54,7 +54,7 @@ Jeśli pierwszy przebieg wpiszesz z mniejszym limitem, historia uzupełni się s
   - **Udział OZE** = wiatr, słońce, woda (bez elektrowni szczytowo-pompowych), biomasa, geotermia, inne OZE.
   - Dni z pokryciem danych poniżej 80% są pomijane. Drobne luki w pojedynczej serii są uzupełniane proporcjonalnie.
   - Dane są poprawiane przez operatorów, dlatego tracker codziennie pobiera ponownie ostatnie 10 dni, a w niedziele ostatnie 45.
-- **Wielka Brytania**: [Elexon BMRS](https://bmrs.elexon.co.uk), Insights Solution API, zbiory AGPT (B1620) i ATL (B0610). Contains BMRS data © Elexon Limited copyright and database right. Zapis w `data/daily/GB.csv`.
+- **Wielka Brytania**: [Elexon BMRS](https://bmrs.elexon.co.uk), Insights Solution API: FUELHH (produkcja wg paliwa i interkonektory, co 30 min) oraz AGPT (B1620, tylko słońce i podział wiatru). Zbiory AGPT i ATL nie są podstawą, bo mają długie luki (całe typy znikają na tygodnie), a ATL zmienił definicję w 2026 r. Contains BMRS data © Elexon Limited copyright and database right. Zapis w `data/daily/GB.csv`.
 - **Ceny**: rynek dnia następnego (day-ahead) z Energy-Charts /price.
   - **Licencja**: Energy-Charts udostępnia na CC BY 4.0 (dane SMARD / Bundesnetzagentur) tylko strefy AT, BE, CH, CZ, DE-LU, DK1, DK2, FR, HU, IT-North, NL, NO2, PL, SE4 i SI. Ceny pozostałych stref są wyłącznie do użytku prywatnego i wewnętrznego, więc dashboard ich domyślnie nie pobiera.
   - Dla Włoch, Norwegii i Szwecji oznacza to tylko jedną strefę (IT-North, NO2, SE4), co dashboard opisuje przy cenie. Dla Danii to średnia DK1 i DK2.
@@ -74,7 +74,7 @@ Ustawienia (odstęp między zapytaniami, limit czasu, liczba dni do ponownego po
 ## Ograniczenia
 
 - Energy-Charts pozwala na ok. 2 zapytania na minutę na każdy rodzaj danych (produkcja, ceny, prognozy osobno), więc codzienny przebieg trwa ok. 20–30 minut. Nie skracaj `request_interval_seconds` poniżej 30.
-- **Wielka Brytania**: dane z Elexon BMRS (produkcja wg typu B1620 i obciążenie B0610, co 30 min, bez klucza API). Kod UK w Energy-Charts obejmuje tylko Irlandię Północną, która jest pokazana osobno. Dla GB nie ma ceny day-ahead na wolnej licencji. Elexon ma osobny limit czasu w przebiegu (`elexon_budget_minutes`, domyślnie 40 min); 5 lat historii pobiera się przy pierwszym przebiegu w ok. 30 min.
+- **Wielka Brytania**: dane z Elexon BMRS (bez klucza API). Produkcja z FUELHH obejmuje elektrownie przyłączone do sieci przesyłowej. Słońce pochodzi z AGPT (szacunek NESO dla instalacji rozproszonych). Rozproszona energetyka wiatrowa (ok. 2 GW średnio) nie jest ujęta, więc udział wiatru jest nieco zaniżony. Wiatr dzielony jest na ląd i morze według proporcji z AGPT. Zużycie liczone jest z bilansu: produkcja + saldo interkonektorów (oznaczone „szac.”), bez pompowania w elektrowniach szczytowo-pompowych. Kod UK w Energy-Charts obejmuje tylko Irlandię Północną, pokazaną osobno. Dla GB nie ma ceny day-ahead na wolnej licencji. Elexon ma osobny limit czasu w przebiegu (`elexon_budget_minutes`, domyślnie 40 min).
 - **Holandia**: od 18.09.2026 źródło raportuje zużycie i „inne” źródła inaczej (skok o ok. −30%), a produkcja ze słońca jest w nim zaniżona. Dashboard wykrywa takie skoki automatycznie i ostrzega przy kraju; porównania r/r są wtedy niewiarygodne.
 - Dni z brakującymi lub niepełnymi danymi są pobierane ponownie automatycznie (każdy zakres najwyżej raz na 7 dni).
 - Bez cen na wolnej licencji (np. Hiszpania, Rumunia, kraje bałtyckie) kafelek ceny i sekcja cen pokazują wyjaśnienie zamiast liczb.

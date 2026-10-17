@@ -127,7 +127,8 @@ def daily_features(frames: list[pd.DataFrame], points: list[dict], tz: str) -> p
 def read_cache(code: str) -> pd.DataFrame:
     p = WEATHER / f"{code}.csv"
     if not p.exists():
-        return pd.DataFrame(columns=FEATURES)
+        return pd.DataFrame({c: pd.Series(dtype=float) for c in FEATURES},
+                            index=pd.DatetimeIndex([], name="date"))
     return pd.read_csv(p, parse_dates=["date"], index_col="date").astype(float).sort_index()
 
 
@@ -160,13 +161,13 @@ def fit(feat: pd.DataFrame, y: pd.Series, kind: str, end: pd.Timestamp) -> np.nd
     df = df[(df.index >= start) & (df.index < end)].dropna()
     if len(df) < max(20, WINDOWS[kind] // 4) or df["y"].abs().sum() == 0:
         return None
-    X = _design(df, kind)
-    coef, *_ = np.linalg.lstsq(X, df["y"].to_numpy(), rcond=None)
+    X = _design(df, kind).astype(float)
+    coef, *_ = np.linalg.lstsq(X, df["y"].to_numpy(dtype=float), rcond=None)
     return coef
 
 
 def predict(coef: np.ndarray, feat: pd.DataFrame, kind: str) -> pd.Series:
-    return pd.Series(np.clip(_design(feat, kind) @ coef, 0, None), index=feat.index)
+    return pd.Series(np.clip(_design(feat.astype(float), kind).astype(float) @ coef, 0, None), index=feat.index)
 
 
 def model_error(feat: pd.DataFrame, y: pd.Series, kind: str, last: pd.Timestamp, days: int = 28) -> float | None:
@@ -262,7 +263,7 @@ def update(settings: dict, frames: dict[str, pd.DataFrame], derive, countries: l
                 log.append(f"{code}: historia pogody niedostępna ({e})")
         past = recent[recent.index < pd.Timestamp(today)]
         cache = pd.concat([cache[~cache.index.isin(past.index)], past]).sort_index()
-        cache = cache[cache.index >= need_from - pd.Timedelta(days=30)]
+        cache = cache[cache.index >= need_from - pd.Timedelta(days=30)].astype(float)
         write_cache(code, cache)
         fut = recent[recent.index >= pd.Timestamp(today)]
         e, _ = derive(frames[code], min_cov)
