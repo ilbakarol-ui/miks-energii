@@ -34,6 +34,7 @@ WINDOW_DAYS = 7
 FUEL = {"CCGT": "gas", "OCGT": "gas", "NUCLEAR": "nuclear", "COAL": "hard_coal", "OIL": "oil",
         "BIOMASS": "biomass", "NPSHYD": "hydro_ror", "PS": "hydro_pumped", "OTHER": "misc", "WIND": "wind"}
 OFFSHORE_SHARE_DEFAULT = 0.6   # udział morskich farm w wietrze przesyłowym, gdy AGPT nie pozwala go ustalić
+OFFSHORE_SHARE_RANGE = (0.35, 0.85)   # poza tym zakresem udział z AGPT uznawany za błędny (luki w danych offshore)
 
 
 class ElexonError(RuntimeError):
@@ -141,13 +142,30 @@ def split_wind(daily: pd.DataFrame, wind_daily: pd.Series, agpt_wind_daily: pd.S
                offshore_share: pd.Series) -> pd.DataFrame:
     """Rozdziela wiatr z FUELHH na ląd i morze wg udziału z AGPT (gdy AGPT pokrywa >= 50%
     wiatru FUELHH), inaczej wg mediany z wiarygodnych dni albo wartości domyślnej."""
-    ok = (agpt_wind_daily >= 0.5 * wind_daily) & (agpt_wind_daily <= 1.5 * wind_daily) & offshore_share.notna()
+    lo, hi = OFFSHORE_SHARE_RANGE
+    ok = ((agpt_wind_daily >= 0.5 * wind_daily) & (agpt_wind_daily <= 1.5 * wind_daily) & offshore_share.notna()
+          & (offshore_share >= lo) & (offshore_share <= hi))
     sh = offshore_share.where(ok)
     fill = float(sh.median()) if sh.notna().any() else OFFSHORE_SHARE_DEFAULT
     sh = sh.fillna(fill).clip(0, 1)
     daily["wind_offshore"] = wind_daily * sh
     daily["wind_onshore"] = wind_daily * (1 - sh)
     return daily
+
+
+def resplit_stored(df: pd.DataFrame) -> pd.DataFrame:
+    """Poprawia zapisany podział wiatru: dni z udziałem morskich farm spoza wiarygodnego
+    zakresu dostają medianę z wiarygodnych dni tego samego roku (albo wartość domyślną)."""
+    df = df.copy()
+    wind = df["wind_onshore"].fillna(0) + df["wind_offshore"].fillna(0)
+    share = (df["wind_offshore"] / wind).where(wind > 0)
+    lo, hi = OFFSHORE_SHARE_RANGE
+    ok = share.between(lo, hi)
+    med = share.where(ok).groupby(df.index.year).transform("median").fillna(OFFSHORE_SHARE_DEFAULT)
+    fix = (wind > 0) & ~ok
+    df.loc[fix, "wind_offshore"] = wind[fix] * med[fix]
+    df.loc[fix, "wind_onshore"] = wind[fix] * (1 - med[fix])
+    return df
 
 
 def fetch_days(a: dt.date, b: dt.date) -> tuple[pd.DataFrame, list[str]]:
@@ -215,6 +233,10 @@ def update(settings: dict, log: list, budget_minutes: float = 40) -> dict:
             st.pop(k, None)
         st["method"] = "fuelhh"
         log.append("GB: przejście na FUELHH - historia pobierana od nowa")
+    if st.get("wind_split") != 2 and not df.empty:
+        df = resplit_stored(df)
+        store.write_daily(CODE, df)
+        st["wind_split"] = 2
     yesterday = dt.datetime.now(ZoneInfo(TZ)).date() - dt.timedelta(days=1)
     min_cov = settings["min_day_coverage"]
 

@@ -154,12 +154,12 @@ def _design(f: pd.DataFrame, kind: str) -> np.ndarray:
 WINDOWS = {"wind": 120, "solar": 60, "load": 365}
 
 
-def fit(feat: pd.DataFrame, y: pd.Series, kind: str, end: pd.Timestamp) -> np.ndarray | None:
+def fit(feat: pd.DataFrame, y: pd.Series, kind: str, end: pd.Timestamp, min_n: int | None = None) -> np.ndarray | None:
     """Regresja liniowa na oknie kończącym się przed `end`."""
     start = end - pd.Timedelta(days=WINDOWS[kind])
     df = feat.join(y.rename("y"), how="inner")
     df = df[(df.index >= start) & (df.index < end)].dropna()
-    if len(df) < max(20, WINDOWS[kind] // 4) or df["y"].abs().sum() == 0:
+    if len(df) < (min_n or max(20, WINDOWS[kind] // 4)) or df["y"].abs().sum() == 0:
         return None
     X = _design(df, kind).astype(float)
     coef, *_ = np.linalg.lstsq(X, df["y"].to_numpy(dtype=float), rcond=None)
@@ -170,10 +170,11 @@ def predict(coef: np.ndarray, feat: pd.DataFrame, kind: str) -> pd.Series:
     return pd.Series(np.clip(_design(feat.astype(float), kind).astype(float) @ coef, 0, None), index=feat.index)
 
 
-def model_error(feat: pd.DataFrame, y: pd.Series, kind: str, last: pd.Timestamp, days: int = 28) -> float | None:
+def model_error(feat: pd.DataFrame, y: pd.Series, kind: str, last: pd.Timestamp, days: int = 28,
+                min_n: int | None = None) -> float | None:
     """Błąd (suma |błędów| / suma wartości, %) na ostatnich `days` dniach, model bez tych dni."""
     cut = last - pd.Timedelta(days=days - 1)
-    coef = fit(feat, y, kind, cut)
+    coef = fit(feat, y, kind, cut, min_n)
     if coef is None:
         return None
     test = feat.join(y.rename("y"), how="inner")
@@ -206,13 +207,22 @@ def forecast_country(code: str, hist: pd.DataFrame, fut: pd.DataFrame, e: pd.Dat
                 out[kind] = [0.0] * days
                 out["methods"][kind] = METHOD
             continue
-        coef = fit(hist, y, kind, last + pd.Timedelta(days=1))
+        min_n = None
+        if kind == "load":
+            # po nagłym skoku w danych źródła (zmiana metodologii) model uczy się tylko na danych po skoku
+            from .trends import detect_break
+            brk = detect_break(e, last.date())
+            if brk:
+                y = y[y.index >= pd.Timestamp(brk["date"])]
+                min_n = 14
+                out.setdefault("notes", {})["load"] = f"model uczony od {brk['date']} (skok w danych źródła)"
+        coef = fit(hist, y, kind, last + pd.Timedelta(days=1), min_n)
         if coef is None or fut[FEATURES].isna().all().all():
             continue
         p = predict(coef, fut[FEATURES].ffill(), kind)
         out[kind] = [None if pd.isna(v) else round(float(v), 2) for v in p.tolist()]
         out["methods"][kind] = METHOD
-        out["errors"][kind] = model_error(hist, y, kind, last)
+        out["errors"][kind] = model_error(hist, y, kind, last, days=14 if min_n else 28, min_n=min_n)
     if not any(k in out for k in TARGETS):
         return None
     return out

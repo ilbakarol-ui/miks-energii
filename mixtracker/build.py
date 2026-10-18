@@ -96,7 +96,7 @@ def forecast_block(fc: dict, e: pd.DataFrame, ref: dt.date, n_years: int, min_ye
     recent_idx = pd.date_range(pd.Timestamp(ref) - pd.Timedelta(days=13), pd.Timestamp(ref), freq="D")
     rb = e.reindex(recent_idx) if not e.empty else pd.DataFrame(index=recent_idx)
     recent_dates = [d.strftime("%Y-%m-%d") for d in recent_idx]
-    out = {"issued": fc["issued"], "days": days, "methods": fc.get("methods", {}), "errors": fc.get("errors", {}),
+    out = {"issued": fc["issued"], "days": days, "methods": fc.get("methods", {}), "errors": fc.get("errors", {}), "notes": fc.get("notes", {}),
            "recent": {"dates": recent_dates}, "band": {}}
     for key in ["solar", "wind", "load"]:
         if fc.get(key) is None:

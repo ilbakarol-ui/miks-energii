@@ -470,3 +470,25 @@ def test_price_ahead_and_map(tmp_store):
     assert pm["countries"]["PL"]["avg"][-1] == pytest.approx((11 * 50 + 12 * 150 - 10) / 24, abs=0.1)
     assert pm["countries"]["ES"]["zones"] == [] and pm["countries"]["ES"]["all"] == ["ES"]
     assert "PL" in pm["geo"]["countries"] and pm["geo"]["w"] > 0
+
+
+def test_gb_resplit_and_break_model():
+    from mixtracker import elexon, weather
+    idx = pd.date_range("2024-01-01", "2024-12-31", freq="D")
+    df = pd.DataFrame(0.0, index=idx, columns=store.COLUMNS)
+    df["wind_offshore"] = 600.0; df["wind_onshore"] = 400.0
+    df.loc["2024-05":"2024-10", ["wind_offshore", "wind_onshore"]] = [150.0, 850.0]   # luka offshore w AGPT
+    r = elexon.resplit_stored(df)
+    assert (r["wind_offshore"] + r["wind_onshore"]).eq(1000).all()
+    assert r.loc["2024-07-01", "wind_offshore"] == pytest.approx(600.0)
+    # model zużycia po skoku w danych uczy się tylko na nowym poziomie
+    rng = np.random.default_rng(3)
+    idx = pd.date_range("2025-09-01", "2026-10-15", freq="D")
+    f = pd.DataFrame({"ws": 8.0, "ghi": 3.0, "temp": 10 + 8 * np.sin(np.arange(len(idx)) / 58)}, index=idx)
+    f["cf"] = weather.turbine_cf(f["ws"]); f["hdd"] = (15.5 - f["temp"]).clip(lower=0); f["cdd"] = 0.0
+    e = pd.DataFrame(index=idx)
+    e["load"] = np.where(idx < pd.Timestamp("2026-09-18"), 330.0, 220.0) + 3 * f["hdd"] + rng.normal(0, 1, len(idx))
+    e["wind"] = 50.0; e["solar"] = 10.0; e["gen_total"] = 300.0
+    fut = f.iloc[-7:].copy(); fut.index = pd.date_range("2026-10-16", periods=7, freq="D")
+    fc = weather.forecast_country("NL", f[weather.FEATURES], fut[weather.FEATURES], e, dt.date(2026, 10, 16))
+    assert 200 < fc["load"][0] < 270 and "load" in fc["notes"]
