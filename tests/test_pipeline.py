@@ -596,3 +596,52 @@ def test_verify_operational():
     assert pl["leads"]["0"]["skill_pers"] == pytest.approx(100)
     eu = out["EU"]["wind"]                                  # suma krajów, nie wiersze "EU" z archiwum
     assert eu["countries"] == 2 and eu["leads"]["1"]["bias"] == pytest.approx(10)
+
+
+def test_model_calendar():
+    from mixtracker import model
+    idx = pd.date_range("2026-01-01", "2026-12-31", freq="D")
+    c = model.calendar(idx, "PL")
+    assert c.loc["2026-11-11", "hol"] == 1            # Święto Niepodległości (środa)
+    assert c.loc["2026-01-05", "bridge"] == 1         # poniedziałek przed Trzech Króli (wtorek)
+    assert c.loc["2026-12-28", "xmas"] == 1 and c.loc["2026-12-28", "hol"] == 0
+    assert c.loc["2026-10-19"].sum() == 0
+    assert model.calendar(idx, "GB").loc["2026-08-31", "hol"] == 1     # Summer Bank Holiday (Anglia)
+    assert model.calendar(idx, "UK").loc["2026-07-13", "hol"] == 1     # Battle of the Boyne (Irlandia Płn., dzień wolny)
+
+
+def test_model_gaps_and_correction():
+    from mixtracker import model
+    f, e = _synthetic()
+    # luka w źródle: 40 dni produkcji ze słońca bliskiej zera przy normalnej pogodzie
+    y = e["solar"].copy()
+    gap = (y.index >= "2026-08-01") & (y.index < "2026-09-10")
+    y[gap] = 0.05
+    bad = model.bad_days(y, f, "solar")
+    assert bad.isin(y.index[gap]).sum() >= 38 and len(bad) <= 42
+    m = model.fit(f, y, "solar", pd.Timestamp("2026-09-20"))
+    assert m.coef[1] == pytest.approx(6, rel=0.02)    # model nie uczy się luki
+    # zużycie: trwały skok poziomu o 15% od 1.10 - korekta z ostatniego dnia przejmuje nowy poziom
+    load = e["load"].copy()
+    load[load.index >= "2026-10-01"] *= 1.15
+    t = pd.Timestamp("2026-10-15")
+    m1 = model.fit(f, load, "load", t, code="PL")
+    m0 = model.fit(f, load, "load", t, code="PL", ar=False)
+    p1 = model.forecast(m1, f, load[load.index < t], [t])
+    p0 = model.forecast(m0, f, load[load.index < t], [t])
+    err1, err0 = abs(p1.iloc[0] / load[t] - 1), abs(p0.iloc[0] / load[t] - 1)
+    assert m1.rho[0] > 0.5 and err1 < 0.5 * err0
+    assert all(m1.rho[i] >= m1.rho[i + 1] for i in range(len(m1.rho) - 1))
+
+
+def test_verify_backtest_leads_and_members():
+    from mixtracker import verify
+    f, e = _synthetic()
+    f2, e2 = _synthetic(10.0)
+    out = verify.verify_all({"PL": f, "DE": f2, "NO": f}, {"PL": e, "DE": e2, "NO": e}, None,
+                            dt.date(2026, 10, 18), days=30, members={"PL", "DE"})
+    r = out["backtest"]["PL"]["load"]
+    assert sorted(r["leads"]) == [str(k) for k in range(7)]
+    assert out["backtest"]["EU"]["wind"]["countries"] == 2           # NO poza UE-27
+    assert sorted(out["backtest"]["EU"]["wind"]["leads"]) == [str(k) for k in range(7)]
+    json.dumps(out)

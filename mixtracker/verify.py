@@ -25,7 +25,7 @@ import datetime as dt
 import numpy as np
 import pandas as pd
 
-from . import trends, weather
+from . import model, trends
 
 KINDS = ["wind", "solar", "load"]
 
@@ -60,38 +60,114 @@ def climatology(e: pd.DataFrame, dates: list[pd.Timestamp], key: str, n_years: i
 
 
 def backtest(feat: pd.DataFrame, e: pd.DataFrame, kind: str, end: pd.Timestamp, days: int = 90,
-             refit: int = 7, n_years: int = 5, min_years: int = 3) -> dict | None:
-    """Test wsteczny jednego modelu na `days` dniach kończących się w `end` (włącznie)."""
+             refit: int = 7, n_years: int = 5, min_years: int = 3, code: str | None = None,
+             leads: int = 7, opts: dict | None = None) -> dict | None:
+    """Test wsteczny modelu na `days` dniach kończących się w `end` (włącznie).
+
+    Dla dnia t i wyprzedzenia k (0 = prognoza na dzień wydania) prognoza jest wydawana w dniu
+    t − k: znane są dane do dnia t − k − 1, model jest dopasowany najpóźniej w dniu wydania
+    (ponowne dopasowanie co `refit` dni), a pogoda jest rzeczywista. Wynik główny: k = 0.
+    """
+    opts = opts or {}
     if feat.empty or e.empty or kind not in e:
         return None
     y = e[kind].dropna()
     if y.empty or y.tail(60).abs().sum() == 0:
         return None
+    end = pd.Timestamp(end)
+    bad = model.bad_days(y, feat, kind) if opts.get("gaps", True) else pd.DatetimeIndex([])
+    yc = y.drop(bad, errors="ignore")
     test_days = pd.date_range(end - pd.Timedelta(days=days - 1), end, freq="D")
-    preds = {}
-    coef, fitted_at = None, None
+    first_issue = test_days[0] - pd.Timedelta(days=leads - 1)
+    fit_dates = list(pd.date_range(first_issue, end, freq=f"{refit}D"))
+    fits = {}
+    for fd in fit_dates:
+        fits[fd] = model.fit(feat, y, kind, fd, code, bad=bad, **opts)
+    # szybka ścieżka (to samo co model.forecast): część pogodowa i błędy liczone raz dla każdego dopasowania
+    rng = pd.date_range(first_issue - pd.Timedelta(days=model.MAX_LAG + 7), end, freq="D")
+    fr = feat.reindex(rng)
+    okf = fr[model.NEED[kind]].notna().all(axis=1).to_numpy()
+    pre = {}
+    for fd, m in fits.items():
+        if m is None:
+            continue
+        b = model.base(m, fr.fillna(0)).to_numpy()
+        b = np.where(okf, b, np.nan)
+        r = pd.Series(yc.reindex(rng).to_numpy() - b, index=rng)
+        pre[fd] = (m, pd.Series(b, index=rng), r)
+    known = yc.index.sort_values()
+    preds: dict[int, dict] = {k: {} for k in range(leads)}
     for t in test_days:
-        if t not in feat.index or t not in y.index:
+        if t not in yc.index:
             continue
-        if coef is None or (t - fitted_at).days >= refit:
-            coef = weather.fit(feat, y, kind, t)
-            fitted_at = t
-        if coef is None:
-            continue
-        row = feat.loc[[t], weather.FEATURES].astype(float)
-        if row.isna().any(axis=1).iloc[0]:
-            continue
-        preds[t] = float(weather.predict(coef, row, kind).iloc[0])
-    if len(preds) < 10:
+        for k in range(leads):
+            issue = t - pd.Timedelta(days=k)
+            fd = max((d for d in fit_dates if d <= issue), default=None)
+            if fd not in pre:
+                continue
+            m, b, r = pre[fd]
+            bt = b.get(t)
+            if bt is None or np.isnan(bt):
+                continue
+            p = bt
+            if m.rho.any():
+                i = known.searchsorted(issue) - 1
+                if i >= 0:
+                    last = known[i]
+                    z = r.loc[last - pd.Timedelta(days=m.ar_days - 1):last].dropna()
+                    h = (t - last).days
+                    if len(z) and 1 <= h <= model.MAX_LAG:
+                        p = bt + m.rho[h - 1] * float(z.mean())
+            preds[k][t] = max(0.0, float(p))
+    if len(preds[0]) < 10:
         return None
-    f = pd.Series(preds)
-    act = y.reindex(f.index)
-    pers = y.shift(1, freq="D").reindex(f.index)            # wartość z poprzedniego dnia
+    f = pd.Series(preds[0])
+    act = yc.reindex(f.index)
+    pers = yc.shift(1, freq="D").reindex(f.index)            # wartość z dnia przed wydaniem
     clim = climatology(e[[kind]], list(f.index), kind, n_years, min_years)
     out = summarize(f, act, pers, clim)
-    if out is not None:
-        out["_raw"] = pd.DataFrame({"f": f, "y": act, "pers": pers, "clim": clim})
+    if out is None:
+        return None
+    by_lead = {}
+    for k in range(leads):
+        fk = pd.Series(preds[k], dtype=float)
+        if len(fk) < 10:
+            continue
+        pk = yc.shift(k + 1, freq="D").reindex(fk.index)       # persystencja: ostatni znany dzień
+        sc = scores(fk, yc.reindex(fk.index), {"pers": pk, "clim": clim.reindex(fk.index)})
+        if sc:
+            by_lead[str(k)] = sc
+    out["leads"] = by_lead
+    out["gaps"] = int(((bad >= test_days[0]) & (bad <= end)).sum())
+    raw = pd.DataFrame({"y": yc.reindex(test_days), "clim": clim.reindex(test_days)}, index=test_days)
+    for k in range(leads):
+        raw[f"f{k}"] = pd.Series(preds[k], dtype=float).reindex(test_days)
+        raw[f"p{k}"] = yc.shift(k + 1, freq="D").reindex(test_days)
+    out["_raw"] = raw
     return out
+
+
+def aggregate(parts: list[pd.DataFrame], leads: int = 7) -> dict | None:
+    """Wynik dla sumy krajów (UE-27). Dzień liczy się, gdy wartość jest dla wszystkich krajów."""
+    if len(parts) < 2:
+        return None
+    # kraj bez klimatologii (krótka historia, np. CY) - w sumie jego udział zastępuje persystencja
+    parts = [p.assign(clim=p["clim"].fillna(p["p0"])) for p in parts]
+    tot = pd.concat(parts).groupby(level=0).sum(min_count=len(parts))
+    if tot[["f0", "y"]].dropna().shape[0] < 10:
+        return None
+    r = summarize(tot["f0"].dropna(), tot["y"], tot["p0"], tot["clim"])
+    if not r:
+        return None
+    r["leads"] = {}
+    for k in range(leads):
+        if f"f{k}" not in tot:
+            continue
+        sc = scores(tot[f"f{k}"], tot["y"], {"pers": tot[f"p{k}"], "clim": tot["clim"]})
+        if sc:
+            r["leads"][str(k)] = sc
+    r["countries"] = len(parts)
+    return r
 
 
 def summarize(f: pd.Series, act: pd.Series, pers: pd.Series, clim: pd.Series) -> dict | None:
@@ -122,7 +198,8 @@ def _lead_scores(g: pd.DataFrame) -> dict:
     return leads
 
 
-def operational(archive: pd.DataFrame, actual: dict[str, pd.DataFrame], days_back: int = 90) -> dict:
+def operational(archive: pd.DataFrame, actual: dict[str, pd.DataFrame], days_back: int = 90,
+                members: set[str] | None = None, feats: dict | None = None) -> dict:
     """Weryfikacja zapisanych prognoz wg wyprzedzenia. actual[code] - ramka z kolumnami wind/solar/load (GWh).
 
     UE łącznie liczona jest z sumy krajów (prognoz i wartości rzeczywistych), tylko dla par
@@ -142,11 +219,13 @@ def operational(archive: pd.DataFrame, actual: dict[str, pd.DataFrame], days_bac
         if e is None or kind not in e:
             continue
         y = e[kind].dropna()
+        y = y.drop(model.bad_days(y, (feats or {}).get(code), kind), errors="ignore")   # luki w danych źródła
         g = g.assign(d=pd.to_datetime(g["date"]), i=pd.to_datetime(g["issued"]))
         g["y"] = g["d"].map(y)
         # persystencja: ostatni znany dzień w chwili wydania (dzień przed wydaniem)
         g["pers"] = (g["i"] - pd.Timedelta(days=1)).map(y)
-        eu.setdefault(kind, []).append(g[["issued", "date", "lead", "gwh", "y", "pers"]])
+        if members is None or code in members:
+            eu.setdefault(kind, []).append(g[["issued", "date", "lead", "gwh", "y", "pers"]])
         g = g.dropna(subset=["y"])
         if g.empty:
             continue
@@ -173,7 +252,8 @@ def operational(archive: pd.DataFrame, actual: dict[str, pd.DataFrame], days_bac
 
 
 def verify_all(feats: dict[str, pd.DataFrame], derived: dict[str, pd.DataFrame], archive: pd.DataFrame | None,
-               ref: dt.date, days: int = 90, n_years: int = 5, min_years: int = 3) -> dict:
+               ref: dt.date, days: int = 90, n_years: int = 5, min_years: int = 3,
+               members: set[str] | None = None) -> dict:
     end = pd.Timestamp(ref)
     bt: dict = {}
     raw: dict = {}
@@ -183,27 +263,17 @@ def verify_all(feats: dict[str, pd.DataFrame], derived: dict[str, pd.DataFrame],
             continue
         for kind in KINDS:
             try:
-                r = backtest(feat, e, kind, end, days, n_years=n_years, min_years=min_years)
+                r = backtest(feat, e, kind, end, days, n_years=n_years, min_years=min_years, code=code)
             except Exception:   # weryfikacja jest dodatkiem - błąd jednego kraju nie zatrzymuje raportu
                 r = None
             if r:
                 raw[(code, kind)] = r.pop("_raw")
                 bt.setdefault(code, {})[kind] = r
-    # UE łącznie: suma prognoz i wartości krajów, tylko dni, w których są wszystkie kraje danej wielkości
+    # UE-27 łącznie: suma krajów członkowskich
     for kind in KINDS:
-        parts = [v for (c, k), v in raw.items() if k == kind]
-        if len(parts) < 2:
-            continue
-        # kraj bez klimatologii (krótka historia, np. CY) - w sumie UE jego udział zastępuje persystencja
-        parts = [p.assign(clim=p["clim"].fillna(p["pers"])) for p in parts]
-        df = pd.concat(parts, keys=range(len(parts)))
-        full = df.dropna(subset=["f", "y"]).groupby(level=1).size() == len(parts)
-        tot = df.groupby(level=1).sum(min_count=len(parts))
-        tot = tot[full.reindex(tot.index, fill_value=False)]
-        if len(tot) >= 10:
-            r = summarize(tot["f"], tot["y"], tot["pers"], tot["clim"])
-            if r:
-                r["countries"] = len(parts)
-                bt.setdefault("EU", {})[kind] = r
-    op = operational(archive, derived) if archive is not None else {}
+        parts = [v for (c, k), v in raw.items() if k == kind and (members is None or c in members)]
+        r = aggregate(parts)
+        if r:
+            bt.setdefault("EU", {})[kind] = r
+    op = operational(archive, derived, members=members, feats=feats) if archive is not None else {}
     return {"backtest": bt, "operational": op, "days": days, "ref": ref.isoformat()}

@@ -3,10 +3,12 @@
 Energy-Charts publikuje prognozy tylko na 1-2 dni, więc tracker liczy własną prognozę:
 1. Pogoda dla kilku punktów w każdym kraju (config/weather_points.csv): prędkość wiatru
    na 100 m, promieniowanie słoneczne, temperatura - historia (ERA5) i prognoza na 8 dni.
-2. Dla każdego kraju prosty model dopasowany do jego własnej historii produkcji:
-   - wiatr: produkcja ~ wskaźnik mocy turbiny z prędkości wiatru (ostatnie 120 dni),
-   - słońce: produkcja ~ promieniowanie (ostatnie 60 dni),
-   - zużycie: ~ dni grzewcze i chłodnicze + dzień tygodnia (ostatnie 365 dni).
+2. Dla każdego kraju model dopasowany do jego własnej historii (szczegóły w model.py):
+   - wiatr: produkcja ~ wskaźnik mocy turbiny z prędkości wiatru (120 dni, nowsze ważą więcej),
+   - słońce: produkcja ~ promieniowanie (90 dni, nowsze ważą więcej),
+   - zużycie: ~ dni grzewcze i chłodnicze, dzień tygodnia, święta (365 dni),
+   - korekta błędem z ostatnich znanych dni, zanikająca z wyprzedzeniem,
+   - dni z luką w danych źródła pomijane.
 3. Błąd modelu = błąd na ostatnich 28 dniach przy znanej pogodzie (model dopasowany
    bez tych dni). Nie obejmuje błędu samej prognozy pogody.
 
@@ -24,7 +26,7 @@ import numpy as np
 import pandas as pd
 import requests
 
-from . import store
+from . import model, store
 
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
@@ -163,50 +165,7 @@ def write_cache(code: str, df: pd.DataFrame):
     out.round(4).to_csv(WEATHER / f"{code}.csv")
 
 
-# ---------- modele ----------
-
-def _design(f: pd.DataFrame, kind: str) -> np.ndarray:
-    if kind == "wind":
-        return np.column_stack([np.ones(len(f)), f["cf"], f["cf"] ** 2])
-    if kind == "solar":
-        return np.column_stack([np.ones(len(f)), f["ghi"]])
-    dow = f.index.dayofweek
-    return np.column_stack([np.ones(len(f)), f["hdd"], f["cdd"], (dow == 5).astype(float), (dow == 6).astype(float)])
-
-
-WINDOWS = {"wind": 120, "solar": 60, "load": 365}
-
-
-def fit(feat: pd.DataFrame, y: pd.Series, kind: str, end: pd.Timestamp, min_n: int | None = None) -> np.ndarray | None:
-    """Regresja liniowa na oknie kończącym się przed `end`."""
-    start = end - pd.Timedelta(days=WINDOWS[kind])
-    df = feat.join(y.rename("y"), how="inner")
-    df = df[(df.index >= start) & (df.index < end)].dropna()
-    if len(df) < (min_n or max(20, WINDOWS[kind] // 4)) or df["y"].abs().sum() == 0:
-        return None
-    X = _design(df, kind).astype(float)
-    coef, *_ = np.linalg.lstsq(X, df["y"].to_numpy(dtype=float), rcond=None)
-    return coef
-
-
-def predict(coef: np.ndarray, feat: pd.DataFrame, kind: str) -> pd.Series:
-    return pd.Series(np.clip(_design(feat.astype(float), kind).astype(float) @ coef, 0, None), index=feat.index)
-
-
-def model_error(feat: pd.DataFrame, y: pd.Series, kind: str, last: pd.Timestamp, days: int = 28,
-                min_n: int | None = None) -> float | None:
-    """Błąd (suma |błędów| / suma wartości, %) na ostatnich `days` dniach, model bez tych dni."""
-    cut = last - pd.Timedelta(days=days - 1)
-    coef = fit(feat, y, kind, cut, min_n)
-    if coef is None:
-        return None
-    test = feat.join(y.rename("y"), how="inner")
-    test = test[(test.index >= cut) & (test.index <= last)].dropna()
-    if len(test) < days // 2 or test["y"].sum() <= 0:
-        return None
-    p = predict(coef, test[FEATURES], kind)
-    return round(float(100 * (p - test["y"]).abs().sum() / test["y"].sum()), 1)
-
+# ---------- modele (mixtracker/model.py) ----------
 
 TARGETS = {"wind": "wind", "solar": "solar", "load": "load"}
 
@@ -240,13 +199,16 @@ def forecast_country(code: str, hist: pd.DataFrame, fut: pd.DataFrame, e: pd.Dat
                 y = y[y.index >= pd.Timestamp(brk["date"])]
                 min_n = 14
                 out.setdefault("notes", {})["load"] = f"model uczony od {brk['date']} (skok w danych źródła)"
-        coef = fit(hist, y, kind, last + pd.Timedelta(days=1), min_n)
-        if coef is None or fut[FEATURES].isna().all().all():
+        y_all = y
+        bad = model.bad_days(y_all, hist, kind)
+        m = model.fit(hist, y_all, kind, last + pd.Timedelta(days=1), code, min_n, bad=bad)
+        if m is None or fut[FEATURES].isna().all().all():
             continue
         # dni bez prognozy pogody zostają puste (bez przenoszenia ostatniej wartości)
-        need = {"wind": ["cf"], "solar": ["ghi"], "load": ["hdd", "cdd"]}[kind]
-        ok = fut[need].notna().all(axis=1)
-        p = predict(coef, fut[FEATURES].fillna(0), kind).where(ok)
+        allf = pd.concat([hist[~hist.index.isin(fut.index)], fut]).sort_index()
+        p = model.forecast(m, allf, y_all.drop(bad, errors="ignore"), sel, gaps=False)
+        if bad.size and (bad >= last - pd.Timedelta(days=89)).any():
+            out.setdefault("gaps", {})[kind] = int((bad >= last - pd.Timedelta(days=89)).sum())
         out[kind] = [None if pd.isna(v) else round(float(v), 2) for v in p.tolist()]
         out["methods"][kind] = METHOD
         if kind == "wind":
@@ -256,11 +218,11 @@ def forecast_country(code: str, hist: pd.DataFrame, fut: pd.DataFrame, e: pd.Dat
                 hi = (pd.Timestamp(today) + pd.Timedelta(days=days)).tz_localize(tz).tz_convert("UTC")
                 hh = hourly[(hourly.index >= lo) & (hourly.index < hi)]
                 if len(hh) >= 24:
-                    mw = hourly_wind_mw(coef, hh, p, tz).where(hh["cf"].notna().to_numpy())
+                    mw = hourly_wind_mw(m.coef, hh, p, tz).where(hh["cf"].notna().to_numpy())
                     out["wind_hourly"] = {"start": hh.index[0].strftime("%Y-%m-%dT%H:%MZ"),
                                           "mw": [None if pd.isna(v) else round(float(v), 0) for v in mw.tolist()],
                                           "ws": [None if pd.isna(v) else round(float(v), 1) for v in hh["ws"].tolist()]}
-        out["errors"][kind] = model_error(hist, y, kind, last, days=14 if min_n else 28, min_n=min_n)
+        out["errors"][kind] = model.model_error(hist, y, kind, last, days=14 if min_n else 28, code=code, min_n=min_n)
     if not any(k in out for k in TARGETS):
         return None
     return out

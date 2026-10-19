@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from . import forecast, prices, store, trends, verify, weather
+from . import forecast, model, prices, store, trends, verify, weather
 from .categories import DETAIL, DETAIL_KEYS, GROUPS, GROUP_KEYS
 
 TEMPLATE = Path(__file__).with_name("template.html")
@@ -169,6 +169,7 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
             "prices": ", ".join(used) if used else ("brak (strefy tylko do użytku prywatnego)" if allz else "brak strefy"),
             "forecast": _fc_status(fc),
             "break": brk,
+            "gaps": _gap_info(e, code, ref),
         }
 
     names = {c["code"]: c["name"] for c in countries}
@@ -199,7 +200,8 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
         "prices": price_info,
         "price_map": price_map(zones_ok, zones_all, countries),
         "wind_tab": wind_tab(fc_raw, winds, n_years, min_years),
-        "verify": _verify(derived, ref, settings, n_years, min_years),
+        "verify": _verify(derived, ref, settings, n_years, min_years,
+                          {c["code"] for c in countries if c.get("group") == "UE"}),
         "factors": {k: v for k, v in trends.emission_factors().items() if v > 0},
         "control": control,
     }
@@ -309,7 +311,37 @@ def wind_tab(fcs: dict, winds: dict[str, pd.Series], n_years: int, min_years: in
     return out
 
 
-def _verify(derived: dict, ref: dt.date, settings: dict, n_years: int, min_years: int) -> dict:
+GAP_LABEL = {"wind": "wiatr", "solar": "słońce", "load": "zużycie"}
+
+
+def _gap_info(e: pd.DataFrame, code: str, ref: dt.date, days: int = 90) -> dict:
+    """Dni z ewidentną luką w danych źródła w ostatnich `days` dniach (pomijane w modelu i weryfikacji)."""
+    try:
+        feat = weather.read_cache(code)
+    except Exception:
+        feat = None
+    out = {}
+    lo = pd.Timestamp(ref) - pd.Timedelta(days=days - 1)
+    for kind in ("wind", "solar", "load"):
+        if kind not in e or e[kind].dropna().empty:
+            continue
+        bad = model.bad_days(e[kind], feat, kind)
+        bad = bad[(bad >= lo) & (bad <= pd.Timestamp(ref))]
+        if not len(bad):
+            continue
+        ranges, start, prev = [], bad[0], bad[0]
+        for d in bad[1:]:
+            if (d - prev).days > 1:
+                ranges.append([start.strftime("%Y-%m-%d"), prev.strftime("%Y-%m-%d")])
+                start = d
+            prev = d
+        ranges.append([start.strftime("%Y-%m-%d"), prev.strftime("%Y-%m-%d")])
+        out[kind] = {"n": int(len(bad)), "ranges": ranges[-3:]}
+    return out
+
+
+def _verify(derived: dict, ref: dt.date, settings: dict, n_years: int, min_years: int,
+            members: set | None = None) -> dict:
     if not settings.get("verify", True):
         return {}
     feats = {code: weather.read_cache(code) for code in derived}
@@ -318,7 +350,8 @@ def _verify(derived: dict, ref: dt.date, settings: dict, n_years: int, min_years
         arch = pd.read_csv(forecast.ARCHIVE, dtype={"issued": str, "date": str})
         # tylko prognozy modelu pogodowego (pierwsze wpisy z 16.10.2026 to prognozy Energy-Charts)
         arch = arch[arch["issued"] >= settings.get("verify_archive_from", "2026-10-17")]
-    out = verify.verify_all(feats, derived, arch, ref, settings.get("verify_days", 90), n_years, min_years)
+    out = verify.verify_all(feats, derived, arch, ref, settings.get("verify_days", 90), n_years, min_years,
+                            members=members)
     out["archive_from"] = settings.get("verify_archive_from", "2026-10-17")
     return out
 

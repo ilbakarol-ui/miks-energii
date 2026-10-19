@@ -502,7 +502,7 @@ footer a, .notes a { color: var(--accent); }
       </section>
     </div>
     <section aria-labelledby="h-vo">
-      <div class="head"><h2 id="h-vo">Prognozy operacyjne wg wyprzedzenia</h2><span class="small muted" id="v-op-label"></span></div>
+      <div class="head"><h2 id="h-vo">Trafność wg wyprzedzenia</h2><span class="small muted" id="v-op-label"></span></div>
       <div class="panel" id="v-op"></div>
     </section>
     <section aria-labelledby="h-vt">
@@ -515,7 +515,15 @@ footer a, .notes a { color: var(--accent); }
       <div class="panel method">
         <p>Prognozy wiatru, słońca i zużycia są sprawdzane na dwa sposoby, bo mają dwa źródła błędu: prognozę pogody i model, który przelicza pogodę na energię.</p>
         <h3>1. Test wsteczny modelu</h3>
-        <p>Dla każdego z ostatnich <span class="v-days2"></span> dni model jest dopasowywany tylko do danych sprzed tego dnia (tak jak w prognozie dziennej: wiatr z ostatnich 120 dni, słońce z 60, zużycie z 365; dopasowanie odświeżane co 7 dni), a następnie dostaje rzeczywistą pogodę z tego dnia: reanalizę ERA5 i analizę Open-Meteo. Wynik porównywany jest z produkcją albo zużyciem, które faktycznie wystąpiły. Ten test mierzy błąd samego modelu. Pokazuje, jak dobra byłaby prognoza przy idealnej prognozie pogody, więc jest to górna granica trafności.</p>
+        <p>Dla każdego z ostatnich <span class="v-days2"></span> dni i każdego wyprzedzenia (0–6 dni) odtwarzana jest sytuacja z dnia wydania prognozy: model jest dopasowany tylko do danych sprzed tego dnia (dopasowanie odświeżane co 7 dni), korekta korzysta tylko z dni znanych w chwili wydania, a pogoda jest rzeczywista: reanaliza ERA5 i analiza Open-Meteo. Wynik porównywany jest z produkcją albo zużyciem, które faktycznie wystąpiły. Ten test mierzy błąd samego modelu. Pokazuje, jak dobra byłaby prognoza przy idealnej prognozie pogody, więc jest to górna granica trafności.</p>
+        <h3>Model, który jest sprawdzany</h3>
+        <ul>
+          <li><b>Wiatr:</b> krzywa mocy turbiny z prędkości wiatru na 100 m w kilku punktach kraju, dopasowana do produkcji z ostatnich 120 dni. Nowsze dni ważą więcej (waga maleje o połowę co 30 dni).</li>
+          <li><b>Słońce:</b> promieniowanie słoneczne, ostatnie 90 dni, waga maleje o połowę co 15 dni, żeby model nadążał za zmianą wysokości słońca w ciągu roku.</li>
+          <li><b>Zużycie:</b> dni grzewcze i chłodnicze, dzień tygodnia, święta państwowe, dni pomostowe i okres 24.12–1.01, ostatnie 365 dni.</li>
+          <li><b>Korekta z ostatnich dni:</b> błąd modelu z ostatniego znanego dnia (dla wiatru i słońca średnia z 3 dni) jest przenoszony na prognozę z wagą, która maleje z wyprzedzeniem. Wagi są szacowane z historii błędów każdego kraju. Dzięki temu model szybko łapie zmiany, których pogoda nie tłumaczy, np. przyrost mocy, ograniczenia pracy farm albo zmianę sposobu raportowania.</li>
+          <li><b>Odporność:</b> pojedyncze nietypowe dni (błąd większy niż 4 typowe odchylenia) są pomijane przy dopasowaniu, a dni z ewidentną luką w danych źródła są pomijane wszędzie.</li>
+        </ul>
         <h3>2. Weryfikacja prognoz operacyjnych</h3>
         <p>Każda prognoza wydana przez automat jest zapisywana w archiwum (<code>data/forecast/archive.csv</code>) w chwili wydania i nie jest później zmieniana. Gdy pojawią się dane rzeczywiste, prognozy są rozliczane osobno dla każdego wyprzedzenia: 0 dni (prognoza na dzień wydania, wydawana rano), 1 dzień, aż do 6 dni. Ta ocena obejmuje oba źródła błędu, więc jej wynik jest gorszy od testu wstecznego i pogarsza się z wyprzedzeniem. Pierwsze wyniki pojawiają się po zebraniu co najmniej 3 prognoz na dane wyprzedzenie.</p>
         <h3>Miary</h3>
@@ -532,10 +540,11 @@ footer a, .notes a { color: var(--accent); }
         <h3>Ograniczenia</h3>
         <ul>
           <li>Dane rzeczywiste są korygowane przez operatorów jeszcze przez kilka tygodni, więc wyniki z ostatnich dni mogą się nieco zmienić.</li>
-          <li>Model zużycia nie zna świąt ani przestojów przemysłu. Dni świąteczne zawyżają błąd.</li>
+          <li>Święta są w modelu, ale ich wpływ jest szacowany z jednego roku, więc pierwsze święta po zmianie nawyków (np. dłuższe przestoje przemysłu) mogą mieć większy błąd.</li>
           <li>Produkcja z wiatru bywa ograniczana przez operatorów sieci (redispatch, ceny ujemne), czego pogoda nie przewiduje. Widać to jako zawyżanie prognozy w takich dniach.</li>
           <li>Przy bardzo małej produkcji (np. wiatr w Słowenii, słońce w Estonii jesienią) błąd procentowy jest wysoki, choć w GWh niewielki.</li>
-          <li>Po nagłej zmianie sposobu raportowania w źródle (np. Holandia od 18.09.2026) test wsteczny miesza dwa poziomy danych i pokazuje zawyżony błąd. Takie kraje są oznaczone w tabeli.</li>
+          <li>Po nagłej zmianie sposobu raportowania w źródle (np. Holandia od 18.09.2026) korekta z ostatnich dni szybko dostosowuje poziom, ale test wsteczny z okresu przejściowego ma wyższy błąd. Takie kraje są oznaczone w tabeli.</li>
+          <li>Luki w danych źródła są wykrywane automatycznie: produkcja z wiatru poniżej 10% (ze słońca poniżej 15%) tego, czego można się spodziewać przy danej pogodzie, oraz zużycie poniżej 60% lub powyżej 160% mediany z 4 tygodni. Takie dni są pomijane przy uczeniu modelu i w weryfikacji, a ich lista jest w kontroli danych. Kraj z długimi lukami (np. słońce na Cyprze w lecie 2026) może nie mieć wyniku testu.</li>
         </ul>
       </div>
     </section>
@@ -1212,7 +1221,7 @@ const DATA = /*__DATA__*/null;
       const nt = (f.notes || {})[k];
       $("fc-sum-" + k).textContent = txt + "." + (isNum(er) ? ` Błąd modelu: ±${fmt0.format(er)}%${er > 50 ? " (niska trafność, mała produkcja albo nieciągłość danych)" : ""}.` : "") + (nt ? ` Uwaga: ${nt}.` : "");
     });
-    $("fc-note").textContent = "Prognoza pogody z Open-Meteo (wiatr na 100 m, promieniowanie, temperatura) przeliczona na produkcję i zużycie modelem dopasowanym do historii tego kraju (wiatr: 120 dni, słońce: 60 dni, zużycie: 365 dni). Błąd modelu: średni błąd z ostatnich 28 dni przy znanej pogodzie; błąd samej prognozy pogody rośnie z każdym dniem. Pasmo i średnia: te same dni kalendarza (±3 dni) w latach " + DATA.meta.years5 + ".";
+    $("fc-note").textContent = "Prognoza pogody z Open-Meteo (wiatr na 100 m, promieniowanie, temperatura) przeliczona na produkcję i zużycie modelem dopasowanym do historii tego kraju (wiatr: 120 dni, słońce: 90 dni, zużycie: 365 dni ze świętami), skorygowanym błędem z ostatnich znanych dni. Opis i wyniki sprawdzania: zakładka „Weryfikacja prognoz”. Błąd modelu: średni błąd z ostatnich 28 dni przy znanej pogodzie; błąd samej prognozy pogody rośnie z każdym dniem. Pasmo i średnia: te same dni kalendarza (±3 dni) w latach " + DATA.meta.years5 + ".";
   }
 
   // ---------- mapa cen day-ahead ----------
@@ -1593,7 +1602,7 @@ const DATA = /*__DATA__*/null;
       : "Brak wyników testu wstecznego dla tego kraju i tej wielkości.") +
       (DATA.breaks && DATA.breaks[S.country] ? " Uwaga: w danych tego kraju wykryto zmianę poziomu, test miesza dwa okresy." : "");
     if (!r) {
-      $("v-kpis").innerHTML = `<div class="panel" style="grid-column:1/-1"><p class="muted">Nie ma czego sprawdzać: kraj nie produkuje tej energii w istotnej ilości, nie ma dla niego danych pogodowych albo historia jest za krótka do dopasowania modelu.</p></div>`;
+      $("v-kpis").innerHTML = `<div class="panel" style="grid-column:1/-1"><p class="muted">Nie ma czego sprawdzać: kraj nie produkuje tej energii w istotnej ilości, nie ma dla niego danych pogodowych, historia jest za krótka do dopasowania modelu albo w ostatnich miesiącach źródło ma długie luki w danych (zob. kontrola danych w zakładce „Miks i ceny”).</p></div>`;
       return;
     }
     const chip = (v) => { const k = skillBin(v); if (k === null) return ""; return `<span class="chip"><i class="sw" style="background:${anomColor(k)}"></i>${v > 5 ? "lepszy od odniesienia" : v < -5 ? "gorszy od odniesienia" : "porównywalny"}</span>`; };
@@ -1637,18 +1646,28 @@ const DATA = /*__DATA__*/null;
 
   function renderVerOp() {
     const o = (VOP[S.country] || {})[VS.k];
+    const bt = ((VBT[S.country] || {})[VS.k] || {}).leads || {};
     $("v-op-label").textContent = `${cname(S.country)} · ${VKIND[VS.k]}`;
     const since = VER.archive_from ? fdate(VER.archive_from) : "17.10.2026";
-    if (!o) {
-      const any = Object.keys(VOP).length;
-      $("v-op").innerHTML = `<p class="muted">${any ? "Brak rozliczonych prognoz operacyjnych dla tego kraju i tej wielkości." : `Archiwum prognoz jest prowadzone od ${since}. Wynik dla danego wyprzedzenia pojawia się, gdy co najmniej 3 prognozy mają już dane rzeczywiste do porównania, więc pierwsze wiersze (ten sam dzień i 1 dzień) pojawią się w ciągu kilku dni roboczych, a pełna tabela do 6 dni po około dwóch tygodniach.`} Do tego czasu orientacyjny jest test wsteczny powyżej: przy prognozie pogody błąd będzie od niego większy i rośnie z wyprzedzeniem.</p>`;
-      return;
-    }
-    const leads = Object.keys(o.leads).sort((a, b) => a - b);
-    $("v-op").innerHTML = `<div style="overflow-x:auto"><table class="acc"><thead><tr><th style="text-align:left">Wyprzedzenie</th><th>prognoz</th><th>błąd (WAPE)</th><th>odchylenie systematyczne</th><th>błąd „jak wczoraj”</th><th>umiejętność vs persystencja</th></tr></thead><tbody>` +
-      leads.map((l) => { const r = o.leads[l]; const k = skillBin(r.skill_pers); const bg = k === null ? "transparent" : anomColor(k);
-        return `<tr><td style="text-align:left">${leadLab(l)}</td><td>${r.n}</td><td>${fmt1.format(r.wape)}%</td><td>${pctS(r.bias)}</td><td>${isNum(r.wape_pers) ? fmt1.format(r.wape_pers) + "%" : "–"}</td><td style="background:${bg};color:${k === null ? css("--ink") : inkFor(bg)};font-weight:600">${pctS(r.skill_pers)}</td></tr>`; }).join("") +
-      `</tbody></table></div><p class="small muted" style="margin-top:8px">Prognozy wydane od ${fdate(o.first)} do ${fdate(o.last)} (${o.issues} wydań${o.countries ? ", suma " + o.countries + " krajów" : ""}). Wyprzedzenie 0 to prognoza na dzień wydania (wydawana ok. 4:30).</p>`;
+    const leads = [...new Set(Object.keys(bt).concat(Object.keys((o || {}).leads || {})))].sort((a, b) => a - b);
+    if (!leads.length) { $("v-op").innerHTML = '<p class="muted">Brak danych do oceny dla tego kraju i tej wielkości.</p>'; return; }
+    const skCell = (v) => { const k = skillBin(v); const bg = k === null ? "transparent" : anomColor(k); return `<td style="background:${bg};color:${k === null ? css("--ink") : inkFor(bg)};font-weight:600">${pctS(v)}</td>`; };
+    const bl = "border-left:1px solid var(--line)";
+    let h = `<div style="overflow-x:auto"><table class="acc"><thead><tr><th rowspan="2" style="text-align:left">Wyprzedzenie</th>
+      <th colspan="3" style="text-align:center;${bl}">Test wsteczny (pogoda rzeczywista)</th><th colspan="4" style="text-align:center;${bl}">Prognozy wydane (pogoda prognozowana)</th></tr>
+      <tr><th style="${bl}">błąd</th><th>„jak wczoraj”</th><th>umiejętność</th><th style="${bl}">prognoz</th><th>błąd</th><th>odchylenie</th><th>umiejętność</th></tr></thead><tbody>`;
+    leads.forEach((l) => {
+      const b = bt[l], r = o && o.leads[l];
+      h += `<tr><td style="text-align:left">${leadLab(l)}</td>`;
+      h += b ? `<td style="${bl}">${fmt1.format(b.wape)}%</td><td>${isNum(b.wape_pers) ? fmt1.format(b.wape_pers) + "%" : "–"}</td>${skCell(b.skill_pers)}` : `<td style="${bl}">–</td><td>–</td><td>–</td>`;
+      h += r ? `<td style="${bl}">${r.n}</td><td>${fmt1.format(r.wape)}%</td><td>${pctS(r.bias)}</td>${skCell(r.skill_pers)}` : `<td style="${bl}">–</td><td>–</td><td>–</td><td>–</td>`;
+      h += "</tr>";
+    });
+    h += "</tbody></table></div>";
+    const note = o
+      ? `Prognozy wydane od ${fdate(o.first)} do ${fdate(o.last)} (${o.issues} wydań${o.countries ? ", suma " + o.countries + " krajów" : ""}).`
+      : `Prognozy wydane: archiwum jest prowadzone od ${since}, a wynik dla danego wyprzedzenia pojawia się po rozliczeniu co najmniej 3 prognoz. Pierwsze wiersze (ten sam dzień, 1 dzień) pojawią się w ciągu kilku dni roboczych, pełna tabela po około dwóch tygodniach.`;
+    $("v-op").innerHTML = h + `<p class="small muted" style="margin-top:8px">Wyprzedzenie 0 to prognoza na dzień wydania (wydawana ok. 4:30, znane dane do poprzedniego dnia). „Jak wczoraj”: błąd metody odniesienia, która powtarza ostatni znany dzień. Umiejętność liczona względem tej metody. ${note}</p>`;
   }
 
   function renderVerTable() {
@@ -1838,6 +1857,11 @@ const DATA = /*__DATA__*/null;
       if (k.history_complete === false) notes.push("historia 5 lat w trakcie uzupełniania");
       if (k.status) notes.push(esc(k.status));
       if (k.break) notes.push(`skok zużycia w źródle od ${fdate(k.break.date)} (${k.break.change > 0 ? "+" : ""}${fmt1.format(k.break.change)}%)`);
+      const GL = { wind: "wiatr", solar: "słońce", load: "zużycie" };
+      Object.entries(k.gaps || {}).forEach(([kind, g]) => {
+        const rr = g.ranges.map(([a, b]) => (a === b ? fdate(a) : `${fdate(a)}–${fdate(b)}`)).join(", ");
+        notes.push(`luki w danych (${GL[kind]}): ${g.n} dni w 90 dniach${rr ? ", ostatnio " + rr : ""}; pomijane w prognozie i weryfikacji`);
+      });
       const lag = k.last ? Math.round((new Date(DATA.meta.ref) - new Date(k.last)) / 864e5) : null;
       h += `<tr><td>${esc(c.name)}</td><td style="text-align:left">${esc(k.source || "")}</td>
         <td class="${lag > 2 ? "cell-hi" : ""}">${k.last ? fdate(k.last) : "–"}</td>
