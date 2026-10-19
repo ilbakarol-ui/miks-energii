@@ -30,6 +30,7 @@
   --nodata: #c9d0d4;
   --neg: #f2a37f;
   --m1: #cde2fb; --m2: #9ec5f4; --m3: #6da7ec; --m4: #3987e5; --m5: #2a78d6; --m6: #1c5cab; --m7: #104281; --m8: #0d2f55;
+  --dv-3: #a8312f; --dv-2: #e34948; --dv-1: #f3aaa9; --dv0: #e6e8e9; --dv1: #9ec5f4; --dv2: #3987e5; --dv3: #1c5cab;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -42,6 +43,7 @@
     --s-other: #d55181; --s-hydro: #3987e5; --s-wind: #199e70; --s-solar: #c98500; --s-total: #8cc8e4;
     --land: #20272c; --nodata: #3a434a; --neg: #c86a45;
     --m1: #173a66; --m2: #1c5cab; --m3: #256abf; --m4: #2a78d6; --m5: #3987e5; --m6: #6da7ec; --m7: #9ec5f4; --m8: #cde2fb;
+    --dv-3: #f08a89; --dv-2: #c44a49; --dv-1: #6e3534; --dv0: #383d41; --dv1: #1f4a7c; --dv2: #3987e5; --dv3: #9ec5f4;
     color-scheme: dark;
   }
 }
@@ -54,6 +56,7 @@
   --s-other: #d55181; --s-hydro: #3987e5; --s-wind: #199e70; --s-solar: #c98500; --s-total: #8cc8e4;
     --land: #20272c; --nodata: #3a434a; --neg: #c86a45;
     --m1: #173a66; --m2: #1c5cab; --m3: #256abf; --m4: #2a78d6; --m5: #3987e5; --m6: #6da7ec; --m7: #9ec5f4; --m8: #cde2fb;
+    --dv-3: #f08a89; --dv-2: #c44a49; --dv-1: #6e3534; --dv0: #383d41; --dv1: #1f4a7c; --dv2: #3987e5; --dv3: #9ec5f4;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -184,6 +187,20 @@ td .mini i { display: block; height: 100%; }
 td.na, .na { color: var(--muted); }
 .cell-hi { color: var(--up); } .cell-lo { color: var(--down); }
 
+.tabs { display: inline-flex; border: 1px solid var(--axis); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.tabs button { background: none; border: 0; padding: 8px 16px; cursor: pointer; font: inherit; font-size: 14.5px; color: var(--ink-2); font-weight: 500; }
+.tabs button + button { border-left: 1px solid var(--line); }
+.tabs button[aria-selected="true"] { background: var(--accent); color: var(--surface); font-weight: 600; }
+.daychips { display: flex; flex-wrap: wrap; gap: 6px; }
+.daychips button { background: var(--surface); border: 1px solid var(--axis); border-radius: 8px; padding: 6px 10px; cursor: pointer; font: inherit; font-size: 13.5px; color: var(--ink-2); display: grid; gap: 1px; text-align: center; min-width: 64px; }
+.daychips button b { font-size: 12px; font-weight: 600; color: var(--ink); }
+.daychips button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.heat { font-size: 13px; }
+.heat td.h { text-align: center; min-width: 62px; font-variant-numeric: tabular-nums; }
+.heat td.h small { display: block; font-size: 11px; opacity: 0.85; }
+.heat td.h.cur { box-shadow: inset 0 0 0 2px var(--ink); }
+@media (max-width: 560px) { #w-kpis { grid-template-columns: 1fr; } }
+.acc td, .acc th { text-align: right; }
 .map-wrap { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(240px, 1fr); gap: 12px; align-items: start; }
 @media (max-width: 820px) { .map-wrap { grid-template-columns: 1fr; } }
 .map-box { position: relative; min-width: 0; }
@@ -234,7 +251,11 @@ footer a, .notes a { color: var(--accent); }
   </header>
   <div class="demo" id="demo" hidden></div>
 
-  <div class="controls" role="group" aria-label="Wybór kraju i okresu">
+  <div class="controls" role="group" aria-label="Wybór kraju, okresu i zakładki">
+    <div class="tabs" role="tablist" aria-label="Zakładki">
+      <button type="button" role="tab" id="tab-btn-mix" data-tab="mix" aria-selected="true" aria-controls="tab-mix">Miks i ceny</button>
+      <button type="button" role="tab" id="tab-btn-wind" data-tab="wind" aria-selected="false" aria-controls="tab-wind">Prognozy wiatru</button>
+    </div>
     <select id="country" aria-label="Kraj"></select>
     <div class="seg" id="period" role="group" aria-label="Okres">
       <button type="button" id="p-week" data-p="week">Tydzień</button>
@@ -243,6 +264,8 @@ footer a, .notes a { color: var(--accent); }
     </div>
     <span class="period-label" id="period-label"></span>
   </div>
+
+  <div id="tab-mix" role="tabpanel" aria-labelledby="tab-btn-mix" style="display:grid;gap:28px">
 
   <div id="daily-part" style="display:grid;gap:28px">
     <div class="demo" id="break-note" hidden></div>
@@ -381,6 +404,64 @@ footer a, .notes a { color: var(--accent); }
     <div class="notes" id="run-log"></div>
   </section>
 
+  </div>
+
+  <div id="tab-wind" role="tabpanel" aria-labelledby="tab-btn-wind" style="display:grid;gap:28px" hidden>
+    <section aria-labelledby="h-w">
+      <div class="head">
+        <h2 id="h-w">Prognoza produkcji z wiatru</h2>
+        <span class="small muted" id="w-issued"></span>
+      </div>
+      <div class="daychips" id="w-days" role="group" aria-label="Dzień prognozy"></div>
+    </section>
+    <div class="kpis" id="w-kpis"></div>
+    <section aria-labelledby="h-wmap">
+      <div class="head"><h2 id="h-wmap">Wiatr względem normy</h2><span class="small muted" id="w-map-day"></span></div>
+      <div class="map-wrap">
+        <div class="panel" style="display:grid;gap:10px">
+          <div class="map-box" id="w-map"></div>
+          <div class="mlegend" id="w-legend"></div>
+        </div>
+        <div class="panel" style="display:grid;gap:10px">
+          <h3>Ranking: odchylenie od normy</h3>
+          <div class="rank" id="w-rank"></div>
+          <p class="small muted">Norma: średnia produkcja z wiatru w tych samych dniach kalendarza (±3 dni) w latach <span class="y5"></span>.</p>
+        </div>
+      </div>
+    </section>
+    <div class="grid2">
+      <section aria-labelledby="h-wh">
+        <div class="head"><h2 id="h-wh">Godzinowo</h2><span class="small muted">MW, czas polski</span></div>
+        <div class="panel" style="display:grid;gap:10px">
+          <div class="legend" id="w-hourly-legend"></div>
+          <div class="chart" id="w-hourly"></div>
+          <p class="small muted" id="w-hourly-note"></p>
+        </div>
+      </section>
+      <section aria-labelledby="h-wd">
+        <div class="head"><h2 id="h-wd">Dziennie na tle 5 lat</h2><span class="small muted">GWh</span></div>
+        <div class="panel" style="display:grid;gap:10px">
+          <div class="legend" id="w-daily-legend"></div>
+          <div class="chart" id="w-daily"></div>
+        </div>
+      </section>
+    </div>
+    <section aria-labelledby="h-wt">
+      <div class="head"><h2 id="h-wt">Wszystkie kraje, 7 dni</h2><span class="small muted">GWh; kolor: odchylenie od normy</span></div>
+      <div class="tablebox"><table class="heat" id="w-table"></table></div>
+    </section>
+    <section aria-labelledby="h-wa">
+      <div class="head"><h2 id="h-wa">Trafność prognoz</h2><span class="small muted" id="w-acc-label"></span></div>
+      <div class="grid2">
+        <div class="panel" id="w-acc"></div>
+        <div class="panel" style="display:grid;gap:10px">
+          <div class="legend" id="w-acc-legend"></div>
+          <div class="chart" id="w-acc-chart"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
   <footer>
     <p>Dane dzienne: <a href="https://energy-charts.info" target="_blank" rel="noopener">Energy-Charts.info</a> (Fraunhofer ISE, licencja CC BY 4.0), na podstawie ENTSO-E Transparency Platform i operatorów sieci. Dane miesięczne oficjalne: <a href="https://ec.europa.eu/eurostat/databrowser/view/nrg_cb_pem/default/table" target="_blank" rel="noopener">Eurostat nrg_cb_pem i nrg_cb_em</a>.</p>
     <p>Produkcja = publiczna produkcja netto (bez części autoprodukcji przemysłowej). Zużycie = obciążenie sieci według ENTSO-E (z pompowaniem i stratami). Saldo wymiany wyliczone z bilansu: zużycie − (produkcja − pompowanie). Dni z pokryciem danych poniżej 80% są pomijane.</p>
@@ -502,6 +583,7 @@ const DATA = /*__DATA__*/null;
     S.country = c; sel.value = c; store.set("country", c);
     try { history.replaceState(null, "", "#" + c.toLowerCase()); } catch (e) { /* bez zmiany adresu */ }
     renderCountry(); renderTable(); renderMap();
+    if (TAB === "wind") renderWind();
   }
   document.querySelectorAll("#period button").forEach((b) => b.addEventListener("click", () => {
     S.period = b.dataset.p; store.set("period", S.period); renderCountry(); renderTable();
@@ -916,8 +998,23 @@ const DATA = /*__DATA__*/null;
         if (l.dash) p.setAttribute("stroke-dasharray", "5 4");
       }
     });
-    const step = Math.ceil(o.n / Math.max(3, Math.floor((R - L) / 70)));
-    for (let i = 0; i < o.n; i += step) { const t = mk("text", { x: x(i), y: H - 6, "text-anchor": i === 0 ? "start" : "middle" }, svg); t.textContent = o.xlab(i); }
+    if (o.ticks) {
+      const minGap = 46;
+      let lastX = -1e9;
+      o.ticks.forEach((i) => {
+        if (x(i) - lastX < minGap) return;
+        lastX = x(i);
+        if (o.gridTicks) mk("line", { x1: x(i), x2: x(i), y1: T, y2: B, stroke: css("--line"), "stroke-width": 1 }, svg);
+        const t = mk("text", { x: x(i) + 3, y: H - 6, "text-anchor": "start" }, svg); t.textContent = o.xlab(i);
+      });
+    } else {
+      const step = Math.ceil(o.n / Math.max(3, Math.floor((R - L) / 70)));
+      for (let i = 0; i < o.n; i += step) { const t = mk("text", { x: x(i), y: H - 6, "text-anchor": i === 0 ? "start" : "middle" }, svg); t.textContent = o.xlab(i); }
+    }
+    if (o.marker != null && o.marker >= 0 && o.marker < o.n) {
+      mk("line", { x1: x(o.marker), x2: x(o.marker), y1: T, y2: B, stroke: css("--ink-2"), "stroke-width": 1, "stroke-dasharray": "3 3" }, svg);
+      const t = mk("text", { x: x(o.marker) + 4, y: T + 12 }, svg); t.textContent = "teraz";
+    }
     const cross = mk("line", { y1: T, y2: B, stroke: css("--axis"), "stroke-width": 1, visibility: "hidden" }, svg);
     const hit = mk("rect", { x: L, y: T, width: R - L, height: B - T, fill: "transparent" }, svg);
     const show = (evt) => {
@@ -1160,6 +1257,254 @@ const DATA = /*__DATA__*/null;
   $("map-next").addEventListener("click", () => { MAPSTATE.i = Math.min(PM.dates.length - 1, MAPSTATE.i + 1); renderMap(); });
   document.querySelectorAll("#map-sec .seg button").forEach((b) => b.addEventListener("click", () => { MAPSTATE.w = +b.dataset.w; store.set("mapw", String(MAPSTATE.w)); renderMap(); }));
 
+  // ---------- zakładka: prognozy wiatru ----------
+  const WT = DATA.wind_tab || {};
+  const WD = WT.countries || {};
+  const WSTATE = { d: 0 };
+  const AB = [-50, -25, -10, 10, 25, 50];      // progi odchylenia od normy, %
+  function anomBin(v) {
+    if (!isNum(v)) return null;
+    let k = -3;
+    for (const t of AB) { if (v >= t) k++; }
+    return k;   // -3..3
+  }
+  const anomColor = (k) => css("--dv" + k);
+  function inkFor(color) {
+    const hex = color.replace("#", "");
+    const [r, g, b] = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.3 ? "#11161a" : "#ffffff";
+  }
+  const sgn = (v, d = 0) => (isNum(v) ? (v > 0 ? "+" : v < 0 ? "−" : "") + (d ? fmt1 : fmt0).format(Math.abs(v)) : "–");
+  const WEEKDAYS_S = ["nd", "pn", "wt", "śr", "cz", "pt", "sb"];
+  const hourFmt = new Intl.DateTimeFormat("pl-PL", { timeZone: "Europe/Warsaw", weekday: "short", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" });
+  const hourKey = new Intl.DateTimeFormat("pl-PL", { timeZone: "Europe/Warsaw", hour: "2-digit", hour12: false });
+
+  const TODAY_PL = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Warsaw" }).format(new Date());
+  const TOMORROW_PL = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Warsaw" }).format(new Date(Date.now() + 864e5));
+  const relDay = (d) => (d === TODAY_PL ? "dziś" : d === TOMORROW_PL ? "jutro" : WEEKDAYS_S[new Date(d + "T12:00:00").getDay()]);
+  function renderWindDays() {
+    const days = WT.days || [];
+    const ti = days.indexOf(TODAY_PL);
+    if (WSTATE.first === undefined) { WSTATE.first = true; if (ti > 0) WSTATE.d = ti; }
+    $("w-days").innerHTML = days.map((d, i) => {
+      const dd = new Date(d + "T12:00:00");
+      const lbl = relDay(d);
+      return `<button type="button" data-i="${i}" aria-pressed="${i === WSTATE.d}"><b>${lbl}</b>${dd.getDate()}.${String(dd.getMonth() + 1).padStart(2, "0")}</button>`;
+    }).join("");
+    $("w-days").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { WSTATE.d = +b.dataset.i; renderWind(); }));
+  }
+
+  function renderWindKPIs() {
+    const c = WD[S.country];
+    if (!c) {
+      $("w-kpis").innerHTML = `<div class="panel"><p class="muted">Brak prognozy wiatru dla tego kraju.</p></div>`;
+      return;
+    }
+    const i = WSTATE.d;
+    const sum = (a, n) => a.slice(0, n).filter(isNum).reduce((x, y) => x + y, 0);
+    const n = c.wind.length;
+    const tot = sum(c.wind, n), totAvg = (c.avg || []).length ? sum(c.avg, n) : null;
+    const totAn = isNum(totAvg) && totAvg > 0 ? 100 * (tot / totAvg - 1) : null;
+    let peak = null;
+    if (c.hourly) {
+      const mw = c.hourly.mw; let k = 0;
+      mw.forEach((v, j) => { if (isNum(v) && v > (isNum(mw[k]) ? mw[k] : -1)) k = j; });
+      const t = new Date(new Date(c.hourly.start).getTime() + k * 3600e3);
+      peak = { mw: mw[k], t };
+    }
+    const [n1, u1] = energyParts(c.wind[i]);
+    const [n2, u2] = energyParts(tot);
+    const tiles = [
+      { label: `Produkcja z wiatru · ${dayLong(c.days[i])}`, val: `${n1}<small>${u1}</small>`,
+        rows: [["norma", fmtU((c.avg || [])[i], "GWh")], ["vs norma", sgn((c.anom || [])[i]) + "%"], ["zakres 5 lat", isNum((c.min || [])[i]) ? fmtU(c.min[i], "GWh") + " – " + fmtU(c.max[i], "GWh") : "–"]],
+        k: anomBin((c.anom || [])[i]) },
+      { label: "7 dni łącznie", val: `${n2}<small>${u2}</small>`,
+        rows: [["norma", fmtU(totAvg, "GWh")], ["vs norma", sgn(totAn) + "%"], ["błąd modelu", isNum(c.err) ? "±" + fmt0.format(c.err) + "%" : "–"]],
+        k: anomBin(totAn) },
+      { label: "Szczyt godzinowy w 7 dniach", val: peak ? `${fmt0.format(peak.mw)}<small>MW</small>` : "–",
+        rows: [["kiedy", peak ? hourFmt.format(peak.t) : "–"], ["średnia prędkość wiatru", isNum((c.ws || [])[i]) ? fmt1.format(c.ws[i]) + " m/s (100 m)" : "–"],
+          ["maks. dobowy z 365 dni", fmtU(c.max365, "GWh")]], k: null },
+    ];
+    $("w-kpis").innerHTML = tiles.map((t) => `<div class="panel kpi">
+      <div class="label">${t.label}</div><div class="value">${t.val}</div>
+      <dl class="deltas">${t.rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join("")}</dl>
+      ${t.k !== null && t.k !== undefined ? `<span class="chip" style="justify-self:start"><i class="sw" style="background:${anomColor(t.k)}"></i>${t.k > 0 ? "powyżej normy" : t.k < 0 ? "poniżej normy" : "w normie (±10%)"}</span>` : ""}
+    </div>`).join("");
+  }
+
+  function renderWindMap() {
+    const G = (DATA.price_map || {}).geo;
+    if (!G || !G.countries) { $("w-map").innerHTML = ""; return; }
+    const i = WSTATE.d;
+    $("w-map-day").textContent = (WT.days || [])[i] ? dayLong(WT.days[i]) : "";
+    let svg = `<svg viewBox="0 0 ${G.w} ${G.h}" role="img" aria-label="Mapa prognozowanej produkcji z wiatru względem normy">`;
+    svg += G.bg.map((d) => `<path class="bg" d="${d}"></path>`).join("");
+    const vals = {};
+    for (const [code, d] of Object.entries(G.countries)) {
+      const c = WD[code];
+      const v = c && c.anom ? c.anom[i] : null;
+      vals[code] = v;
+      const k = anomBin(v);
+      svg += `<path class="c${code === S.country ? " sel" : ""}" data-c="${code}" d="${d}" style="fill:${k === null ? css("--nodata") : anomColor(k)}"></path>`;
+    }
+    for (const [code, [x, y, area]] of Object.entries(G.labels || {})) {
+      const v = vals[code];
+      if (!isNum(v) || area < 140) continue;
+      svg += `<text x="${x}" y="${y + 4}" text-anchor="middle" style="fill:${inkFor(anomColor(anomBin(v)))}">${sgn(v)}%</text>`;
+    }
+    const box = $("w-map");
+    box.innerHTML = svg + "</svg>";
+    const tip = document.createElement("div"); tip.className = "tip"; tip.hidden = true; box.appendChild(tip);
+    box.querySelectorAll("path.c").forEach((p) => {
+      const code = p.dataset.c;
+      const show = (evt) => {
+        const r = box.getBoundingClientRect();
+        const c = WD[code];
+        let h = `<b>${esc(cname(code))}</b>`;
+        if (c) {
+          h += `<div class="r"><span>prognoza</span><span>${fmtU(c.wind[i], "GWh")}</span></div>`;
+          h += `<div class="r"><span>norma</span><span>${fmtU((c.avg || [])[i], "GWh")}</span></div>`;
+          h += `<div class="r"><span>vs norma</span><span>${sgn(vals[code])}%</span></div>`;
+          if (isNum((c.ws || [])[i])) h += `<div class="r"><span>wiatr 100 m</span><span>${fmt1.format(c.ws[i])} m/s</span></div>`;
+        } else h += `<div class="small muted">brak prognozy</div>`;
+        placeTip(tip, box, evt.clientX - r.left, Math.max(0, evt.clientY - r.top - 40), h);
+      };
+      p.addEventListener("pointermove", show);
+      p.addEventListener("pointerdown", show);
+      p.addEventListener("pointerleave", () => { tip.hidden = true; });
+      p.addEventListener("click", () => setCountry(code));
+    });
+    const labs = ["< −50", "−50…−25", "−25…−10", "±10", "+10…+25", "+25…+50", "> +50"];
+    $("w-legend").innerHTML = labs.map((l, j) => `<span><i style="background:${anomColor(j - 3)}"></i>${l}</span>`).join("") +
+      `<span><i style="background:${css("--nodata")}"></i>brak</span><span style="align-self:center;margin-left:6px">% normy</span>`;
+    const rows = Object.entries(WD).filter(([code, c]) => code !== "EU" && isNum((c.anom || [])[i])).sort((a, b) => b[1].anom[i] - a[1].anom[i]);
+    const mx = Math.max(1, ...rows.map(([, c]) => Math.abs(c.anom[i])));
+    $("w-rank").innerHTML = rows.map(([code, c]) => {
+      const v = c.anom[i];
+      return `<div class="r${code === S.country ? " sel" : ""}" data-c="${code}" tabindex="0" role="button" title="${esc(fmtU(c.wind[i], "GWh"))}"><span>${esc(cname(code))}</span><span class="bar"><i style="width:${Math.max(1, (100 * Math.abs(v)) / mx)}%;background:${anomColor(anomBin(v))}"></i></span><span class="v">${sgn(v)}%</span></div>`;
+    }).join("");
+    $("w-rank").querySelectorAll(".r").forEach((r) => {
+      r.addEventListener("click", () => setCountry(r.dataset.c));
+      r.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCountry(r.dataset.c); } });
+    });
+  }
+
+  function renderWindCharts() {
+    const c = WD[S.country];
+    const wcol = col("wind");
+    if (!c) { ["w-hourly", "w-daily"].forEach((id) => ($(id).innerHTML = '<p class="empty">Brak prognozy dla tego kraju.</p>')); return; }
+    // godzinowo
+    if (c.hourly) {
+      const t0 = new Date(c.hourly.start).getTime();
+      const n = c.hourly.mw.length;
+      const times = Array.from({ length: n }, (_, j) => new Date(t0 + j * 3600e3));
+      const ticks = [];
+      times.forEach((t, j) => { if (hourKey.format(t) === "00") ticks.push(j); });
+      const now = Math.floor((Date.now() - t0) / 3600e3);
+      legend($("w-hourly-legend"), [{ line: 1, color: wcol, label: "prognoza modelu" }]);
+      lineChart($("w-hourly"), {
+        n, unit: "MW", H: 230, ticks: ticks.length ? ticks : [0], gridTicks: true, marker: now,
+        lines: [{ values: c.hourly.mw, color: wcol, width: 2 }],
+        xlab: (j) => { const d = times[j]; return d.toLocaleDateString("pl-PL", { timeZone: "Europe/Warsaw", weekday: "short", day: "numeric" }); },
+        tlab: (j) => hourFmt.format(times[j]),
+        rows: (j) => [["produkcja", isNum(c.hourly.mw[j]) ? fmt0.format(c.hourly.mw[j]) + " MW" : "–", wcol]].concat(c.hourly.ws && isNum(c.hourly.ws[j]) ? [["wiatr 100 m", fmt1.format(c.hourly.ws[j]) + " m/s"]] : []),
+      });
+      $("w-hourly-note").textContent = "Rozkład godzinowy z modelu dziennego zastosowanego do prognozy wiatru dla każdej godziny; suma każdej doby równa prognozie dziennej.";
+    } else {
+      $("w-hourly").innerHTML = '<p class="empty">Rozkład godzinowy pojawi się po następnym przebiegu automatu.</p>';
+      $("w-hourly-legend").innerHTML = ""; $("w-hourly-note").textContent = "";
+    }
+    // dziennie: 14 dni rzeczywistych + 7 dni prognozy na tle 5 lat
+    const rd = (c.recent || {}).dates || [], rw = (c.recent || {}).wind || [];
+    const dates = rd.concat(c.days);
+    const nR = rd.length;
+    const act = rw.concat(c.days.map(() => null));
+    const fcv = rd.map((_, j) => (j === nR - 1 ? rw[j] : null)).concat(c.wind);
+    const pad = rd.map(() => null);
+    legend($("w-daily-legend"), [{ line: 1, color: css("--ink-2"), label: "rzeczywista" }, { line: 1, color: wcol, label: "prognoza (przerywana)" },
+      { line: 1, color: css("--muted"), label: "norma " + DATA.meta.years5 }, { band: 1, label: "zakres min–maks" }]);
+    lineChart($("w-daily"), {
+      n: dates.length, unit: "GWh", split: nR, H: 230,
+      lines: [{ values: pad.concat(c.avg || []), color: css("--muted"), width: 1.5 }, { values: act, color: css("--ink-2"), width: 2.5 },
+        { values: fcv, color: wcol, width: 2.5, dash: true }],
+      band: { lo: pad.concat(c.min || []), hi: pad.concat(c.max || []) },
+      xlab: (j) => dayLab(dates[j]), tlab: (j) => dayLong(dates[j]) + (j >= nR ? " · prognoza" : ""),
+      rows: (j) => [[j >= nR ? "prognoza" : "rzeczywista", fmtU(j >= nR ? c.wind[j - nR] : act[j], "GWh"), j >= nR ? wcol : css("--ink-2")]]
+        .concat(j >= nR ? [["norma", fmtU((c.avg || [])[j - nR], "GWh")], ["vs norma", sgn((c.anom || [])[j - nR]) + "%"]] : []),
+    });
+  }
+
+  function renderWindTable() {
+    const days = WT.days || [];
+    const rows = Object.entries(WD).sort((a, b) => {
+      if (a[0] === "EU") return -1; if (b[0] === "EU") return 1;
+      return b[1].wind.filter(isNum).reduce((x, y) => x + y, 0) - a[1].wind.filter(isNum).reduce((x, y) => x + y, 0);
+    });
+    let h = "<thead><tr><th>Kraj</th>" + days.map((d) => `<th style="text-align:center">${relDay(d)} ${dayLab(d)}</th>`).join("") + "<th>7 dni, GWh</th><th>vs norma</th></tr></thead><tbody>";
+    rows.forEach(([code, c]) => {
+      const tot = c.wind.filter(isNum).reduce((x, y) => x + y, 0);
+      const ta = (c.avg || []).filter(isNum).reduce((x, y) => x + y, 0);
+      const tan = ta > 0 && (c.avg || []).filter(isNum).length === c.wind.length ? 100 * (tot / ta - 1) : null;
+      h += `<tr data-c="${code}" tabindex="0" class="${code === S.country ? "sel" : ""}"><td>${esc(cname(code))}</td>`;
+      c.wind.forEach((v, i) => {
+        const k = anomBin((c.anom || [])[i]);
+        const bg = k === null ? "transparent" : anomColor(k);
+        const fg = k === null ? css("--ink") : inkFor(bg);
+        h += `<td class="h${i === WSTATE.d ? " cur" : ""}" style="background:${bg};color:${fg}">${isNum(v) ? (v >= 100 ? fmt0.format(v) : fmt1.format(v)) : "–"}<small>${isNum((c.anom || [])[i]) ? sgn(c.anom[i]) + "%" : ""}</small></td>`;
+      });
+      h += `<td>${tot >= 100 ? fmt0.format(tot) : fmt1.format(tot)}</td><td>${isNum(tan) ? sgn(tan) + "%" : "–"}</td></tr>`;
+    });
+    const t = $("w-table"); t.innerHTML = h + "</tbody>";
+    t.querySelectorAll("tbody tr").forEach((tr) => {
+      tr.addEventListener("click", () => setCountry(tr.dataset.c));
+      tr.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCountry(tr.dataset.c); } });
+    });
+  }
+
+  function renderWindAccuracy() {
+    const A = (WT.accuracy || {})[S.country];
+    $("w-acc-label").textContent = cname(S.country);
+    if (!A) {
+      $("w-acc").innerHTML = `<p class="muted">Za mało archiwalnych prognoz, żeby ocenić trafność. Automat zapisuje każdą prognozę od 16.10.2026, a ocena wymaga co najmniej 3 porównań z rzeczywistą produkcją dla danego wyprzedzenia, więc pojawi się w ciągu kilku dni. Do tego czasu orientacyjny jest błąd modelu przy znanej pogodzie: ${isNum((WD[S.country] || {}).err) ? "±" + fmt0.format(WD[S.country].err) + "%" : "–"}.</p>`;
+      $("w-acc-chart").innerHTML = ""; $("w-acc-legend").innerHTML = "";
+      return;
+    }
+    const leads = Object.keys(A.leads).sort((a, b) => a - b);
+    $("w-acc").innerHTML = `<div style="overflow-x:auto"><table class="acc"><thead><tr><th style="text-align:left">Wyprzedzenie</th><th>prognoz</th><th>błąd</th><th>odchylenie systematyczne</th></tr></thead><tbody>` +
+      leads.map((l) => { const r = A.leads[l]; return `<tr><td style="text-align:left">${l === "0" ? "ten sam dzień" : l === "1" ? "1 dzień" : l + " dni"}</td><td>${r.n}</td><td>±${fmt0.format(r.err)}%</td><td>${sgn(r.bias, 1)}%</td></tr>`; }).join("") +
+      `</tbody></table></div><p class="small muted" style="margin-top:8px">Błąd: suma różnic bezwzględnych między prognozą a produkcją rzeczywistą, w % produkcji. Odchylenie systematyczne: dodatnie, gdy model zawyża. Prognozy z ostatnich 60 dni.</p>`;
+    const R = A.recent || {};
+    if ((R.dates || []).length >= 2) {
+      legend($("w-acc-legend"), [{ line: 1, color: css("--ink-2"), label: "rzeczywista" }, { line: 1, color: col("wind"), label: "prognoza z dnia poprzedniego" }]);
+      lineChart($("w-acc-chart"), {
+        n: R.dates.length, unit: "GWh", H: 200,
+        lines: [{ values: R.act, color: css("--ink-2"), width: 2.5 }, { values: R.fc, color: col("wind"), width: 2, dash: true }],
+        xlab: (j) => dayLab(R.dates[j]), tlab: (j) => dayLong(R.dates[j]),
+        rows: (j) => [["rzeczywista", fmtU(R.act[j], "GWh"), css("--ink-2")], ["prognoza", fmtU(R.fc[j], "GWh"), col("wind")]],
+      });
+    } else { $("w-acc-chart").innerHTML = '<p class="empty">Wykres pojawi się po zebraniu kilku prognoz.</p>'; $("w-acc-legend").innerHTML = ""; }
+  }
+
+  function renderWind() {
+    if (!WT.days) { $("tab-wind").innerHTML = '<div class="panel"><p class="muted">Prognozy wiatru pojawią się po pierwszym przebiegu z modelem pogodowym.</p></div>'; return; }
+    $("w-issued").textContent = "model pogodowy, wydana " + WT.issued.replace("T", " ").replace("Z", " UTC");
+    renderWindDays(); renderWindKPIs(); renderWindMap(); renderWindCharts(); renderWindTable(); renderWindAccuracy();
+  }
+
+  // ---------- zakładki ----------
+  let TAB = store.get("tab", "mix") === "wind" ? "wind" : "mix";
+  if (hash === "WIATR") TAB = "wind";
+  function setTab(t) {
+    TAB = t; store.set("tab", t);
+    document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === t)));
+    $("tab-mix").hidden = t !== "mix";
+    $("tab-wind").hidden = t !== "wind";
+    $("period").hidden = t !== "mix";
+    $("period-label").hidden = t !== "mix";
+    if (t === "wind") renderWind();
+  }
+  document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => setTab(b.dataset.tab)));
+
   // ---------- tabela krajów ----------
   const COLS = [
     { key: "name", label: "Kraj" },
@@ -1329,11 +1674,12 @@ const DATA = /*__DATA__*/null;
     renderEurostat();
   }
   renderCountry(); renderTable(); renderMap(); renderMovers(); renderControl();
+  setTab(TAB);
   let rt;
-  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (DATA.summary[S.country]) { renderTrend(); renderPrices(); renderForecast(); renderDaily(); renderMonthly(); } renderEurostat(); }, 150); });
+  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (DATA.summary[S.country]) { renderTrend(); renderPrices(); renderForecast(); renderDaily(); renderMonthly(); } if (TAB === "wind") renderWindCharts(); renderEurostat(); }, 150); });
   try {
-    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { renderCountry(); renderTable(); renderMap(); renderMovers(); });
-    new MutationObserver(() => { renderCountry(); renderTable(); renderMap(); renderMovers(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { renderCountry(); renderTable(); renderMap(); renderMovers(); if (TAB === "wind") renderWind(); });
+    new MutationObserver(() => { renderCountry(); renderTable(); renderMap(); renderMovers(); if (TAB === "wind") renderWind(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   } catch (e) { /* starsze przeglądarki */ }
 })();
 </script>

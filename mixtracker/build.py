@@ -119,6 +119,7 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
 
     summary, weekly, daily, monthly, control = {}, {}, {}, {}, {}
     est_load, fcast, price_info, breaks = {}, {}, {}, {}
+    winds, fc_raw = {}, {}
     zones_ok = prices.load_zones(settings.get("price_licenses", ["cc_by"]))
     zones_all = prices.all_zones()
     for c in countries:
@@ -137,7 +138,10 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
                                              periods["week"]["iso"][1] if periods["week"]["iso"][0] == ref.year else 53)
         daily[code] = trends.daily_recent(e, ref, settings["daily_chart_days"])
         monthly[code] = trends.monthly_recent(e, periods["month"]["end"], settings["monthly_chart_months"])
+        winds[code] = e["wind"] if "wind" in e else pd.Series(dtype=float)
         fc = (forecasts or {}).get(code) if forecasts is not None else forecast.read_latest(code)
+        if fc:
+            fc_raw[code] = fc
         if fc:
             fcast[code] = forecast_block(fc, e, ref, n_years, min_years)
         used = [z["zone"] for z in zones_ok.get(code, [])]
@@ -193,6 +197,7 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
         "forecast": fcast,
         "prices": price_info,
         "price_map": price_map(zones_ok, zones_all, countries),
+        "wind_tab": wind_tab(fc_raw, winds, n_years, min_years),
         "factors": {k: v for k, v in trends.emission_factors().items() if v > 0},
         "control": control,
     }
@@ -235,6 +240,71 @@ def price_map(zones_ok: dict, zones_all: dict, countries: list[dict], days: int 
         out_c[code] = {"zones": used, "all": allz, "avg": [_r(v, 1) for v in avg.tolist()]}
     geo = json.loads(MAP_FILE.read_text(encoding="utf-8")) if MAP_FILE.exists() else {}
     return {"dates": [d.strftime("%Y-%m-%d") for d in idx], "zones": zones, "countries": out_c, "geo": geo}
+
+
+def wind_accuracy(actual: dict[str, pd.Series], days_back: int = 60) -> dict:
+    """Trafność archiwalnych prognoz wiatru: błąd (suma |błędów| / suma produkcji, %) wg wyprzedzenia
+    (0 = prognoza na ten sam dzień, wydana rano) dla prognoz z ostatnich `days_back` dni."""
+    from .forecast import ARCHIVE
+    if not ARCHIVE.exists():
+        return {}
+    a = pd.read_csv(ARCHIVE, dtype={"issued": str, "date": str})
+    a = a[a["type"] == "wind"]
+    if a.empty:
+        return {}
+    a["lead"] = (pd.to_datetime(a["date"]) - pd.to_datetime(a["issued"])).dt.days
+    a = a[(a["lead"] >= 0) & (a["lead"] <= 6)]
+    cutoff = (dt.date.today() - dt.timedelta(days=days_back)).isoformat()
+    a = a[a["issued"] >= cutoff]
+    out = {}
+    for code, g in a.groupby("code"):
+        y = actual.get(code)
+        if y is None or y.empty:
+            continue
+        g = g.assign(actual=pd.to_datetime(g["date"]).map(y)).dropna(subset=["actual"])
+        res = {}
+        for lead, gl in g.groupby("lead"):
+            if len(gl) >= 3 and gl["actual"].sum() > 0:
+                res[str(int(lead))] = {"n": int(len(gl)),
+                                       "err": _r(100 * (gl["gwh"] - gl["actual"]).abs().sum() / gl["actual"].sum(), 1),
+                                       "bias": _r(100 * (gl["gwh"].sum() / gl["actual"].sum() - 1), 1)}
+        if res:
+            # ostatnie prognozy z wyprzedzeniem 1 dnia vs rzeczywistość (wykres)
+            g1 = g[g["lead"] == 1].sort_values("date").tail(30)
+            out[code] = {"leads": res, "recent": {"dates": g1["date"].tolist(),
+                                                  "fc": [_r(v) for v in g1["gwh"]], "act": [_r(v) for v in g1["actual"]]}}
+    return out
+
+
+def wind_tab(fcs: dict, winds: dict[str, pd.Series], n_years: int, min_years: int) -> dict:
+    """Dane zakładki „Prognozy wiatru”: prognoza dzienna, norma z 5 lat, godzinowo, trafność."""
+    if not fcs:
+        return {}
+    ref_code = "EU" if "EU" in fcs else next(iter(fcs))
+    days = fcs[ref_code]["days"]
+    out = {"days": days, "issued": fcs[ref_code]["issued"], "countries": {}}
+    for code, fc in fcs.items():
+        if not fc.get("wind"):
+            continue
+        y = winds.get(code)
+        e = pd.DataFrame({"wind": y}) if y is not None else pd.DataFrame()
+        band = trends.calendar_band(e, fc["days"], "wind", n_years, min_years) if not e.empty else {}
+        vals = fc["wind"]
+        # przy normie < 1 GWh/d (mała energetyka wiatrowa, np. SI, CH) odchylenie procentowe to szum
+        anom = [(_r(100 * (v / a - 1), 1) if (v is not None and a is not None and a >= 1.0) else None)
+                for v, a in zip(vals, band.get("avg", [None] * len(vals)))]
+        rec = {"days": fc["days"], "wind": vals, "avg": band.get("avg"), "min": band.get("min"), "max": band.get("max"),
+               "anom": anom, "ws": fc.get("wind_ws"), "err": (fc.get("errors") or {}).get("wind")}
+        if y is not None and not y.dropna().empty:
+            last365 = y.dropna().tail(365)
+            rec["max365"] = _r(last365.max())
+            rec["recent"] = {"dates": [d.strftime("%Y-%m-%d") for d in y.dropna().index[-14:]],
+                             "wind": [_r(v) for v in y.dropna().tail(14)]}
+        if fc.get("wind_hourly"):
+            rec["hourly"] = fc["wind_hourly"]
+        out["countries"][code] = rec
+    out["accuracy"] = wind_accuracy(winds)
+    return out
 
 
 FC_LABEL = {"wind": "wiatr", "solar": "słońce", "load": "zużycie"}

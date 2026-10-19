@@ -124,6 +124,29 @@ def daily_features(frames: list[pd.DataFrame], points: list[dict], tz: str) -> p
     return d[FEATURES]
 
 
+def hourly_wind(frames: list[pd.DataFrame], points: list[dict]) -> pd.DataFrame:
+    """Godzinowy wskaźnik mocy turbiny (cf) i średnia prędkość wiatru na 100 m dla kraju (UTC)."""
+    wind = [df["wind_speed_100m"] for p, df in zip(points, frames)
+            if not df.empty and p["kind"] in ("all", "wind")]
+    if not wind:
+        return pd.DataFrame(columns=["cf", "ws"])
+    ws = pd.concat(wind, axis=1)
+    return pd.DataFrame({"cf": pd.DataFrame(turbine_cf(ws.to_numpy()), index=ws.index).mean(axis=1),
+                         "ws": ws.mean(axis=1)})
+
+
+def hourly_wind_mw(coef: np.ndarray, hourly: pd.DataFrame, daily_gwh: pd.Series, tz: str) -> pd.Series:
+    """Godzinowa prognoza produkcji z wiatru (MW): model dzienny zastosowany do godzinowego cf,
+    przeskalowany tak, by suma każdej doby była równa prognozie dziennej."""
+    cf = hourly["cf"].astype(float)
+    raw = np.clip(coef[0] + coef[1] * cf + coef[2] * cf ** 2, 0, None) * 1000.0 / 24.0   # MW
+    raw = pd.Series(raw, index=hourly.index)
+    day = pd.Index(pd.to_datetime(raw.index.tz_convert(ZoneInfo(tz)).date), name="date")
+    tot = raw.groupby(day).sum() / 1000.0                       # GWh z godzin
+    scale = (daily_gwh.reindex(tot.index) / tot.where(tot > 0)).fillna(1.0)
+    return raw * scale.reindex(day).to_numpy()
+
+
 def read_cache(code: str) -> pd.DataFrame:
     p = WEATHER / f"{code}.csv"
     if not p.exists():
@@ -189,7 +212,8 @@ TARGETS = {"wind": "wind", "solar": "solar", "load": "load"}
 
 
 def forecast_country(code: str, hist: pd.DataFrame, fut: pd.DataFrame, e: pd.DataFrame,
-                     today: dt.date, days: int = 7) -> dict | None:
+                     today: dt.date, days: int = 7, hourly: pd.DataFrame | None = None,
+                     tz: str = "Europe/Brussels") -> dict | None:
     """Prognoza dzienna (GWh) na `days` dni od dziś z modeli dopasowanych do historii kraju."""
     if fut.empty or e.empty:
         return None
@@ -219,9 +243,23 @@ def forecast_country(code: str, hist: pd.DataFrame, fut: pd.DataFrame, e: pd.Dat
         coef = fit(hist, y, kind, last + pd.Timedelta(days=1), min_n)
         if coef is None or fut[FEATURES].isna().all().all():
             continue
-        p = predict(coef, fut[FEATURES].ffill(), kind)
+        # dni bez prognozy pogody zostają puste (bez przenoszenia ostatniej wartości)
+        need = {"wind": ["cf"], "solar": ["ghi"], "load": ["hdd", "cdd"]}[kind]
+        ok = fut[need].notna().all(axis=1)
+        p = predict(coef, fut[FEATURES].fillna(0), kind).where(ok)
         out[kind] = [None if pd.isna(v) else round(float(v), 2) for v in p.tolist()]
         out["methods"][kind] = METHOD
+        if kind == "wind":
+            out["wind_ws"] = [None if pd.isna(v) else round(float(v), 1) for v in fut["ws"].tolist()]
+            if hourly is not None and not hourly.empty:
+                lo = pd.Timestamp(today).tz_localize(tz).tz_convert("UTC")
+                hi = (pd.Timestamp(today) + pd.Timedelta(days=days)).tz_localize(tz).tz_convert("UTC")
+                hh = hourly[(hourly.index >= lo) & (hourly.index < hi)]
+                if len(hh) >= 24:
+                    mw = hourly_wind_mw(coef, hh, p, tz).where(hh["cf"].notna().to_numpy())
+                    out["wind_hourly"] = {"start": hh.index[0].strftime("%Y-%m-%dT%H:%MZ"),
+                                          "mw": [None if pd.isna(v) else round(float(v), 0) for v in mw.tolist()],
+                                          "ws": [None if pd.isna(v) else round(float(v), 1) for v in hh["ws"].tolist()]}
         out["errors"][kind] = model_error(hist, y, kind, last, days=14 if min_n else 28, min_n=min_n)
     if not any(k in out for k in TARGETS):
         return None
@@ -278,7 +316,8 @@ def update(settings: dict, frames: dict[str, pd.DataFrame], derive, countries: l
         fut = recent[recent.index >= pd.Timestamp(today)]
         e, _ = derive(frames[code], min_cov)
         try:
-            fc = forecast_country(code, cache, fut, e, today)
+            hw = hourly_wind(by_code.get(code, []), pts[code])
+            fc = forecast_country(code, cache, fut, e, today, hourly=hw, tz=tz)
         except Exception as ex:
             log.append(f"{code}: błąd modelu prognozy ({type(ex).__name__}: {ex})")
             fc = None
@@ -296,6 +335,17 @@ def update(settings: dict, frames: dict[str, pd.DataFrame], derive, countries: l
             if all(results[m].get(k) for m in members):
                 eu[k] = [round(sum(results[m][k][i] or 0 for m in members), 2) for i in range(len(days))]
                 eu["methods"][k] = METHOD + ", suma krajów"
+        hs = [results[m].get("wind_hourly") for m in members]
+        if all(hs) and len({h["start"] for h in hs}) <= 3:
+            # strefy czasowe krajów różnią się - suma na wspólnej osi UTC
+            series = []
+            for h in hs:
+                idx = pd.date_range(pd.Timestamp(h["start"]), periods=len(h["mw"]), freq="h")
+                series.append(pd.Series(h["mw"], index=idx))
+            tot = pd.concat(series, axis=1).dropna().sum(axis=1)
+            if len(tot) >= 24:
+                eu["wind_hourly"] = {"start": tot.index[0].strftime("%Y-%m-%dT%H:%MZ"),
+                                     "mw": [round(float(v), 0) for v in tot.tolist()]}
         (store.FORECAST / "EU.json").write_text(json.dumps(eu, ensure_ascii=False), encoding="utf-8")
         _archive("EU", eu)
         results["EU"] = eu

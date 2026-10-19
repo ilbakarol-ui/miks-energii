@@ -492,3 +492,24 @@ def test_gb_resplit_and_break_model():
     fut = f.iloc[-7:].copy(); fut.index = pd.date_range("2026-10-16", periods=7, freq="D")
     fc = weather.forecast_country("NL", f[weather.FEATURES], fut[weather.FEATURES], e, dt.date(2026, 10, 16))
     assert 200 < fc["load"][0] < 270 and "load" in fc["notes"]
+
+
+def test_wind_hourly_and_missing_weather():
+    from mixtracker import weather
+    rng = np.random.default_rng(5)
+    idx = pd.date_range("2025-06-01", "2026-10-18", freq="D")
+    f = pd.DataFrame({"ws": rng.uniform(2, 14, len(idx)), "ghi": 3.0, "temp": 10.0}, index=idx)
+    f["cf"] = weather.turbine_cf(f["ws"]); f["hdd"] = 5.5; f["cdd"] = 0.0
+    e = pd.DataFrame({"wind": 5 + 80 * f["cf"], "solar": 18.0, "load": 400.0, "gen_total": 500.0}, index=idx)
+    fut = f.iloc[-7:].copy(); fut.index = pd.date_range("2026-10-19", periods=7, freq="D")
+    fut.iloc[4:, :] = np.nan                                          # brak prognozy pogody od 5. dnia
+    hidx = pd.date_range(pd.Timestamp("2026-10-19").tz_localize("Europe/Warsaw").tz_convert("UTC"), periods=168, freq="h")
+    hws = rng.uniform(3, 15, 168); hws[96:] = np.nan
+    hw = pd.DataFrame({"cf": weather.turbine_cf(hws), "ws": hws}, index=hidx)
+    fc = weather.forecast_country("PL", f[weather.FEATURES], fut[weather.FEATURES], e, dt.date(2026, 10, 19),
+                                  hourly=hw, tz="Europe/Warsaw")
+    assert fc["wind"][4:] == [None, None, None] and all(v is not None for v in fc["wind"][:4])
+    mw = fc["wind_hourly"]["mw"]
+    assert len(mw) == 168 and mw[100] is None
+    for d in range(4):
+        assert sum(mw[d * 24:(d + 1) * 24]) / 1000 == pytest.approx(fc["wind"][d], rel=1e-3)
