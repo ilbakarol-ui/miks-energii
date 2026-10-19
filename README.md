@@ -90,7 +90,7 @@ Ustawienia (odstęp między zapytaniami, limit czasu, liczba dni do ponownego po
 
 ## Wspólna pogoda dla innych dashboardów
 
-Osobny przebieg (`.github/workflows/shared_weather.yml`, codziennie o 02:41 UTC, także w weekendy) zapisuje w `data/shared_weather/` temperaturę dla punktów z `config/shared_weather_points.csv` (miasta krajów UE używane przez raport Gaz UE i punkty w Azji):
+Osobny przebieg (`.github/workflows/shared_weather.yml`, codziennie o 00:17 UTC, także w weekendy) zapisuje w `data/shared_weather/` temperaturę dla punktów z `config/shared_weather_points.csv` (miasta krajów UE używane przez raport Gaz UE i punkty w Azji):
 
 - `temp_hist.csv` – średnia dobowa z archiwum ERA5 od 2019 r.,
 - `temp_recent.csv` – ostatnie 14 dni i 16 dni prognozy (`fc=1`),
