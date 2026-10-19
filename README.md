@@ -45,7 +45,7 @@ Działa w chmurze GitHub (GitHub Actions), raz dziennie, bez niczego na Twoim ko
 5. **Pierwsze uruchomienie**: zakładka **Actions** → **Miks energii - aktualizacja dzienna** → **Run workflow**, zostaw domyślny limit czasu **240**. Pobranie 5 lat historii produkcji i cen dla 30 krajów oraz sprawdzenie, które kraje mają prognozy, trwa ok. 2,5 godziny, bo źródło pozwala na 2 zapytania na minutę.
 6. **Adres dashboardu**: po zakończeniu przebiegu jest w **Settings → Pages** (np. `https://<twoja-nazwa>.github.io/miks-energii/`). Ten sam adres działa na telefonie. Kraj można podać w adresie, np. `…/#pl`.
 
-Następne przebiegi startują same od poniedziałku do piątku o 02:23 UTC (04:23 latem, 03:23 zimą w Polsce), tak żeby dane i raport były gotowe przed 6:00, i trwają ok. 20–40 minut. Poniedziałkowy przebieg dociąga dane z weekendu. Godzinę zmienisz w `.github/workflows/daily.yml` (linia `cron`).
+Następne przebiegi startują same od poniedziałku do piątku o 00:53 UTC (02:53 latem, 01:53 zimą w Polsce) i trwają ok. 20–40 minut. Wczesny start zostawia zapas na opóźnienia startów planowych GitHub (bywają do ok. 3 godzin), tak żeby dane były gotowe przed odświeżeniem podglądu o 5:40. Zapis danych ponawia się do 5 razy, gdy w tym samym czasie do repozytorium pisze przebieg „Wspólna pogoda”. Poniedziałkowy przebieg dociąga dane z weekendu. Godzinę zmienisz w `.github/workflows/daily.yml` (linia `cron`).
 
 Jeśli pierwszy przebieg wpiszesz z mniejszym limitem, historia uzupełni się sama w kolejnych dniach. Do tego czasu porównania z 5 lat pokazują „–”, a Kontrola danych ma uwagę „historia 5 lat w trakcie uzupełniania”.
 

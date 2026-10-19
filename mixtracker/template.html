@@ -1667,7 +1667,7 @@ const DATA = /*__DATA__*/null;
     const note = o
       ? `Prognozy wydane od ${fdate(o.first)} do ${fdate(o.last)} (${o.issues} wydań${o.countries ? ", suma " + o.countries + " krajów" : ""}).`
       : `Prognozy wydane: archiwum jest prowadzone od ${since}, a wynik dla danego wyprzedzenia pojawia się po rozliczeniu co najmniej 3 prognoz. Pierwsze wiersze (ten sam dzień, 1 dzień) pojawią się w ciągu kilku dni roboczych, pełna tabela po około dwóch tygodniach.`;
-    $("v-op").innerHTML = h + `<p class="small muted" style="margin-top:8px">Wyprzedzenie 0 to prognoza na dzień wydania (wydawana ok. 4:30, znane dane do poprzedniego dnia). „Jak wczoraj”: błąd metody odniesienia, która powtarza ostatni znany dzień. Umiejętność liczona względem tej metody. ${note}</p>`;
+    $("v-op").innerHTML = h + `<p class="small muted" style="margin-top:8px">Wyprzedzenie 0 to prognoza na dzień wydania (wydawana w nocy, ok. 3:00, znane dane do poprzedniego dnia). „Jak wczoraj”: błąd metody odniesienia, która powtarza ostatni znany dzień. Umiejętność liczona względem tej metody. ${note}</p>`;
   }
 
   function renderVerTable() {
