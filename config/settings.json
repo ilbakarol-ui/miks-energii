@@ -23,5 +23,6 @@
   "weather_forecast": true,
   "weather_history_days": 420,
   "forecasts_energycharts": false,
-  "elexon_budget_minutes": 40
+  "elexon_budget_minutes": 40,
+  "verify_archive_from": "2026-10-20"
 }
