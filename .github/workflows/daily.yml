@@ -2,7 +2,7 @@ name: Miks energii - aktualizacja dzienna
 
 on:
   schedule:
-    - cron: "23 5 * * *"        # 05:23 UTC = 07:23 czasu letniego w Polsce (06:23 zimą)
+    - cron: "23 2 * * 1-5"      # pon.-pt. 02:23 UTC = 04:23 czasu letniego w Polsce (03:23 zimą); raport gotowy przed 6:00
   workflow_dispatch:
     inputs:
       budget:

@@ -38,7 +38,7 @@ Działa w chmurze GitHub (GitHub Actions), raz dziennie, bez niczego na Twoim ko
 5. **Pierwsze uruchomienie**: zakładka **Actions** → **Miks energii - aktualizacja dzienna** → **Run workflow**, zostaw domyślny limit czasu **240**. Pobranie 5 lat historii produkcji i cen dla 30 krajów oraz sprawdzenie, które kraje mają prognozy, trwa ok. 2,5 godziny, bo źródło pozwala na 2 zapytania na minutę.
 6. **Adres dashboardu**: po zakończeniu przebiegu jest w **Settings → Pages** (np. `https://<twoja-nazwa>.github.io/miks-energii/`). Ten sam adres działa na telefonie. Kraj można podać w adresie, np. `…/#pl`.
 
-Następne przebiegi startują same codziennie o 05:23 UTC (07:23 latem, 06:23 zimą w Polsce) i trwają ok. 20–30 minut. Godzinę zmienisz w `.github/workflows/daily.yml` (linia `cron`).
+Następne przebiegi startują same od poniedziałku do piątku o 02:23 UTC (04:23 latem, 03:23 zimą w Polsce), tak żeby dane i raport były gotowe przed 6:00, i trwają ok. 20–40 minut. Poniedziałkowy przebieg dociąga dane z weekendu. Godzinę zmienisz w `.github/workflows/daily.yml` (linia `cron`).
 
 Jeśli pierwszy przebieg wpiszesz z mniejszym limitem, historia uzupełni się sama w kolejnych dniach. Do tego czasu porównania z 5 lat pokazują „–”, a Kontrola danych ma uwagę „historia 5 lat w trakcie uzupełniania”.
 
@@ -61,7 +61,7 @@ Jeśli pierwszy przebieg wpiszesz z mniejszym limitem, historia uzupełni się s
   - **Saldo wymiany** = zużycie − (produkcja − pompowanie). Dodatnie: import netto, ujemne: eksport netto.
   - **Udział OZE** = wiatr, słońce, woda (bez elektrowni szczytowo-pompowych), biomasa, geotermia, inne OZE.
   - Dni z pokryciem danych poniżej 80% są pomijane. Drobne luki w pojedynczej serii są uzupełniane proporcjonalnie.
-  - Dane są poprawiane przez operatorów, dlatego tracker codziennie pobiera ponownie ostatnie 10 dni, a w niedziele ostatnie 45.
+  - Dane są poprawiane przez operatorów, dlatego tracker przy każdym przebiegu pobiera ponownie ostatnie 10 dni, a w poniedziałki ostatnie 45.
 - **Wielka Brytania**: [Elexon BMRS](https://bmrs.elexon.co.uk), Insights Solution API: FUELHH (produkcja wg paliwa i interkonektory, co 30 min) oraz AGPT (B1620, tylko słońce i podział wiatru). Zbiory AGPT i ATL nie są podstawą, bo mają długie luki (całe typy znikają na tygodnie), a ATL zmienił definicję w 2026 r. Contains BMRS data © Elexon Limited copyright and database right. Zapis w `data/daily/GB.csv`.
 - **Ceny**: rynek dnia następnego (day-ahead) z Energy-Charts /price.
   - **Licencja**: Energy-Charts udostępnia na CC BY 4.0 (dane SMARD / Bundesnetzagentur) tylko strefy AT, BE, CH, CZ, DE-LU, DK1, DK2, FR, HU, IT-North, NL, NO2, PL, SE4 i SI. Ceny pozostałych stref są wyłącznie do użytku prywatnego i wewnętrznego, więc dashboard ich domyślnie nie pobiera.

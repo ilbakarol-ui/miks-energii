@@ -5,7 +5,7 @@
   "max_retries": 4,
   "refetch_days": 10,
   "refetch_days_weekly": 45,
-  "weekly_refetch_weekday": 6,
+  "weekly_refetch_weekday": 0,
   "backfill_chunk_days": 366,
   "min_chunk_days": 31,
   "history_years": 5,
