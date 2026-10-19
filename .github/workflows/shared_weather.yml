@@ -1,0 +1,57 @@
+name: Wspólna pogoda dla dashboardów
+
+# Temperatura dla punktów Gazu UE i Azji: archiwum ERA5, bieżąca prognoza i dawne prognozy (wyprzedzenie 0-7 dni).
+# Codziennie, także w weekendy; kończy się przed 6:00 w Polsce, kiedy startuje raport gazowy.
+on:
+  schedule:
+    - cron: "41 2 * * *"
+  workflow_dispatch:
+    inputs:
+      budget:
+        description: "Limit zapytań ważonych Open-Meteo w tym przebiegu"
+        required: false
+        default: "8000"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: shared-weather
+  cancel-in-progress: false
+
+jobs:
+  weather:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalacja
+        run: pip install -r requirements.txt
+
+      - name: Test modułu
+        run: python -m pytest -q tests/test_shared_weather.py
+
+      - name: Pobranie pogody
+        env:
+          BUDGET: ${{ github.event.inputs.budget || '8000' }}
+        run: python -m mixtracker.shared_weather --budget "$BUDGET"
+
+      - name: Zapis w repozytorium
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/shared_weather
+          git diff --cached --quiet && exit 0
+          git commit -m "Wspólna pogoda $(date -u +%Y-%m-%d)"
+          for i in 1 2 3 4 5; do
+            git pull --rebase --autostash && git push && exit 0
+            sleep $((i * 20))
+          done
+          exit 1

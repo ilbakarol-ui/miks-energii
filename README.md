@@ -88,6 +88,17 @@ Jeśli pierwszy przebieg wpiszesz z mniejszym limitem, historia uzupełni się s
 
 Ustawienia (odstęp między zapytaniami, limit czasu, liczba dni do ponownego pobrania, próg pokrycia, liczba lat, licencje cen, prognozy) są w `config/settings.json`. Strefy cenowe krajów są w `config/price_zones.csv`. Lista krajów i stref czasowych jest w `config/countries.csv`.
 
+## Wspólna pogoda dla innych dashboardów
+
+Osobny przebieg (`.github/workflows/shared_weather.yml`, codziennie o 02:41 UTC, także w weekendy) zapisuje w `data/shared_weather/` temperaturę dla punktów z `config/shared_weather_points.csv` (miasta krajów UE używane przez raport Gaz UE i punkty w Azji):
+
+- `temp_hist.csv` – średnia dobowa z archiwum ERA5 od 2019 r.,
+- `temp_recent.csv` – ostatnie 14 dni i 16 dni prognozy (`fc=1`),
+- `temp_prev.csv` – dawne prognozy: `l1` to prognoza na dany dzień wydana dzień wcześniej, `l7` – tydzień wcześniej (`l0` – bieżąca analiza); służy do liczenia, jak bardzo myli się prognoza pogody przy różnym wyprzedzeniu,
+- `meta.json` – czas aktualizacji, zakres danych, zużycie limitu Open-Meteo i błędy.
+
+Inne dashboardy czytają te pliki z repozytorium; gdy przebieg się nie uda, korzystają z własnego pobierania. Pierwsze uruchomienia dociągają historię partiami (limit Open-Meteo), kolejne tylko nowe dni. Przebieg nie zmienia danych ani działania Miksu energii.
+
 ## Ograniczenia
 
 - Energy-Charts pozwala na ok. 2 zapytania na minutę na każdy rodzaj danych (produkcja, ceny, prognozy osobno), więc codzienny przebieg trwa ok. 20–30 minut. Nie skracaj `request_interval_seconds` poniżej 30.

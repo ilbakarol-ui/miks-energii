@@ -1,0 +1,107 @@
+import datetime as dt
+import json
+
+import pandas as pd
+
+from mixtracker import shared_weather as sw
+
+
+def fake_get_factory(calls):
+    def get(url, params):
+        calls.append((url, dict(params)))
+        n = len(params["latitude"].split(","))
+        out = []
+        for i in range(n):
+            if "hourly" in params:
+                a = pd.Timestamp(params["start_date"])
+                b = pd.Timestamp(params["end_date"]) + pd.Timedelta(hours=23)
+                t = pd.date_range(a, b, freq="h")
+                h = {"time": [x.strftime("%Y-%m-%dT%H:%M") for x in t]}
+                for k, v in enumerate(params["hourly"].split(",")):
+                    h[v] = [float(k + i)] * len(t)
+                out.append({"hourly": h})
+            else:
+                if "start_date" in params:
+                    days = pd.date_range(params["start_date"], params["end_date"])
+                else:
+                    today = pd.Timestamp(TODAY)
+                    days = pd.date_range(today - pd.Timedelta(days=params["past_days"]),
+                                         today + pd.Timedelta(days=params["forecast_days"] - 1))
+                out.append({"daily": {"time": [d.strftime("%Y-%m-%d") for d in days],
+                                      "temperature_2m_mean": [5.0 + i] * len(days)}})
+        return out
+    return get
+
+
+TODAY = dt.date(2026, 10, 19)
+
+
+def setup(tmp_path, monkeypatch, n=3):
+    pts = tmp_path / "pts.csv"
+    pts.write_text("pt,group,cc,lat,lon,tz\n" + "".join(
+        f"P{i},eu_gas,DE,5{i}.0,1{i}.0,Europe/Berlin\n" for i in range(n)) + "A1,asia,JP,35.68,139.69,GMT\n")
+    monkeypatch.setattr(sw, "OUT", tmp_path / "out")
+    monkeypatch.setattr(sw, "POINTS", pts)
+    monkeypatch.setattr(sw, "HIST_START", "2026-01-01")
+    monkeypatch.setattr(sw, "PREV_START", "2026-09-01")
+    monkeypatch.setattr(sw.time, "sleep", lambda s: None)
+
+
+def test_quota_weight():
+    assert sw.Quota.weight(10, 14) == 10
+    assert sw.Quota.weight(1, 28, 8) == 2
+    assert sw.Quota.weight(1, 28, 20) == 4
+
+
+def test_daily_from_hourly_requires_20_hours():
+    t = [f"2026-01-01T{h:02d}:00" for h in range(24)] + [f"2026-01-02T{h:02d}:00" for h in range(10)]
+    d = sw.daily_from_hourly(t, {"l0": [1.0] * 24 + [2.0] * 10})
+    assert d.loc["2026-01-01", "l0"] == 1.0
+    assert pd.isna(d.loc["2026-01-02", "l0"])
+
+
+def test_full_run_and_incremental(tmp_path, monkeypatch):
+    setup(tmp_path, monkeypatch)
+    calls = []
+    meta = sw.run(budget=1e6, get=fake_get_factory(calls), today=TODAY)
+    assert meta["errors"] == []
+    out = tmp_path / "out"
+    rec = pd.read_csv(out / "temp_recent.csv")
+    assert rec.fc.sum() == 4 * 16 and set(rec.pt) == {"P0", "P1", "P2", "A1"}
+    hist = pd.read_csv(out / "temp_hist.csv")
+    assert hist.date.max() == "2026-10-13" and hist.date.min() == "2026-01-01"
+    prev = pd.read_csv(out / "temp_prev.csv")
+    assert list(prev.columns) == ["pt", "date"] + [f"l{k}" for k in range(8)]
+    assert prev.date.max() == "2026-10-18" and prev.date.min() == "2026-09-01"
+    assert (prev[prev.pt == "P1"].l3 == 4.0).all()           # zmienna nr 3 + indeks punktu 1
+    # strefy czasowe: Europa i Azja w osobnych zapytaniach
+    assert {c[1]["timezone"] for c in calls} == {"Europe/Berlin", "GMT"}
+    m = json.loads((out / "meta.json").read_text())
+    assert m["forecast_issued"] == "2026-10-19" and m["coverage"]["prev"]["points"] == 4
+    # następny dzień: tylko przyrost
+    calls.clear()
+    sw.run(budget=1e6, get=fake_get_factory(calls), today=TODAY + dt.timedelta(days=1))
+    hist_calls = [c for c in calls if c[0] == sw.ARCHIVE_URL]
+    assert all(c[1]["start_date"] == "2026-10-14" for c in hist_calls)
+    prev_calls = [c for c in calls if c[0] == sw.PREV_URL]
+    assert all(c[1]["start_date"] == "2026-10-15" for c in prev_calls)
+    assert pd.read_csv(out / "temp_prev.csv").date.max() == "2026-10-19"
+
+
+def test_budget_leaves_pending(tmp_path, monkeypatch):
+    setup(tmp_path, monkeypatch)
+    meta = sw.run(budget=30, get=fake_get_factory([]), today=TODAY)
+    assert meta["pending"].get("hist", 0) > 0 or meta["pending"].get("prev", 0) > 0
+
+
+def test_step_error_does_not_stop_others(tmp_path, monkeypatch):
+    setup(tmp_path, monkeypatch)
+    good = fake_get_factory([])
+
+    def get(url, params):
+        if url == sw.PREV_URL:
+            raise RuntimeError("HTTP 403")
+        return good(url, params)
+    meta = sw.run(budget=1e6, get=get, today=TODAY)
+    assert any(e.startswith("prev") for e in meta["errors"])
+    assert (tmp_path / "out" / "temp_hist.csv").exists()
