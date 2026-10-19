@@ -1857,6 +1857,7 @@ const DATA = /*__DATA__*/null;
       if (k.history_complete === false) notes.push("historia 5 lat w trakcie uzupełniania");
       if (k.status) notes.push(esc(k.status));
       if (k.break) notes.push(`skok zużycia w źródle od ${fdate(k.break.date)} (${k.break.change > 0 ? "+" : ""}${fmt1.format(k.break.change)}%)`);
+      if (k.partial_last) notes.push(`ostatnia doba ${fdate(k.partial_last.date)} niepełna w źródle (zużycie ${fmt0.format(100 * k.partial_last.ratio)}% typowego) - pominięta do czasu uzupełnienia`);
       const GL = { wind: "wiatr", solar: "słońce", load: "zużycie" };
       Object.entries(k.gaps || {}).forEach(([kind, g]) => {
         const rr = g.ranges.map(([a, b]) => (a === b ? fdate(a) : `${fdate(a)}–${fdate(b)}`)).join(", ");

@@ -645,3 +645,14 @@ def test_verify_backtest_leads_and_members():
     assert out["backtest"]["EU"]["wind"]["countries"] == 2           # NO poza UE-27
     assert sorted(out["backtest"]["EU"]["wind"]["leads"]) == [str(k) for k in range(7)]
     json.dumps(out)
+
+
+def test_flag_partial_last_day():
+    idx = pd.date_range("2026-09-14", "2026-10-18", freq="D")
+    df = pd.DataFrame({"cov": 1.0, "load": 30000.0 + 3000 * (idx.dayofweek < 5)}, index=idx)
+    out, info = build._flag_partial_last(df.assign(load=df["load"].where(df.index < "2026-10-18", 15000.0)), 0.8)
+    assert info == {"date": "2026-10-18", "ratio": 0.5}
+    assert out.at[pd.Timestamp("2026-10-18"), "cov"] < 0.8 and out.at[pd.Timestamp("2026-10-17"), "cov"] == 1.0
+    out, info = build._flag_partial_last(df.assign(load=df["load"].where(df.index < "2026-10-18", 27000.0)), 0.8)
+    assert info is None and out.at[pd.Timestamp("2026-10-18"), "cov"] == 1.0
+    assert build._flag_partial_last(df.drop(columns="load"), 0.8)[1] is None

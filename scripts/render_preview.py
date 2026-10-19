@@ -52,7 +52,7 @@ def main(out: Path):
         brief["wiatr_PL"] = w("PL")
         brief["wiatr_prognoza_wydana"] = wt.get("issued")
     gb = payload.get("control", {}).get("GB", {})
-    brief["kontrola"] = {k: v for k, v in payload.get("control", {}).items() if v.get("error") or v.get("break")}
+    brief["kontrola"] = {k: v for k, v in payload.get("control", {}).items() if v.get("error") or v.get("break") or v.get("partial_last")}
     brief["GB_ostatni_dzien"] = gb.get("last")
     (out / "brief.json").write_text(json.dumps(brief, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps(brief, ensure_ascii=False, indent=1))

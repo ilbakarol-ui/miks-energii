@@ -15,6 +15,27 @@ TEMPLATE = Path(__file__).with_name("template.html")
 SITE = store.ROOT / "site"
 
 
+def _flag_partial_last(df: pd.DataFrame, min_cov: float, ratio: float = 0.6):
+    """Ostatnia doba z pełnym pokryciem, ale zużyciem poniżej 60% mediany z tych samych dni
+    tygodnia z 4 poprzednich tygodni -> traktowana jako niepełna (źródło dosyła resztę później).
+    Zwraca (ramka, informacja o oznaczeniu albo None)."""
+    if df is None or df.empty or "load" not in df:
+        return df, None
+    last = df.index.max()
+    if df.at[last, "cov"] < min_cov:
+        return df, None
+    prev = [last - pd.Timedelta(weeks=k) for k in range(1, 5)]
+    prev = [d for d in prev if d in df.index and df.at[d, "cov"] >= min_cov]
+    if len(prev) < 2:
+        return df, None
+    ref, val = df.loc[prev, "load"].median(), df.at[last, "load"]
+    if pd.notna(ref) and ref > 0 and pd.notna(val) and val < ratio * ref:
+        df = df.copy()
+        df.at[last, "cov"] = min(df.at[last, "cov"], min_cov / 2)
+        return df, {"date": last.strftime("%Y-%m-%d"), "ratio": round(float(val / ref), 2)}
+    return df, None
+
+
 def _ref_date(frames: dict, min_cov: float) -> dt.date | None:
     lasts = {}
     for code, df in frames.items():
@@ -113,6 +134,11 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
     min_cov = settings["min_day_coverage"]
     n_years, min_years = settings["history_years"], settings["five_year_min_years"]
     frames = {c["code"]: store.read_daily(c["code"], folder) for c in countries if store.has_daily(c)}
+    partial = {}
+    for k in list(frames):
+        frames[k], p = _flag_partial_last(frames[k], min_cov)
+        if p:
+            partial[k] = p
     ref = _ref_date(frames, min_cov) or (today or dt.date.today()) - dt.timedelta(days=1)
     periods = trends.reference_periods(ref)
     state = store.read_state()
@@ -170,6 +196,7 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
             "forecast": _fc_status(fc),
             "break": brk,
             "gaps": _gap_info(e, code, ref),
+            "partial_last": partial.get(code),
         }
 
     names = {c["code"]: c["name"] for c in countries}
