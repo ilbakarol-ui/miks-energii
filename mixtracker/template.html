@@ -201,6 +201,15 @@ td.na, .na { color: var(--muted); }
 .heat td.h.cur { box-shadow: inset 0 0 0 2px var(--ink); }
 @media (max-width: 560px) { #w-kpis { grid-template-columns: 1fr; } }
 .acc td, .acc th { text-align: right; }
+[hidden] { display: none !important; }
+.method { display: grid; gap: 10px; max-width: 78ch; font-size: 14.5px; line-height: 1.55; }
+.method h3 { color: var(--ink); font-size: 17px; margin-top: 6px; }
+.method p, .method li { color: var(--ink-2); }
+.method ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.method code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; color: var(--ink); }
+.vtable td.sk { font-weight: 600; }
+@media (max-width: 860px) { .tabs button { padding: 8px 12px; font-size: 13.5px; } }
+@media (max-width: 560px) { .tabs { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; } .tabs button { padding: 8px 4px; font-size: 13px; line-height: 1.25; } }
 .map-wrap { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(240px, 1fr); gap: 12px; align-items: start; }
 @media (max-width: 820px) { .map-wrap { grid-template-columns: 1fr; } }
 .map-box { position: relative; min-width: 0; }
@@ -255,6 +264,7 @@ footer a, .notes a { color: var(--accent); }
     <div class="tabs" role="tablist" aria-label="Zakładki">
       <button type="button" role="tab" id="tab-btn-mix" data-tab="mix" aria-selected="true" aria-controls="tab-mix">Miks i ceny</button>
       <button type="button" role="tab" id="tab-btn-wind" data-tab="wind" aria-selected="false" aria-controls="tab-wind">Prognozy wiatru</button>
+      <button type="button" role="tab" id="tab-btn-ver" data-tab="ver" aria-selected="false" aria-controls="tab-ver">Weryfikacja prognoz</button>
     </div>
     <select id="country" aria-label="Kraj"></select>
     <div class="seg" id="period" role="group" aria-label="Okres">
@@ -462,6 +472,75 @@ footer a, .notes a { color: var(--accent); }
     </section>
   </div>
 
+  <div id="tab-ver" role="tabpanel" aria-labelledby="tab-btn-ver" style="display:grid;gap:28px" hidden>
+    <section aria-labelledby="h-v">
+      <div class="head">
+        <h2 id="h-v">Weryfikacja prognoz</h2>
+        <div class="seg" id="v-kind" role="group" aria-label="Prognozowana wielkość">
+          <button type="button" data-k="wind" aria-pressed="true">Wiatr</button>
+          <button type="button" data-k="solar" aria-pressed="false">Słońce</button>
+          <button type="button" data-k="load" aria-pressed="false">Zużycie</button>
+        </div>
+      </div>
+      <p class="small muted" id="v-sub"></p>
+    </section>
+    <div class="kpis" id="v-kpis"></div>
+    <div class="grid2">
+      <section aria-labelledby="h-vs">
+        <div class="head"><h2 id="h-vs">Model a rzeczywistość</h2><span class="small muted">GWh, test wsteczny</span></div>
+        <div class="panel" style="display:grid;gap:10px">
+          <div class="legend" id="v-series-legend"></div>
+          <div class="chart" id="v-series"></div>
+        </div>
+      </section>
+      <section aria-labelledby="h-vw">
+        <div class="head"><h2 id="h-vw">Błąd w kolejnych tygodniach</h2><span class="small muted">%, test wsteczny</span></div>
+        <div class="panel" style="display:grid;gap:10px">
+          <div class="chart" id="v-weekly"></div>
+          <p class="small muted">Stabilny poziom oznacza, że model nie psuje się w czasie. Skok w jednym tygodniu to zwykle nietypowe zdarzenie (święto, awaria, ograniczenia pracy farm) albo korekta danych źródła.</p>
+        </div>
+      </section>
+    </div>
+    <section aria-labelledby="h-vo">
+      <div class="head"><h2 id="h-vo">Prognozy operacyjne wg wyprzedzenia</h2><span class="small muted" id="v-op-label"></span></div>
+      <div class="panel" id="v-op"></div>
+    </section>
+    <section aria-labelledby="h-vt">
+      <div class="head"><h2 id="h-vt">Wszystkie kraje</h2><span class="small muted">test wsteczny, ostatnie <span id="v-days"></span> dni</span></div>
+      <div class="tablebox"><table class="vtable" id="v-table"></table></div>
+      <p class="small muted">Kolor umiejętności: niebieski - model lepszy od metody odniesienia, czerwony - gorszy. Kliknij wiersz, aby wybrać kraj.</p>
+    </section>
+    <section aria-labelledby="h-vm">
+      <div class="head"><h2 id="h-vm">Metoda sprawdzania</h2></div>
+      <div class="panel method">
+        <p>Prognozy wiatru, słońca i zużycia są sprawdzane na dwa sposoby, bo mają dwa źródła błędu: prognozę pogody i model, który przelicza pogodę na energię.</p>
+        <h3>1. Test wsteczny modelu</h3>
+        <p>Dla każdego z ostatnich <span class="v-days2"></span> dni model jest dopasowywany tylko do danych sprzed tego dnia (tak jak w prognozie dziennej: wiatr z ostatnich 120 dni, słońce z 60, zużycie z 365; dopasowanie odświeżane co 7 dni), a następnie dostaje rzeczywistą pogodę z tego dnia: reanalizę ERA5 i analizę Open-Meteo. Wynik porównywany jest z produkcją albo zużyciem, które faktycznie wystąpiły. Ten test mierzy błąd samego modelu. Pokazuje, jak dobra byłaby prognoza przy idealnej prognozie pogody, więc jest to górna granica trafności.</p>
+        <h3>2. Weryfikacja prognoz operacyjnych</h3>
+        <p>Każda prognoza wydana przez automat jest zapisywana w archiwum (<code>data/forecast/archive.csv</code>) w chwili wydania i nie jest później zmieniana. Gdy pojawią się dane rzeczywiste, prognozy są rozliczane osobno dla każdego wyprzedzenia: 0 dni (prognoza na dzień wydania, wydawana rano), 1 dzień, aż do 6 dni. Ta ocena obejmuje oba źródła błędu, więc jej wynik jest gorszy od testu wstecznego i pogarsza się z wyprzedzeniem. Pierwsze wyniki pojawiają się po zebraniu co najmniej 3 prognoz na dane wyprzedzenie.</p>
+        <h3>Miary</h3>
+        <ul>
+          <li><b>Błąd (WAPE)</b> = Σ|prognoza − rzeczywistość| / Σ rzeczywistość. Mówi, o ile procent łącznej energii model się mylił. Dni z dużą produkcją ważą więcej niż dni z małą, więc wynik nie jest zawyżany przez dni prawie bez wiatru.</li>
+          <li><b>Odchylenie systematyczne</b> = Σ prognoza / Σ rzeczywistość − 1. Wartość dodatnia oznacza, że model zawyża, a ujemna, że zaniża.</li>
+          <li><b>Umiejętność</b> = 1 − (błąd modelu / błąd metody odniesienia), liczona na tych samych dniach. 100% oznacza prognozę idealną, 0% wynik nie lepszy od metody odniesienia, a wartość ujemna wynik gorszy.</li>
+        </ul>
+        <h3>Metody odniesienia</h3>
+        <ul>
+          <li><b>Persystencja (jak wczoraj):</b> prognoza równa ostatniej znanej wartości, czyli dnia poprzedzającego wydanie prognozy. Trudna do pobicia na krótkie wyprzedzenia przy zużyciu.</li>
+          <li><b>Klimatologia (jak zwykle):</b> średnia z tych samych dni kalendarza (±3 dni) w ostatnich 5 latach. Trudna do pobicia na dalsze wyprzedzenia, gdy prognoza pogody traci trafność.</li>
+        </ul>
+        <h3>Ograniczenia</h3>
+        <ul>
+          <li>Dane rzeczywiste są korygowane przez operatorów jeszcze przez kilka tygodni, więc wyniki z ostatnich dni mogą się nieco zmienić.</li>
+          <li>Model zużycia nie zna świąt ani przestojów przemysłu. Dni świąteczne zawyżają błąd.</li>
+          <li>Produkcja z wiatru bywa ograniczana przez operatorów sieci (redispatch, ceny ujemne), czego pogoda nie przewiduje. Widać to jako zawyżanie prognozy w takich dniach.</li>
+          <li>Przy bardzo małej produkcji (np. wiatr w Słowenii, słońce w Estonii jesienią) błąd procentowy jest wysoki, choć w GWh niewielki.</li>
+          <li>Po nagłej zmianie sposobu raportowania w źródle (np. Holandia od 18.09.2026) test wsteczny miesza dwa poziomy danych i pokazuje zawyżony błąd. Takie kraje są oznaczone w tabeli.</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
   <footer>
     <p>Dane dzienne: <a href="https://energy-charts.info" target="_blank" rel="noopener">Energy-Charts.info</a> (Fraunhofer ISE, licencja CC BY 4.0), na podstawie ENTSO-E Transparency Platform i operatorów sieci. Dane miesięczne oficjalne: <a href="https://ec.europa.eu/eurostat/databrowser/view/nrg_cb_pem/default/table" target="_blank" rel="noopener">Eurostat nrg_cb_pem i nrg_cb_em</a>.</p>
     <p>Produkcja = publiczna produkcja netto (bez części autoprodukcji przemysłowej). Zużycie = obciążenie sieci według ENTSO-E (z pompowaniem i stratami). Saldo wymiany wyliczone z bilansu: zużycie − (produkcja − pompowanie). Dni z pokryciem danych poniżej 80% są pomijane.</p>
@@ -584,6 +663,7 @@ const DATA = /*__DATA__*/null;
     try { history.replaceState(null, "", "#" + c.toLowerCase()); } catch (e) { /* bez zmiany adresu */ }
     renderCountry(); renderTable(); renderMap();
     if (TAB === "wind") renderWind();
+    if (TAB === "ver") renderVer();
   }
   document.querySelectorAll("#period button").forEach((b) => b.addEventListener("click", () => {
     S.period = b.dataset.p; store.set("period", S.period); renderCountry(); renderTable();
@@ -1491,17 +1571,135 @@ const DATA = /*__DATA__*/null;
     renderWindDays(); renderWindKPIs(); renderWindMap(); renderWindCharts(); renderWindTable(); renderWindAccuracy();
   }
 
+  // ---------- zakładka: weryfikacja prognoz ----------
+  const VER = DATA.verify || {};
+  const VBT = VER.backtest || {}, VOP = VER.operational || {};
+  const VKIND = { wind: "wiatr", solar: "słońce", load: "zużycie" };
+  const VKL = { wind: "Produkcja z wiatru", solar: "Produkcja ze słońca", load: "Zużycie" };
+  const VS = { k: ["wind", "solar", "load"].includes(store.get("vkind", "")) ? store.get("vkind") : "wind" };
+  const SB = [-20, -5, 5, 25, 50];
+  function skillBin(v) {
+    if (!isNum(v)) return null;
+    if (v < SB[0]) return -3; if (v < SB[1]) return -2; if (v < SB[2]) return 0; if (v < SB[3]) return 1; if (v < SB[4]) return 2; return 3;
+  }
+  const leadLab = (l) => (l === "0" ? "ten sam dzień" : l === "1" ? "1 dzień" : l + " dni");
+  const pctS = (v) => (isNum(v) ? sgn(v, 1) + "%" : "–");
+  function verKindColor(k) { return k === "load" ? css("--s-total") : col(k); }
+
+  function renderVerKPIs() {
+    const r = (VBT[S.country] || {})[VS.k];
+    $("v-sub").textContent = `${cname(S.country)} · ${VKL[VS.k].toLowerCase()}. ` + (r
+      ? `Test wsteczny za okres ${fdate(r.period[0])} – ${fdate(r.period[1])} (${r.n} dni${r.countries ? ", suma " + r.countries + " krajów" : ""}).`
+      : "Brak wyników testu wstecznego dla tego kraju i tej wielkości.") +
+      (DATA.breaks && DATA.breaks[S.country] ? " Uwaga: w danych tego kraju wykryto zmianę poziomu, test miesza dwa okresy." : "");
+    if (!r) {
+      $("v-kpis").innerHTML = `<div class="panel" style="grid-column:1/-1"><p class="muted">Nie ma czego sprawdzać: kraj nie produkuje tej energii w istotnej ilości, nie ma dla niego danych pogodowych albo historia jest za krótka do dopasowania modelu.</p></div>`;
+      return;
+    }
+    const chip = (v) => { const k = skillBin(v); if (k === null) return ""; return `<span class="chip"><i class="sw" style="background:${anomColor(k)}"></i>${v > 5 ? "lepszy od odniesienia" : v < -5 ? "gorszy od odniesienia" : "porównywalny"}</span>`; };
+    const tiles = [
+      { label: "Błąd modelu (WAPE)", val: isNum(r.wape) ? `${fmt1.format(r.wape)}<small>%</small>` : "–",
+        rows: [["odchylenie systematyczne", pctS(r.bias)], ["dni w teście", fmt0.format(r.n)]], extra: "" },
+      { label: "Umiejętność vs persystencja", val: isNum(r.skill_pers) ? `${sgn(r.skill_pers, 1)}<small>%</small>` : "–",
+        rows: [["błąd metody „jak wczoraj”", isNum(r.wape_pers) ? fmt1.format(r.wape_pers) + "%" : "–"], ["błąd modelu", fmt1.format(r.wape) + "%"]], extra: chip(r.skill_pers) },
+      { label: "Umiejętność vs klimatologia", val: isNum(r.skill_clim) ? `${sgn(r.skill_clim, 1)}<small>%</small>` : "–",
+        rows: [["błąd metody „jak zwykle”", isNum(r.wape_clim) ? fmt1.format(r.wape_clim) + "%" : "–"], ["błąd modelu", fmt1.format(r.wape) + "%"]], extra: chip(r.skill_clim) },
+    ];
+    $("v-kpis").innerHTML = tiles.map((t) => `<div class="panel kpi">
+      <div class="label">${t.label}</div><div class="value">${t.val}</div>
+      <dl class="deltas">${t.rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join("")}</dl>${t.extra}</div>`).join("");
+  }
+
+  function renderVerCharts() {
+    const r = (VBT[S.country] || {})[VS.k];
+    if (!r) {
+      ["v-series", "v-weekly"].forEach((id) => ($(id).innerHTML = '<p class="empty">Brak danych.</p>'));
+      $("v-series-legend").innerHTML = ""; return;
+    }
+    const sr = r.series, kc = verKindColor(VS.k);
+    legend($("v-series-legend"), [{ line: 1, color: css("--ink-2"), label: "rzeczywista" }, { line: 1, color: kc, label: "model (pogoda rzeczywista)" },
+      { line: 1, color: css("--muted"), label: "klimatologia" }]);
+    lineChart($("v-series"), {
+      n: sr.dates.length, unit: "GWh", H: 240,
+      lines: [{ values: sr.clim, color: css("--muted"), width: 1.5 }, { values: sr.act, color: css("--ink-2"), width: 2.5 }, { values: sr.fc, color: kc, width: 2, dash: true }],
+      xlab: (j) => dayLab(sr.dates[j]), tlab: (j) => dayLong(sr.dates[j]),
+      rows: (j) => [["rzeczywista", fmtU(sr.act[j], "GWh"), css("--ink-2")], ["model", fmtU(sr.fc[j], "GWh"), kc], ["klimatologia", fmtU(sr.clim[j], "GWh"), css("--muted")],
+        ["różnica", isNum(sr.act[j]) && isNum(sr.fc[j]) && sr.act[j] ? pctS(100 * (sr.fc[j] / sr.act[j] - 1)) : "–"]],
+    });
+    const wk = r.weekly;
+    lineChart($("v-weekly"), {
+      n: wk.weeks.length, unit: "%", H: 240,
+      lines: [{ values: wk.wape, color: kc, width: 2.5 }, { values: wk.wape.map(() => r.wape), color: css("--muted"), width: 1, dash: true }],
+      xlab: (j) => dayLab(wk.weeks[j]), tlab: (j) => "tydzień do " + fdate(wk.weeks[j]),
+      rows: (j) => [["błąd tygodnia", isNum(wk.wape[j]) ? fmt1.format(wk.wape[j]) + "%" : "–", kc], ["średnio w teście", fmt1.format(r.wape) + "%", css("--muted")]],
+    });
+  }
+
+  function renderVerOp() {
+    const o = (VOP[S.country] || {})[VS.k];
+    $("v-op-label").textContent = `${cname(S.country)} · ${VKIND[VS.k]}`;
+    const since = VER.archive_from ? fdate(VER.archive_from) : "17.10.2026";
+    if (!o) {
+      const any = Object.keys(VOP).length;
+      $("v-op").innerHTML = `<p class="muted">${any ? "Brak rozliczonych prognoz operacyjnych dla tego kraju i tej wielkości." : `Archiwum prognoz jest prowadzone od ${since}. Wynik dla danego wyprzedzenia pojawia się, gdy co najmniej 3 prognozy mają już dane rzeczywiste do porównania, więc pierwsze wiersze (ten sam dzień i 1 dzień) pojawią się w ciągu kilku dni roboczych, a pełna tabela do 6 dni po około dwóch tygodniach.`} Do tego czasu orientacyjny jest test wsteczny powyżej: przy prognozie pogody błąd będzie od niego większy i rośnie z wyprzedzeniem.</p>`;
+      return;
+    }
+    const leads = Object.keys(o.leads).sort((a, b) => a - b);
+    $("v-op").innerHTML = `<div style="overflow-x:auto"><table class="acc"><thead><tr><th style="text-align:left">Wyprzedzenie</th><th>prognoz</th><th>błąd (WAPE)</th><th>odchylenie systematyczne</th><th>błąd „jak wczoraj”</th><th>umiejętność vs persystencja</th></tr></thead><tbody>` +
+      leads.map((l) => { const r = o.leads[l]; const k = skillBin(r.skill_pers); const bg = k === null ? "transparent" : anomColor(k);
+        return `<tr><td style="text-align:left">${leadLab(l)}</td><td>${r.n}</td><td>${fmt1.format(r.wape)}%</td><td>${pctS(r.bias)}</td><td>${isNum(r.wape_pers) ? fmt1.format(r.wape_pers) + "%" : "–"}</td><td style="background:${bg};color:${k === null ? css("--ink") : inkFor(bg)};font-weight:600">${pctS(r.skill_pers)}</td></tr>`; }).join("") +
+      `</tbody></table></div><p class="small muted" style="margin-top:8px">Prognozy wydane od ${fdate(o.first)} do ${fdate(o.last)} (${o.issues} wydań${o.countries ? ", suma " + o.countries + " krajów" : ""}). Wyprzedzenie 0 to prognoza na dzień wydania (wydawana ok. 4:30).</p>`;
+  }
+
+  function renderVerTable() {
+    const K = ["wind", "solar", "load"];
+    const codesV = Object.keys(VBT).sort((a, b) => (a === "EU" ? -1 : b === "EU" ? 1 : cname(a).localeCompare(cname(b), "pl")));
+    $("v-days").textContent = VER.days || 90;
+    document.querySelectorAll(".v-days2").forEach((e) => (e.textContent = VER.days || 90));
+    let h = `<thead><tr><th rowspan="2">Kraj</th>${K.map((k) => `<th colspan="3" style="text-align:center;border-left:1px solid var(--line)">${VKL[k]}</th>`).join("")}</tr><tr>` +
+      K.map(() => `<th style="border-left:1px solid var(--line)">błąd</th><th>vs pers.</th><th>vs klim.</th>`).join("") + "</tr></thead><tbody>";
+    const cell = (v) => { const k = skillBin(v); if (k === null) return "<td>–</td>"; const bg = anomColor(k); return `<td class="sk" style="background:${bg};color:${inkFor(bg)}">${sgn(Math.round(v))}</td>`; };
+    codesV.forEach((code) => {
+      const b = DATA.breaks && DATA.breaks[code];
+      h += `<tr data-c="${code}" tabindex="0" class="${code === S.country ? "sel" : ""}"><td>${esc(cname(code))}${b ? ' <span class="chip" title="Zmiana poziomu danych źródła - test wsteczny miesza dwa okresy">zmiana danych</span>' : ""}</td>`;
+      K.forEach((k) => {
+        const r = VBT[code][k];
+        if (!r) { h += '<td style="border-left:1px solid var(--line)">–</td><td></td><td></td>'; return; }
+        h += `<td style="border-left:1px solid var(--line)${k === VS.k ? ";font-weight:600" : ""}">${fmt1.format(r.wape)}%</td>` + cell(r.skill_pers) + cell(r.skill_clim);
+      });
+      h += "</tr>";
+    });
+    const t = $("v-table"); t.innerHTML = h + "</tbody>";
+    t.querySelectorAll("tbody tr").forEach((tr) => {
+      tr.addEventListener("click", () => setCountry(tr.dataset.c));
+      tr.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCountry(tr.dataset.c); } });
+    });
+  }
+
+  function renderVer() {
+    if (!Object.keys(VBT).length && !Object.keys(VOP).length) {
+      $("v-kpis").innerHTML = '<div class="panel" style="grid-column:1/-1"><p class="muted">Weryfikacja pojawi się po następnym przebiegu automatu.</p></div>';
+      return;
+    }
+    document.querySelectorAll("#v-kind button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === VS.k)));
+    renderVerKPIs(); renderVerCharts(); renderVerOp(); renderVerTable();
+  }
+  document.querySelectorAll("#v-kind button").forEach((b) => b.addEventListener("click", () => { VS.k = b.dataset.k; store.set("vkind", VS.k); renderVer(); }));
+
   // ---------- zakładki ----------
-  let TAB = store.get("tab", "mix") === "wind" ? "wind" : "mix";
+  let TAB = ["mix", "wind", "ver"].includes(store.get("tab", "mix")) ? store.get("tab", "mix") : "mix";
   if (hash === "WIATR") TAB = "wind";
+  if (hash === "WERYFIKACJA") TAB = "ver";
   function setTab(t) {
     TAB = t; store.set("tab", t);
     document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === t)));
     $("tab-mix").hidden = t !== "mix";
     $("tab-wind").hidden = t !== "wind";
+    $("tab-ver").hidden = t !== "ver";
     $("period").hidden = t !== "mix";
     $("period-label").hidden = t !== "mix";
     if (t === "wind") renderWind();
+    if (t === "ver") renderVer();
   }
   document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => setTab(b.dataset.tab)));
 
@@ -1676,10 +1874,10 @@ const DATA = /*__DATA__*/null;
   renderCountry(); renderTable(); renderMap(); renderMovers(); renderControl();
   setTab(TAB);
   let rt;
-  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (DATA.summary[S.country]) { renderTrend(); renderPrices(); renderForecast(); renderDaily(); renderMonthly(); } if (TAB === "wind") renderWindCharts(); renderEurostat(); }, 150); });
+  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (DATA.summary[S.country]) { renderTrend(); renderPrices(); renderForecast(); renderDaily(); renderMonthly(); } if (TAB === "wind") renderWindCharts(); if (TAB === "ver") renderVerCharts(); renderEurostat(); }, 150); });
   try {
-    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { renderCountry(); renderTable(); renderMap(); renderMovers(); if (TAB === "wind") renderWind(); });
-    new MutationObserver(() => { renderCountry(); renderTable(); renderMap(); renderMovers(); if (TAB === "wind") renderWind(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { renderCountry(); renderTable(); renderMap(); renderMovers(); if (TAB === "wind") renderWind(); if (TAB === "ver") renderVer(); });
+    new MutationObserver(() => { renderCountry(); renderTable(); renderMap(); renderMovers(); if (TAB === "wind") renderWind(); if (TAB === "ver") renderVer(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   } catch (e) { /* starsze przeglądarki */ }
 })();
 </script>

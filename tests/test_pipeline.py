@@ -513,3 +513,86 @@ def test_wind_hourly_and_missing_weather():
     assert len(mw) == 168 and mw[100] is None
     for d in range(4):
         assert sum(mw[d * 24:(d + 1) * 24]) / 1000 == pytest.approx(fc["wind"][d], rel=1e-3)
+
+
+def test_verify_scores():
+    from mixtracker import verify
+    y = pd.Series([10.0, 20, 30, 40])
+    f = pd.Series([12.0, 18, 33, 40])
+    r = pd.Series([20.0, 10, 20, 30])
+    sc = verify.scores(f, y, {"pers": r})
+    assert sc["n"] == 4
+    assert sc["wape"] == pytest.approx(100 * 7 / 100)          # Σ|f−y| = 2+2+3+0
+    assert sc["bias"] == pytest.approx(100 * (103 / 100 - 1))
+    assert sc["wape_pers"] == pytest.approx(100 * 40 / 100)
+    assert sc["skill_pers"] == pytest.approx(100 * (1 - 7 / 40))
+    assert verify.scores(f.iloc[:2], y.iloc[:2]) is None         # za mało dni
+
+
+def _synthetic(code_shift=0.0):
+    from mixtracker import weather
+    rng = np.random.default_rng(3)
+    idx = pd.date_range("2021-01-01", "2026-10-18", freq="D")
+    f = pd.DataFrame({"ws": rng.uniform(2, 14, len(idx)), "ghi": 3.5 + 3 * np.sin(2 * np.pi * (idx.dayofyear - 80) / 365),
+                      "temp": 10 + 10 * np.sin(2 * np.pi * (idx.dayofyear - 110) / 365)}, index=idx)
+    f["cf"] = weather.turbine_cf(f["ws"])
+    f["hdd"] = (15.5 - f["temp"]).clip(lower=0)
+    f["cdd"] = (f["temp"] - 22).clip(lower=0)
+    e = pd.DataFrame(index=idx)
+    e["wind"] = 5 + 80 * f["cf"] + code_shift
+    e["solar"] = 6 * f["ghi"]
+    e["load"] = 400 + 8 * f["hdd"] - 60 * (idx.dayofweek == 6)
+    return f[weather.FEATURES], e
+
+
+def test_verify_backtest_and_eu():
+    from mixtracker import verify
+    f, e = _synthetic()
+    r = verify.backtest(f, e, "wind", pd.Timestamp("2026-10-18"), days=60)
+    assert r["n"] == 60 and r["period"] == ["2026-08-20", "2026-10-18"]
+    assert r["wape"] < 1                                    # model idealny na danych syntetycznych
+    assert r["skill_pers"] > 90 and r["skill_clim"] > 90    # losowy wiatr: persystencja i klimatologia słabe
+    assert len(r["series"]["dates"]) == 60 and len(r["weekly"]["weeks"]) >= 8
+    assert "_raw" in r
+    f2, e2 = _synthetic(10.0)
+    out = verify.verify_all({"PL": f, "DE": f2}, {"PL": e, "DE": e2}, None, dt.date(2026, 10, 18), days=30)
+    assert set(out["backtest"]) == {"PL", "DE", "EU"}
+    eu = out["backtest"]["EU"]["wind"]
+    assert eu["countries"] == 2 and eu["n"] == 30
+    pl, de = out["backtest"]["PL"]["wind"], out["backtest"]["DE"]["wind"]
+    assert eu["series"]["act"][-1] == pytest.approx(pl["series"]["act"][-1] + de["series"]["act"][-1], abs=0.02)
+    assert "_raw" not in pl
+    json.dumps(out)                                          # payload musi być serializowalny
+
+
+def test_verify_operational():
+    from mixtracker import verify
+    days = pd.date_range("2026-10-01", "2026-10-20", freq="D")
+    act = {"PL": pd.DataFrame({"wind": np.arange(len(days), dtype=float) + 100}, index=days),
+           "DE": pd.DataFrame({"wind": np.full(len(days), 300.0)}, index=days)}
+    rows = []
+    today = dt.date.today()
+    for code in ("PL", "DE", "EU"):
+        for i in range(5, 15):
+            issued = days[i]
+            for lead in range(3):
+                d = issued + pd.Timedelta(days=lead)
+                true = 0 if code == "EU" else act[code]["wind"][d]
+                rows.append({"issued": issued.strftime("%Y-%m-%d"), "code": code, "date": d.strftime("%Y-%m-%d"),
+                             "type": "wind", "gwh": true * (1 + 0.1 * lead)})
+    arch = pd.DataFrame(rows)
+    # okno wsteczne liczone od dziś - przesuwamy daty tak, by mieściły się w ostatnich 90 dniach
+    shift = (pd.Timestamp(today) - pd.Timestamp("2026-10-20")).days
+    for c in ("issued", "date"):
+        arch[c] = (pd.to_datetime(arch[c]) + pd.Timedelta(days=shift)).dt.strftime("%Y-%m-%d")
+    act = {k: v.set_axis(v.index + pd.Timedelta(days=shift)) for k, v in act.items()}
+    out = verify.operational(arch, act)
+    pl = out["PL"]["wind"]
+    assert pl["leads"]["0"]["wape"] == pytest.approx(0)
+    assert pl["leads"]["1"]["bias"] == pytest.approx(10)
+    assert pl["leads"]["2"]["wape"] == pytest.approx(20)
+    assert pl["issues"] == 10 and pl["leads"]["0"]["n"] == 10
+    # persystencja: PL rośnie o 1 GWh dziennie, więc dla wyprzedzenia 0 jej błąd = 1 GWh na dzień
+    assert pl["leads"]["0"]["skill_pers"] == pytest.approx(100)
+    eu = out["EU"]["wind"]                                  # suma krajów, nie wiersze "EU" z archiwum
+    assert eu["countries"] == 2 and eu["leads"]["1"]["bias"] == pytest.approx(10)

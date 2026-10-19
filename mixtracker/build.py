@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from . import forecast, prices, store, trends
+from . import forecast, prices, store, trends, verify, weather
 from .categories import DETAIL, DETAIL_KEYS, GROUPS, GROUP_KEYS
 
 TEMPLATE = Path(__file__).with_name("template.html")
@@ -119,7 +119,7 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
 
     summary, weekly, daily, monthly, control = {}, {}, {}, {}, {}
     est_load, fcast, price_info, breaks = {}, {}, {}, {}
-    winds, fc_raw = {}, {}
+    winds, fc_raw, derived = {}, {}, {}
     zones_ok = prices.load_zones(settings.get("price_licenses", ["cc_by"]))
     zones_all = prices.all_zones()
     for c in countries:
@@ -139,6 +139,7 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
         daily[code] = trends.daily_recent(e, ref, settings["daily_chart_days"])
         monthly[code] = trends.monthly_recent(e, periods["month"]["end"], settings["monthly_chart_months"])
         winds[code] = e["wind"] if "wind" in e else pd.Series(dtype=float)
+        derived[code] = e[[k for k in ("wind", "solar", "load") if k in e]]
         fc = (forecasts or {}).get(code) if forecasts is not None else forecast.read_latest(code)
         if fc:
             fc_raw[code] = fc
@@ -198,6 +199,7 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
         "prices": price_info,
         "price_map": price_map(zones_ok, zones_all, countries),
         "wind_tab": wind_tab(fc_raw, winds, n_years, min_years),
+        "verify": _verify(derived, ref, settings, n_years, min_years),
         "factors": {k: v for k, v in trends.emission_factors().items() if v > 0},
         "control": control,
     }
@@ -304,6 +306,20 @@ def wind_tab(fcs: dict, winds: dict[str, pd.Series], n_years: int, min_years: in
             rec["hourly"] = fc["wind_hourly"]
         out["countries"][code] = rec
     out["accuracy"] = wind_accuracy(winds)
+    return out
+
+
+def _verify(derived: dict, ref: dt.date, settings: dict, n_years: int, min_years: int) -> dict:
+    if not settings.get("verify", True):
+        return {}
+    feats = {code: weather.read_cache(code) for code in derived}
+    arch = None
+    if forecast.ARCHIVE.exists():
+        arch = pd.read_csv(forecast.ARCHIVE, dtype={"issued": str, "date": str})
+        # tylko prognozy modelu pogodowego (pierwsze wpisy z 16.10.2026 to prognozy Energy-Charts)
+        arch = arch[arch["issued"] >= settings.get("verify_archive_from", "2026-10-17")]
+    out = verify.verify_all(feats, derived, arch, ref, settings.get("verify_days", 90), n_years, min_years)
+    out["archive_from"] = settings.get("verify_archive_from", "2026-10-17")
     return out
 
 
