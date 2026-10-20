@@ -1,19 +1,19 @@
-## Miks energii UE - dane do 2026-10-18
+## Miks energii UE - dane do 2026-10-19
 
 **tydz. 42/2026 (12.10–18.10)** (UE-27)
 
 | | bieżący | poprz. tydz. | rok temu | śr. 5 lat |
 |---|---|---|---|---|
-| Zużycie, GWh | 45 756 | 45 139 | 46 931 | 46 811 |
-| Produkcja, GWh | 45 877 | 45 430 | 46 770 | 46 771 |
+| Zużycie, GWh | 45 794 | 45 139 | 46 931 | 46 811 |
+| Produkcja, GWh | 45 918 | 45 423 | 46 770 | 46 771 |
 | Udział OZE | 43.8% | 47.0% | 35.7% | 39.8% |
 | Emisyjność, g/kWh | 213 | 187 | 233 | 225 |
 
 **Największe zmiany**
 
 - Belgia: emisyjność 183 g/kWh (+131.3% r/r, mies.)
-- Słowenia: Jądrowa 49.2% (+49.2 p.p. r/r, tydz.)
-- Słowenia: emisyjność 121 g/kWh (-74.8% r/r, tydz.)
+- Słowenia: Jądrowa 49.3% (+49.3 p.p. r/r, tydz.)
+- Słowenia: emisyjność 122 g/kWh (-74.6% r/r, tydz.)
 - Łotwa: emisyjność 27 g/kWh (-73.8% r/r, mies.)
 - Irlandia Północna (UK): Wiatr 78.0% (+35.4 p.p. r/r, tydz.)
 - Irlandia Północna (UK): OZE łącznie 78.0% (+35.4 p.p. r/r, tydz.)
