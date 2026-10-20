@@ -38,9 +38,10 @@ jobs:
         run: python -m pytest -q tests/test_shared_weather.py
 
       - name: Pobranie pogody
+        timeout-minutes: 45
         env:
           BUDGET: ${{ github.event.inputs.budget || '8000' }}
-        run: python -m mixtracker.shared_weather --budget "$BUDGET"
+        run: python -m mixtracker.shared_weather --budget "$BUDGET" --minutes 35
 
       - name: Zapis w repozytorium
         if: always()

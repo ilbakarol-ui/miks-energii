@@ -105,3 +105,23 @@ def test_step_error_does_not_stop_others(tmp_path, monkeypatch):
     meta = sw.run(budget=1e6, get=get, today=TODAY)
     assert any(e.startswith("prev") for e in meta["errors"])
     assert (tmp_path / "out" / "temp_hist.csv").exists()
+
+
+def test_deadline_saves_partial(tmp_path, monkeypatch):
+    setup(tmp_path, monkeypatch)
+    monkeypatch.setattr(sw, "PREV_CHUNK_DAYS", 10)
+    good = fake_get_factory([])
+    n = {"prev": 0}
+
+    def get(url, params):
+        if url == sw.PREV_URL:
+            n["prev"] += 1
+            if n["prev"] > 1:
+                sw.DEADLINE[0] = 0      # czas minął w trakcie kroku
+        return good(url, params)
+    meta = sw.run(budget=1e6, get=get, today=TODAY)
+    assert meta["steps"]["prev"]["status"] == "limit czasu"
+    assert meta["steps"]["hist"]["status"] == "OK"
+    assert len(pd.read_csv(tmp_path / "out" / "temp_prev.csv")) > 0     # pierwsza paczka zapisana
+    m = json.loads((tmp_path / "out" / "meta.json").read_text())
+    assert "prev" in m["steps"] and m["coverage"]["prev"]["points"] >= 1
