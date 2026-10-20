@@ -6,7 +6,8 @@ name: Wspólna pogoda dla dashboardów
 # Zadania idą równolegle na osobnych maszynach (osobny limit Open-Meteo). Dwa razy dziennie, także w weekendy:
 # - 00:17 UTC – wcześnie rano (start planowany bywa opóźniony nawet o 3 godziny), żeby zdążyć przed raportem gazowym o 5:41,
 # - 13:17 UTC (15:17 latem / 14:17 zimą w Polsce) – świeższe przebiegi modeli przed popołudniowym raportem o 16:41.
-#   Historia, dawne prognozy i SEAS5 dociągają się przyrostowo, więc drugi przebieg odświeża głównie prognozy i ensemble.
+#   Historia, dawne prognozy i SEAS5 dociągają się przyrostowo, więc drugi przebieg odświeża głównie prognozy i ensemble;
+#   ma limit 8 min zamiast 35 (zaległości w nocy), żeby commit z prognozą był gotowy wcześniej.
 on:
   schedule:
     - cron: "17 0 * * *"
@@ -51,7 +52,10 @@ jobs:
         timeout-minutes: 45
         env:
           BUDGET: ${{ github.event.inputs.budget || '8000' }}
-        run: python -m mixtracker.shared_weather --job ${{ matrix.job }} --budget "$BUDGET" --minutes 35
+          # po południu krótko: świeża prognoza ma być w repozytorium przed raportem gazowym o 16:41,
+          # zaległe dawne prognozy dociągają się w nocy
+          MINUTES: ${{ github.event.schedule == '17 13 * * *' && '8' || '35' }}
+        run: python -m mixtracker.shared_weather --job ${{ matrix.job }} --budget "$BUDGET" --minutes "$MINUTES"
 
       - name: Zapis w repozytorium
         if: always()
