@@ -15,25 +15,33 @@ TEMPLATE = Path(__file__).with_name("template.html")
 SITE = store.ROOT / "site"
 
 
-def _flag_partial_last(df: pd.DataFrame, min_cov: float, ratio: float = 0.6):
-    """Ostatnia doba z pełnym pokryciem, ale zużyciem poniżej 60% mediany z tych samych dni
-    tygodnia z 4 poprzednich tygodni -> traktowana jako niepełna (źródło dosyła resztę później).
+def _flag_partial_last(df: pd.DataFrame, min_cov: float, ratio: float = 0.6, days: int = 10):
+    """Doby z okna dosyłania danych (ostatnie `days` dni) z pełnym pokryciem, ale zużyciem poniżej 60%
+    mediany z tych samych dni tygodnia z 4 poprzednich tygodni -> traktowane jako niepełne (źródło
+    dosyła resztę później albo wcale). Sprawdzana jest każda doba z okna, nie tylko ostatnia, bo
+    niepełna doba nie przestaje być niepełna, gdy przyjdzie kolejna.
     Zwraca (ramka, informacja o oznaczeniu albo None)."""
     if df is None or df.empty or "load" not in df:
         return df, None
     last = df.index.max()
-    if df.at[last, "cov"] < min_cov:
+    found = []
+    for day in df.index[df.index > last - pd.Timedelta(days=days)]:
+        if df.at[day, "cov"] < min_cov:
+            continue
+        prev = [day - pd.Timedelta(weeks=k) for k in range(1, 5)]
+        prev = [d for d in prev if d in df.index and df.at[d, "cov"] >= min_cov]
+        if len(prev) < 2:
+            continue
+        ref, val = df.loc[prev, "load"].median(), df.at[day, "load"]
+        if pd.notna(ref) and ref > 0 and pd.notna(val) and val < ratio * ref:
+            found.append((day, round(float(val / ref), 2)))
+    if not found:
         return df, None
-    prev = [last - pd.Timedelta(weeks=k) for k in range(1, 5)]
-    prev = [d for d in prev if d in df.index and df.at[d, "cov"] >= min_cov]
-    if len(prev) < 2:
-        return df, None
-    ref, val = df.loc[prev, "load"].median(), df.at[last, "load"]
-    if pd.notna(ref) and ref > 0 and pd.notna(val) and val < ratio * ref:
-        df = df.copy()
-        df.at[last, "cov"] = min(df.at[last, "cov"], min_cov / 2)
-        return df, {"date": last.strftime("%Y-%m-%d"), "ratio": round(float(val / ref), 2)}
-    return df, None
+    df = df.copy()
+    for day, _ in found:
+        df.at[day, "cov"] = min(df.at[day, "cov"], min_cov / 2)
+    d, r = found[-1]
+    return df, {"date": d.strftime("%Y-%m-%d"), "ratio": r, "days": [x.strftime("%Y-%m-%d") for x, _ in found]}
 
 
 def _ref_date(frames: dict, min_cov: float) -> dt.date | None:
@@ -136,7 +144,7 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
     frames = {c["code"]: store.read_daily(c["code"], folder) for c in countries if store.has_daily(c)}
     partial = {}
     for k in list(frames):
-        frames[k], p = _flag_partial_last(frames[k], min_cov)
+        frames[k], p = _flag_partial_last(frames[k], min_cov, days=settings.get("refetch_days", 10))
         if p:
             partial[k] = p
     ref = _ref_date(frames, min_cov) or (today or dt.date.today()) - dt.timedelta(days=1)

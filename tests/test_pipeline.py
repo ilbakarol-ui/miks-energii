@@ -652,11 +652,19 @@ def test_flag_partial_last_day():
     idx = pd.date_range("2026-09-14", "2026-10-18", freq="D")
     df = pd.DataFrame({"cov": 1.0, "load": 30000.0 + 3000 * (idx.dayofweek < 5)}, index=idx)
     out, info = build._flag_partial_last(df.assign(load=df["load"].where(df.index < "2026-10-18", 15000.0)), 0.8)
-    assert info == {"date": "2026-10-18", "ratio": 0.5}
+    assert (info["date"], info["ratio"]) == ("2026-10-18", 0.5)
     assert out.at[pd.Timestamp("2026-10-18"), "cov"] < 0.8 and out.at[pd.Timestamp("2026-10-17"), "cov"] == 1.0
     out, info = build._flag_partial_last(df.assign(load=df["load"].where(df.index < "2026-10-18", 27000.0)), 0.8)
     assert info is None and out.at[pd.Timestamp("2026-10-18"), "cov"] == 1.0
     assert build._flag_partial_last(df.drop(columns="load"), 0.8)[1] is None
+    # niepełna doba, która nie jest już ostatnia (kolejna doba przyszła pełna) - nadal oznaczona
+    df2 = pd.concat([df, pd.DataFrame({"cov": 1.0, "load": 33000.0}, index=[pd.Timestamp("2026-10-19")])])
+    out, info = build._flag_partial_last(df2.assign(load=df2["load"].where(df2.index != "2026-10-18", 15000.0)), 0.8)
+    assert info["days"] == ["2026-10-18"] and out.at[pd.Timestamp("2026-10-18"), "cov"] < 0.8
+    assert out.at[pd.Timestamp("2026-10-19"), "cov"] == 1.0
+    # poza oknem dosyłania (ponad 10 dni) - bez zmian
+    out, info = build._flag_partial_last(df2.assign(load=df2["load"].where(df2.index != "2026-10-05", 15000.0)), 0.8)
+    assert info is None
 
 
 def test_afternoon_archive_keeps_morning(tmp_store):

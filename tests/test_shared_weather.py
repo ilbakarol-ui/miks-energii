@@ -176,3 +176,40 @@ def test_ensemble_fallback_deterministic(tmp_path, monkeypatch):
     meta = sw.run(budget=1e6, get=get, today=TODAY, job="extra")
     assert meta["ensemble_kind"] == "deterministic"
     assert set(pd.read_csv(tmp_path / "out" / "ensemble_power.csv.gz").member) == {0}
+
+
+def test_prev_increment_first_and_pending(tmp_path, monkeypatch):
+    """Punkty z aktualną historią są pobierane przed zaległymi; po końcu czasu pending pokazuje zaległe punkty."""
+    setup(tmp_path, monkeypatch)
+    sw.run(budget=1e6, get=fake_get_factory([]), today=TODAY)
+    out = tmp_path / "out"
+    prev = pd.read_csv(out / "temp_prev.csv", dtype={"date": str})
+    # P2 ma zaległość: historia urwana 2026-09-10
+    prev = prev[~((prev.pt == "P2") & (prev.date > "2026-09-10"))]
+    prev.to_csv(out / "temp_prev.csv", index=False)
+    calls = []
+    good = fake_get_factory(calls)
+
+    def get(url, params):
+        r = good(url, params)
+        if url == sw.PREV_URL:
+            sw.DEADLINE[0] = 0          # czas kończy się po pierwszym zapytaniu dawnych prognoz
+        return r
+    meta = sw.run(budget=1e6, get=get, today=TODAY + dt.timedelta(days=1))
+    first = next(c for c in calls if c[0] == sw.PREV_URL)
+    assert first[1]["start_date"] >= "2026-10-15"     # najpierw przyrost, nie zaległość z września
+    assert meta["steps"]["prev"]["status"] == "limit czasu"
+    assert meta["pending"]["prev"] >= 1               # P2 (i ew. punkty, na które nie starczyło czasu)
+    m = json.loads((out / "meta.json").read_text())
+    assert m["coverage"]["prev"]["points_to_end"] < m["coverage"]["prev"]["points"]
+
+
+def test_meta_step_counters_and_extra_coverage(tmp_path, monkeypatch):
+    setup_extra(tmp_path, monkeypatch)
+    sw.STATS["http429"] = 5
+    sw.STATS["last_error"] = "stary błąd"
+    meta = sw.run(budget=1e6, get=fake_get_factory([]), today=TODAY, job="extra")
+    for step in meta["steps"].values():
+        assert step["http429"] == 0 and step["last_error"] is None
+    m = json.loads((tmp_path / "out" / "meta_extra.json").read_text())
+    assert "coverage" not in m                         # zakres plików temperatury tylko w meta.json

@@ -249,7 +249,8 @@ _PREV_LEFT = [0]
 def _prev_loop(jobs, q, get, end, hourly, new):
     left = 0
     _PREV_LEFT[0] = len(jobs)
-    for (start, tz), g in jobs.groupby(["start", "tz"], sort=True):
+    # najpierw przyrost (punkty z aktualną historią – wczorajsze l0..l7 dla raportów), potem zaległa historia
+    for (start, tz), g in sorted(jobs.groupby(["start", "tz"]), key=lambda kv: kv[0][0], reverse=True):
         for i in range(0, len(g), PREV_BATCH):
             gg = g.iloc[i:i + PREV_BATCH]
             a = start
@@ -357,14 +358,33 @@ def step_seasonal(pts, q: Quota, get=http_get, today: dt.date | None = None) -> 
     return len({x for n in new for x in n.pt.unique()})
 
 
+def _pending(name: str, pts: pd.DataFrame, today: dt.date) -> int:
+    """Ile punktów nie ma jeszcze danych do oczekiwanej daty (po przerwanym kroku)."""
+    files = {"hist": ("temp_hist.csv", ERA5_LAG), "prev": ("temp_prev.csv", 1)}
+    if name not in files:
+        return 0
+    f, lag = files[name]
+    old = _read(f, ["pt", "date"])
+    last = old.groupby("pt").date.max().to_dict() if len(old) else {}
+    want = (today - dt.timedelta(days=lag)).isoformat()
+    return int(sum(last.get(p, "") < want for p in pts.pt))
+
+
 def _save_meta(meta: dict, q: Quota, name: str = "meta.json"):
     cov = {}
-    for f, key in (("temp_hist.csv", "hist"), ("temp_prev.csv", "prev"), ("temp_recent.csv", "recent")):
+    # zakres plików temperatury opisuje tylko meta.json (zadanie "extra" ma w checkoucie starsze kopie tych plików)
+    files = (("temp_hist.csv", "hist"), ("temp_prev.csv", "prev"), ("temp_recent.csv", "recent")) if name == "meta.json" else ()
+    for f, key in files:
         df = _read(f, ["pt", "date"])
         if len(df):
-            cov[key] = {"points": int(df.pt.nunique()), "from": str(df.date.min()), "to": str(df.date.max()), "rows": int(len(df))}
-    meta.update(updated=dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%MZ"), coverage=cov,
-                weighted_calls=round(q.used, 1))
+            last = df.groupby("pt").date.max()
+            cov[key] = {"points": int(df.pt.nunique()), "points_to_end": int((last == last.max()).sum()),
+                        "from": str(df.date.min()), "to": str(df.date.max()), "rows": int(len(df))}
+    meta.update(updated=dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%MZ"), weighted_calls=round(q.used, 1))
+    if cov:
+        meta["coverage"] = cov
+    else:
+        meta.pop("coverage", None)
     (OUT / name).write_text(json.dumps(meta, ensure_ascii=False, indent=1))
 
 
@@ -391,7 +411,8 @@ def run(budget: float = 8000, get=http_get, today: dt.date | None = None, minute
     meta.update(source="Open-Meteo (CC BY 4.0): ERA5, ECMWF IFS (prognozy bieżące, dawne, ensemble), ECMWF SEAS5",
                 errors=[], pending={}, steps={})
     for name, fn, use in steps:
-        t0, r0, w0 = time.time(), STATS["requests"], q.used
+        t0, r0, w0, h0 = time.time(), STATS["requests"], q.used, STATS["http429"]
+        STATS["last_error"] = None       # błąd i liczniki 429 opisują tylko ten krok
         status = "OK"
         try:
             res = fn(_sel(pts, use), q, get=get, today=today)
@@ -406,6 +427,7 @@ def run(budget: float = 8000, get=http_get, today: dt.date | None = None, minute
         except Deadline:
             status = "limit czasu"
             meta["errors"].append(f"{name}: limit czasu przebiegu ({minutes:.0f} min) – zebrane dane zapisane, reszta jutro")
+            meta["pending"][name] = _pending(name, _sel(pts, use), today)
         except DailyLimit as e:
             status = "dzienny limit"
             meta["errors"].append(f"{name}: dzienny limit Open-Meteo ({e})")
@@ -413,8 +435,8 @@ def run(budget: float = 8000, get=http_get, today: dt.date | None = None, minute
             status = f"błąd {type(e).__name__}"
             meta["errors"].append(f"{name}: {type(e).__name__}: {str(e)[:150]}")
         meta["steps"][name] = dict(status=status, seconds=round(time.time() - t0), requests=STATS["requests"] - r0,
-                                   weighted=round(q.used - w0, 1), http429=STATS["http429"], last_error=STATS["last_error"])
-        print(f"  {name}: {status} ({time.time() - t0:.0f} s, zapytań {STATS['requests'] - r0}, 429: {STATS['http429']})"
+                                   weighted=round(q.used - w0, 1), http429=STATS["http429"] - h0, last_error=STATS["last_error"])
+        print(f"  {name}: {status} ({time.time() - t0:.0f} s, zapytań {STATS['requests'] - r0}, 429: {STATS['http429'] - h0})"
               + (f"; ostatni błąd: {STATS['last_error']}" if STATS["last_error"] else ""), file=sys.stderr if status != "OK" else sys.stdout)
         _save_meta(meta, q, meta_name)
         if status in ("limit czasu", "dzienny limit"):
