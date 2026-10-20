@@ -1,14 +1,17 @@
 name: Wspólna pogoda dla dashboardów
 
-# Temperatura dla punktów Gazu UE i Azji: archiwum ERA5, bieżąca prognoza i dawne prognozy (wyprzedzenie 0-7 dni).
-# Codziennie, także w weekendy, wcześnie rano (start planowany bywa opóźniony nawet o 3 godziny), żeby zdążyć przed raportem gazowym o 6:00.
+# Cała pogoda dla raportu Gaz UE (i innych dashboardów) pobierana tutaj, do data/shared_weather/:
+# - zadanie "temp": temperatura dla miast UE i Azji – archiwum ERA5, bieżąca prognoza, dawne prognozy (wyprzedzenie 0-7 dni),
+# - zadanie "extra": ensemble ECMWF (51 wariantów) do prognozy energetyki i prognoza sezonowa SEAS5.
+# Zadania idą równolegle na osobnych maszynach (osobny limit Open-Meteo). Codziennie, także w weekendy, wcześnie rano
+# (start planowany bywa opóźniony nawet o 3 godziny), żeby zdążyć przed raportem gazowym o 5:41.
 on:
   schedule:
     - cron: "17 0 * * *"
   workflow_dispatch:
     inputs:
       budget:
-        description: "Limit zapytań ważonych Open-Meteo w tym przebiegu"
+        description: "Limit zapytań ważonych Open-Meteo w jednym zadaniu"
         required: false
         default: "8000"
 
@@ -21,6 +24,10 @@ concurrency:
 
 jobs:
   weather:
+    strategy:
+      fail-fast: false
+      matrix:
+        job: [temp, extra]
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -37,11 +44,11 @@ jobs:
       - name: Test modułu
         run: python -m pytest -q tests/test_shared_weather.py
 
-      - name: Pobranie pogody
+      - name: Pobranie pogody (${{ matrix.job }})
         timeout-minutes: 45
         env:
           BUDGET: ${{ github.event.inputs.budget || '8000' }}
-        run: python -m mixtracker.shared_weather --budget "$BUDGET" --minutes 35
+        run: python -m mixtracker.shared_weather --job ${{ matrix.job }} --budget "$BUDGET" --minutes 35
 
       - name: Zapis w repozytorium
         if: always()
@@ -50,9 +57,10 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/shared_weather
           git diff --cached --quiet && exit 0
-          git commit -m "Wspólna pogoda $(date -u +%Y-%m-%d)"
+          git commit -m "Wspólna pogoda ${{ matrix.job }} $(date -u +%Y-%m-%d)"
           for i in 1 2 3 4 5; do
             git pull --rebase --autostash && git push && exit 0
+            git rebase --abort 2>/dev/null || true
             sleep $((i * 20))
           done
           exit 1

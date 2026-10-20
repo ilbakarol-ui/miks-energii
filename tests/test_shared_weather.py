@@ -25,10 +25,15 @@ def fake_get_factory(calls):
                     days = pd.date_range(params["start_date"], params["end_date"])
                 else:
                     today = pd.Timestamp(TODAY)
-                    days = pd.date_range(today - pd.Timedelta(days=params["past_days"]),
+                    days = pd.date_range(today - pd.Timedelta(days=params.get("past_days", 0)),
                                          today + pd.Timedelta(days=params["forecast_days"] - 1))
-                out.append({"daily": {"time": [d.strftime("%Y-%m-%d") for d in days],
-                                      "temperature_2m_mean": [5.0 + i] * len(days)}})
+                dd = {"time": [d.strftime("%Y-%m-%d") for d in days]}
+                for k, var in enumerate(params["daily"].split(",")):
+                    dd[var] = [5.0 + i + k] * len(days)
+                    if url in (sw.ENSEMBLE_URL, sw.SEASONAL_URL):
+                        for m in (1, 2):
+                            dd[f"{var}_member{m:02d}"] = [5.0 + i + k + m] * len(days)
+                out.append({"daily": dd})
         return out
     return get
 
@@ -125,3 +130,49 @@ def test_deadline_saves_partial(tmp_path, monkeypatch):
     assert len(pd.read_csv(tmp_path / "out" / "temp_prev.csv")) > 0     # pierwsza paczka zapisana
     m = json.loads((tmp_path / "out" / "meta.json").read_text())
     assert "prev" in m["steps"] and m["coverage"]["prev"]["points"] >= 1
+
+
+def setup_extra(tmp_path, monkeypatch):
+    setup(tmp_path, monkeypatch)
+    (tmp_path / "pts.csv").write_text("pt,group,cc,lat,lon,tz,uses\n"
+                                      "EU_DE_1,eu_gas,DE,52.5,13.4,Europe/Berlin,temp;ens;seas\n"
+                                      "EU_DE_2,eu_gas,DE,50.1,8.7,Europe/Berlin,temp;ens\n"
+                                      "RES_DE_1,power_res,DE,54.3,9.0,Europe/Berlin,ens\n"
+                                      "EU_PL_1,eu_gas,PL,52.2,21.0,Europe/Berlin,temp;ens;seas\n"
+                                      "JP_tokyo,asia,JP,35.68,139.69,GMT,temp;seas\n")
+
+
+def test_extra_job(tmp_path, monkeypatch):
+    setup_extra(tmp_path, monkeypatch)
+    calls = []
+    meta = sw.run(budget=1e6, get=fake_get_factory(calls), today=TODAY, job="extra")
+    assert meta["errors"] == [] and meta["ensemble_kind"] == "ensemble" and meta["seasonal_refreshed_points"] == 3
+    out = tmp_path / "out"
+    e = pd.read_csv(out / "ensemble_power.csv.gz")
+    assert set(e.code) == {"DE", "PL"} and set(e.member) == {0, 1, 2}
+    assert e.date.min() == "2026-10-14" and e.date.max() == "2026-10-30"      # 5 dni wstecz, 12 dni prognozy
+    de = e[(e.code == "DE") & (e.member == 0)].iloc[0]
+    assert abs(de.ws - 6.0) < 1e-9                       # średnia z 3 punktów DE (5, 6, 7 dla pierwszej zmiennej)
+    h = pd.read_csv(out / "ensemble_hist.csv")
+    assert h.date.max() == "2026-10-18" and set(h.columns) == {"code", "date", "ws", "sr", "t"}
+    s = pd.read_csv(out / "seasonal.csv.gz")
+    assert set(s.pt) == {"EU_DE_1", "EU_PL_1", "JP_tokyo"} and set(s.member) == {0, 1, 2} and (s.fetched == "2026-10-19").all()
+    assert not (out / "meta.json").exists() and (out / "meta_extra.json").exists()
+    # dzień później: SEAS5 nie jest pobierany ponownie (kopia < 7 dni), ensemble tak; historia ensemble rośnie
+    calls.clear()
+    m2 = sw.run(budget=1e6, get=fake_get_factory(calls), today=TODAY + dt.timedelta(days=1), job="extra")
+    assert m2["seasonal_refreshed_points"] == 0 and not [c for c in calls if c[0] == sw.SEASONAL_URL]
+    assert pd.read_csv(out / "ensemble_hist.csv").date.max() == "2026-10-19"
+
+
+def test_ensemble_fallback_deterministic(tmp_path, monkeypatch):
+    setup_extra(tmp_path, monkeypatch)
+    good = fake_get_factory([])
+
+    def get(url, params):
+        if url == sw.ENSEMBLE_URL:
+            raise RuntimeError("HTTP 502")
+        return good(url, params)
+    meta = sw.run(budget=1e6, get=get, today=TODAY, job="extra")
+    assert meta["ensemble_kind"] == "deterministic"
+    assert set(pd.read_csv(tmp_path / "out" / "ensemble_power.csv.gz").member) == {0}
