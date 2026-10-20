@@ -64,8 +64,14 @@ def main(argv=None):
     ap.add_argument("--skip-fetch", action="store_true")
     ap.add_argument("--skip-eurostat", action="store_true")
     ap.add_argument("--skip-weather", action="store_true")
+    ap.add_argument("--afternoon", action="store_true",
+                    help="przebieg popołudniowy: świeża prognoza pogody i ceny na jutro; prognozy do archive_pm.csv, "
+                         "bez tygodniowego ponownego pobrania 45 dni i bez Eurostatu")
     args = ap.parse_args(argv)
     settings = store.load_settings()
+    if args.afternoon:
+        settings["weekly_refetch_weekday"] = -1     # 45 dni pobiera tylko poranny przebieg w poniedziałek
+        args.skip_eurostat = True
     t0 = time.time()
     run = {"requests": 0, "log": []}
     only = [x.strip().upper() for x in args.only.split(",") if x.strip()] or None
@@ -82,7 +88,9 @@ def main(argv=None):
         countries = [c for c in store.load_countries() if store.has_daily(c)]
         frames = {c["code"]: store.read_daily(c["code"]) for c in countries}
         wlog = run.setdefault("log", [])
-        fcs = weather.update(settings, frames, trends.derive, countries, wlog)
+        from .forecast import ARCHIVE_PM
+        fcs = weather.update(settings, frames, trends.derive, countries, wlog,
+                             ARCHIVE_PM if args.afternoon else None)
         run["forecasts"] = sorted(fcs)
     es_df, es_err = (None, None) if args.skip_eurostat else eurostat.update(settings["history_years"])
     if args.skip_eurostat:
@@ -93,7 +101,8 @@ def main(argv=None):
         run.setdefault("log", []).append(es_err)
     run["minutes"] = (time.time() - t0) / 60
     payload = build.build(settings, es_df, {"requests": run.get("requests", 0), "by_endpoint": run.get("by_endpoint", {}),
-                                            "log": run.get("log", [])[:30]})
+                                            "log": run.get("log", [])[:30],
+                                            "kind": "popołudniowy" if args.afternoon else "poranny"})
     out = build.render(payload)
     md = summary_md(payload, run)
     (store.DATA / "podsumowanie.md").write_text(md, encoding="utf-8")

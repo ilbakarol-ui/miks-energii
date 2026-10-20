@@ -230,8 +230,10 @@ def forecast_country(code: str, hist: pd.DataFrame, fut: pd.DataFrame, e: pd.Dat
 
 # ---------- przebieg ----------
 
-def update(settings: dict, frames: dict[str, pd.DataFrame], derive, countries: list[dict], log: list) -> dict:
-    """Aktualizuje cache pogody, liczy prognozy i zapisuje data/forecast/<KOD>.json."""
+def update(settings: dict, frames: dict[str, pd.DataFrame], derive, countries: list[dict], log: list,
+           archive_path=None) -> dict:
+    """Aktualizuje cache pogody, liczy prognozy i zapisuje data/forecast/<KOD>.json.
+    archive_path - plik archiwum prognoz (domyślnie poranny data/forecast/archive.csv)."""
     from .forecast import _archive   # archiwum prognoz (ocena trafności)
 
     pts = load_points()
@@ -286,7 +288,7 @@ def update(settings: dict, frames: dict[str, pd.DataFrame], derive, countries: l
         if fc:
             store.FORECAST.mkdir(parents=True, exist_ok=True)
             (store.FORECAST / f"{code}.json").write_text(json.dumps(fc, ensure_ascii=False), encoding="utf-8")
-            _archive(code, fc)
+            _archive(code, fc, archive_path)
             results[code] = fc
     # UE-27: suma prognoz krajów członkowskich (gdy są wszystkie)
     members = [c["code"] for c in countries if c.get("group") == "UE" and store.has_daily(c)]
@@ -309,6 +311,6 @@ def update(settings: dict, frames: dict[str, pd.DataFrame], derive, countries: l
                 eu["wind_hourly"] = {"start": tot.index[0].strftime("%Y-%m-%dT%H:%MZ"),
                                      "mw": [round(float(v), 0) for v in tot.tolist()]}
         (store.FORECAST / "EU.json").write_text(json.dumps(eu, ensure_ascii=False), encoding="utf-8")
-        _archive("EU", eu)
+        _archive("EU", eu, archive_path)
         results["EU"] = eu
     return results

@@ -379,6 +379,10 @@ def _verify(derived: dict, ref: dt.date, settings: dict, n_years: int, min_years
         arch = arch[arch["issued"] >= settings.get("verify_archive_from", "2026-10-17")]
     out = verify.verify_all(feats, derived, arch, ref, settings.get("verify_days", 90), n_years, min_years,
                             members=members)
+    if forecast.ARCHIVE_PM.exists():
+        pm = pd.read_csv(forecast.ARCHIVE_PM, dtype={"issued": str, "date": str})
+        pm = pm[pm["issued"] >= settings.get("verify_archive_from", "2026-10-17")]
+        out["operational_pm"] = verify.operational(pm, derived, members=members, feats=feats)
     out["archive_from"] = settings.get("verify_archive_from", "2026-10-17")
     return out
 

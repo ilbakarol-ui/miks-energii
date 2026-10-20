@@ -6,7 +6,9 @@ Wynik: <folder>/miks-energii.html oraz <folder>/brief.json
 """
 from __future__ import annotations
 
+import datetime as dt
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -14,6 +16,56 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from mixtracker import build, eurostat, store  # noqa: E402
+
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def _git(*args) -> str | None:
+    try:
+        return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, timeout=60, check=True).stdout
+    except Exception:
+        return None
+
+
+def _run_info() -> dict:
+    """Który przebieg dał dane: ostatni commit „Dane z …” (poranny albo „(popołudnie)”)."""
+    log = _git("log", "-40", "--format=%H%x09%ci%x09%s") or ""
+    rows = [ln.split("\t", 2) for ln in log.splitlines() if ln.count("\t") == 2]
+    data = [r for r in rows if r[2].startswith("Dane z ")]
+    if not data:
+        return {}
+    h, when, subj = data[0]
+    info = {"commit": subj, "czas": when, "przebieg": "popołudniowy" if "(popołudnie)" in subj else "poranny"}
+    if info["przebieg"] == "popołudniowy":
+        morning = next((r for r in data if r[2] == subj.replace(" (popołudnie)", "")), None)
+        if morning:
+            info["poranny_commit"] = morning[0]
+    return info
+
+
+def _since_morning(morning_commit: str, codes=("EU", "PL", "DE")) -> dict:
+    """Zmiana prognoz (suma 7 dni i dzień po dniu) między porannym a bieżącym przebiegiem."""
+    out = {}
+    for code in codes:
+        old_txt = _git("show", f"{morning_commit}:data/forecast/{code}.json")
+        p = ROOT / "data" / "forecast" / f"{code}.json"
+        if not old_txt or not p.exists():
+            continue
+        old, new = json.loads(old_txt), json.loads(p.read_text(encoding="utf-8"))
+        res = {"rano_wydana": old.get("issued"), "teraz_wydana": new.get("issued")}
+        for k in ("wind", "solar", "load"):
+            a = dict(zip(old.get("days", []), old.get(k) or []))
+            b = dict(zip(new.get("days", []), new.get(k) or []))
+            days = [d for d in new.get("days", []) if a.get(d) is not None and b.get(d) is not None]
+            if not days:
+                continue
+            ta, tb = sum(a[d] for d in days), sum(b[d] for d in days)
+            res[k] = {"dni": days, "rano_gwh": round(ta, 1), "teraz_gwh": round(tb, 1),
+                      "zmiana_proc": round(100 * (tb / ta - 1), 1) if ta else None,
+                      "dzien_po_dniu_proc": [round(100 * (b[d] / a[d] - 1), 1) if a[d] else None for d in days]}
+        out[code] = res
+    return out
 
 
 def main(out: Path):
@@ -27,6 +79,12 @@ def main(out: Path):
 
     m = payload["meta"]
     brief = {"dane_do": m["ref"], "wygenerowano": m["generated"], "tydzien": m["periods"]["week"]["label"]}
+    run = _run_info()
+    if run:
+        brief["przebieg"] = run["przebieg"]
+        brief["commit_danych"] = f'{run["commit"]} ({run["czas"]})'
+        if run.get("poranny_commit"):
+            brief["zmiana_od_rana"] = _since_morning(run["poranny_commit"])
     eu = payload["summary"].get("EU", {}).get("week", {})
     for k in ("load", "gen_total", "share_renewable", "intensity"):
         if k in eu:

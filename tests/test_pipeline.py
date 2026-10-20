@@ -142,6 +142,7 @@ def tmp_store(tmp_path, monkeypatch):
     monkeypatch.setattr(store, "PRICES", tmp_path / "prices")
     monkeypatch.setattr(store, "FORECAST", tmp_path / "forecast")
     monkeypatch.setattr(forecast, "ARCHIVE", tmp_path / "forecast" / "archive.csv")
+    monkeypatch.setattr(forecast, "ARCHIVE_PM", tmp_path / "forecast" / "archive_pm.csv")
     return tmp_path
 
 
@@ -656,3 +657,18 @@ def test_flag_partial_last_day():
     out, info = build._flag_partial_last(df.assign(load=df["load"].where(df.index < "2026-10-18", 27000.0)), 0.8)
     assert info is None and out.at[pd.Timestamp("2026-10-18"), "cov"] == 1.0
     assert build._flag_partial_last(df.drop(columns="load"), 0.8)[1] is None
+
+
+def test_afternoon_archive_keeps_morning(tmp_store):
+    today = dt.date.today().isoformat()
+    days = [(dt.date.today() + dt.timedelta(days=i)).isoformat() for i in range(3)]
+    am = {"issued": today + "T01:10Z", "days": days, "wind": [10.0, 11.0, 12.0]}
+    pm = {"issued": today + "T12:50Z", "days": days, "wind": [20.0, 21.0, 22.0]}
+    forecast._archive("PL", am)
+    forecast._archive("PL", pm, forecast.ARCHIVE_PM)
+    a = pd.read_csv(forecast.ARCHIVE)
+    b = pd.read_csv(forecast.ARCHIVE_PM)
+    assert a["gwh"].tolist() == [10.0, 11.0, 12.0]      # poranna prognoza nie jest nadpisana
+    assert b["gwh"].tolist() == [20.0, 21.0, 22.0]
+    forecast._archive("PL", dict(pm, wind=[30.0, 31.0, 32.0]), forecast.ARCHIVE_PM)   # ponowny przebieg popołudniowy
+    assert pd.read_csv(forecast.ARCHIVE_PM)["gwh"].tolist() == [30.0, 31.0, 32.0]

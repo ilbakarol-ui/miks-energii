@@ -27,6 +27,7 @@ METHODS = {
 }
 RECHECK_DAYS = 7
 ARCHIVE = store.FORECAST / "archive.csv"
+ARCHIVE_PM = store.FORECAST / "archive_pm.csv"   # prognozy z przebiegu popołudniowego (świeższa pogoda)
 
 
 def parse_forecast(payload: dict) -> pd.Series:
@@ -136,7 +137,10 @@ def update_country(client: Client, c: dict, state: dict, log: list, can_request)
     return out
 
 
-def _archive(code: str, fc: dict):
+def _archive(code: str, fc: dict, path=None):
+    """Zapis prognozy w archiwum w chwili wydania. Rano: archive.csv (prognoza podstawowa,
+    weryfikowana); po południu: archive_pm.csv - poranna prognoza nie jest nadpisywana."""
+    path = path or ARCHIVE
     rows = []
     for key in ["solar", "wind", "load"]:
         for d, v in zip(fc["days"], fc.get(key) or []):
@@ -145,14 +149,15 @@ def _archive(code: str, fc: dict):
     if not rows:
         return
     new = pd.DataFrame(rows)
-    if ARCHIVE.exists():
-        old = pd.read_csv(ARCHIVE, dtype={"issued": str, "date": str})
+    if path.exists():
+        old = pd.read_csv(path, dtype={"issued": str, "date": str})
         old = old[~((old["issued"] == new["issued"].iloc[0]) & (old["code"] == code))]
         new = pd.concat([old, new])
     # archiwum z ostatnich 400 dni
     cutoff = (dt.date.today() - dt.timedelta(days=400)).isoformat()
     new = new[new["issued"] >= cutoff]
-    new.to_csv(ARCHIVE, index=False)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    new.to_csv(path, index=False)
 
 
 def read_latest(code: str, max_age_days: int = 2) -> dict | None:
