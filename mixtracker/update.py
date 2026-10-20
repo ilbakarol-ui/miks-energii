@@ -314,3 +314,40 @@ def update_all(settings: dict, budget_minutes: float | None = None, only: list[s
     store.write_state(state)
     return {"requests": client.requests_made, "by_endpoint": dict(getattr(client, "by_endpoint", {})),
             "log": log, "history_complete": done, "forecasts": sorted(forecasts)}
+
+
+def update_prices_ahead(settings: dict, budget_minutes: float | None = None, client: Client | None = None,
+                        days_ahead: int = 1) -> dict:
+    """Przebieg popołudniowy: tylko ceny day-ahead stref (dziś i jutro - aukcja ok. 12:45 publikuje ceny
+    na następny dzień). Bez produkcji, pogody i prognoz; jedno zapytanie na strefę."""
+    client = client or Client(base_url=settings["energycharts_base_url"],
+                              interval=settings["request_interval_seconds"],
+                              timeout=settings["request_timeout_seconds"],
+                              max_retries=settings["max_retries"])
+    budget = Budget(budget_minutes or 20, client.interval)
+    tz_of = {c["code"]: c["tz"] for c in store.load_countries()}
+    zones: dict[str, str] = {}
+    for code, zl in prices.load_zones(settings.get("price_licenses", ["cc_by"])).items():
+        for z in zl:
+            zones.setdefault(z["zone"], tz_of.get(code, "Europe/Brussels"))
+    log: list[str] = []
+    done = []
+    for zone, tz in sorted(zones.items()):
+        if not budget.can_request():
+            log.append(f"ceny: limit czasu, pominięto strefy od {zone}")
+            break
+        today = _today(tz)
+        try:
+            ser = prices.parse_price(client.price(zone, today, today + dt.timedelta(days=days_ahead)))
+        except FetchError as e:
+            log.append(f"ceny {zone}: {e}")
+            continue
+        zd = prices.zone_daily(ser, tz)
+        if zd.empty:
+            continue
+        old = store.read_zone(zone)
+        merged = pd.concat([old.drop(index=zd.index.intersection(old.index), errors="ignore"), zd])
+        merged = merged[~merged.index.duplicated(keep="last")].sort_index()
+        store.write_zone(zone, merged)
+        done.append(zone)
+    return {"requests": len(done), "log": log, "zones": done}

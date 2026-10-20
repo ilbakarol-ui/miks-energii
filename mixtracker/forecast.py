@@ -27,7 +27,6 @@ METHODS = {
 }
 RECHECK_DAYS = 7
 ARCHIVE = store.FORECAST / "archive.csv"
-ARCHIVE_PM = store.FORECAST / "archive_pm.csv"   # prognozy z przebiegu popołudniowego (świeższa pogoda)
 
 
 def parse_forecast(payload: dict) -> pd.Series:
@@ -138,8 +137,7 @@ def update_country(client: Client, c: dict, state: dict, log: list, can_request)
 
 
 def _archive(code: str, fc: dict, path=None):
-    """Zapis prognozy w archiwum w chwili wydania. Rano: archive.csv (prognoza podstawowa,
-    weryfikowana); po południu: archive_pm.csv - poranna prognoza nie jest nadpisywana."""
+    """Zapis prognozy w archiwum w chwili wydania (domyślnie archive.csv; ta sama data wydania jest zastępowana)."""
     path = path or ARCHIVE
     rows = []
     for key in ["solar", "wind", "load"]:

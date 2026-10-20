@@ -3,7 +3,7 @@ name: Miks energii - aktualizacja dzienna
 on:
   schedule:
     - cron: "53 0 * * 1-5"      # pon.-pt. 00:53 UTC = 02:53 czasu letniego w Polsce (01:53 zimą); zapas na opóźnienia startów GitHub (do ~3 h) przed odświeżeniem o 5:40
-    - cron: "37 12 * * 1-5"     # przebieg popołudniowy: 12:37 UTC = 14:37 latem (13:37 zimą) - świeża prognoza pogody (przebiegi modeli 06 UTC) i ceny day-ahead na jutro, przed odświeżeniem o 16:40
+    - cron: "37 12 * * 1-5"     # przebieg popołudniowy: 12:37 UTC = 14:37 latem (13:37 zimą) - tylko ceny day-ahead na jutro (ok. 10 min), przed odświeżeniem o 16:40
   workflow_dispatch:
     inputs:
       budget:
@@ -15,7 +15,7 @@ on:
         required: false
         default: ""
       afternoon:
-        description: "Przebieg popołudniowy (prognozy do archive_pm.csv)"
+        description: "Przebieg popołudniowy (tylko ceny day-ahead na jutro)"
         type: boolean
         required: false
         default: false
@@ -54,7 +54,7 @@ jobs:
           AFTERNOON: ${{ github.event.schedule == '37 12 * * 1-5' || github.event.inputs.afternoon == 'true' }}
         run: |
           if [ "$AFTERNOON" = "true" ]; then
-            python -m mixtracker.run_daily --budget "$BUDGET" --only "$ONLY" --afternoon
+            python -m mixtracker.run_daily --budget 15 --afternoon
           else
             python -m mixtracker.run_daily --budget "$BUDGET" --only "$ONLY"
           fi

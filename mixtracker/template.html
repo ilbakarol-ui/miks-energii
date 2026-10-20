@@ -641,7 +641,7 @@ const DATA = /*__DATA__*/null;
   // ---------- nagłówek ----------
   const m = DATA.meta;
   $("stamp").textContent = `Dane do ${fdate(m.ref)} · wygenerowano ${m.generated.replace("T", " ").replace("Z", " UTC")}` +
-    (m.run && m.run.kind === "popołudniowy" ? " (przebieg popołudniowy: świeża prognoza pogody i ceny na jutro)" : "");
+    (m.run && m.run.kind === "popołudniowy" ? " (przebieg popołudniowy: ceny day-ahead na jutro)" : "");
   if (m.demo) {
     $("demo").hidden = false;
     $("demo").textContent = "Podgląd na danych demonstracyjnych: dzienne wartości zostały wygenerowane z miesięcznych danych Eurostatu z losową zmiennością wiatru i słońca. Prawdziwe dane dzienne pojawią się po pierwszym przebiegu automatu.";
@@ -1583,7 +1583,7 @@ const DATA = /*__DATA__*/null;
 
   // ---------- zakładka: weryfikacja prognoz ----------
   const VER = DATA.verify || {};
-  const VBT = VER.backtest || {}, VOP = VER.operational || {}, VOPM = VER.operational_pm || {};
+  const VBT = VER.backtest || {}, VOP = VER.operational || {};
   const VKIND = { wind: "wiatr", solar: "słońce", load: "zużycie" };
   const VKL = { wind: "Produkcja z wiatru", solar: "Produkcja ze słońca", load: "Zużycie" };
   const VS = { k: ["wind", "solar", "load"].includes(store.get("vkind", "")) ? store.get("vkind") : "wind" };
@@ -1647,30 +1647,28 @@ const DATA = /*__DATA__*/null;
 
   function renderVerOp() {
     const o = (VOP[S.country] || {})[VS.k];
-    const opm = (VOPM[S.country] || {})[VS.k];
     const bt = ((VBT[S.country] || {})[VS.k] || {}).leads || {};
     $("v-op-label").textContent = `${cname(S.country)} · ${VKIND[VS.k]}`;
     const since = VER.archive_from ? fdate(VER.archive_from) : "17.10.2026";
-    const leads = [...new Set(Object.keys(bt).concat(Object.keys((o || {}).leads || {}), Object.keys((opm || {}).leads || {})))].sort((a, b) => a - b);
+    const leads = [...new Set(Object.keys(bt).concat(Object.keys((o || {}).leads || {})))].sort((a, b) => a - b);
     if (!leads.length) { $("v-op").innerHTML = '<p class="muted">Brak danych do oceny dla tego kraju i tej wielkości.</p>'; return; }
     const skCell = (v) => { const k = skillBin(v); const bg = k === null ? "transparent" : anomColor(k); return `<td style="background:${bg};color:${k === null ? css("--ink") : inkFor(bg)};font-weight:600">${pctS(v)}</td>`; };
     const bl = "border-left:1px solid var(--line)";
     let h = `<div style="overflow-x:auto"><table class="acc"><thead><tr><th rowspan="2" style="text-align:left">Wyprzedzenie</th>
-      <th colspan="3" style="text-align:center;${bl}">Test wsteczny (pogoda rzeczywista)</th><th colspan="4" style="text-align:center;${bl}">Prognozy wydane rano (pogoda prognozowana)</th>${opm ? `<th colspan="2" style="text-align:center;${bl}">Aktualizacja popołudniowa</th>` : ""}</tr>
-      <tr><th style="${bl}">błąd</th><th>„jak wczoraj”</th><th>umiejętność</th><th style="${bl}">prognoz</th><th>błąd</th><th>odchylenie</th><th>umiejętność</th>${opm ? `<th style="${bl}">błąd</th><th>umiejętność</th>` : ""}</tr></thead><tbody>`;
+      <th colspan="3" style="text-align:center;${bl}">Test wsteczny (pogoda rzeczywista)</th><th colspan="4" style="text-align:center;${bl}">Prognozy wydane (pogoda prognozowana)</th></tr>
+      <tr><th style="${bl}">błąd</th><th>„jak wczoraj”</th><th>umiejętność</th><th style="${bl}">prognoz</th><th>błąd</th><th>odchylenie</th><th>umiejętność</th></tr></thead><tbody>`;
     leads.forEach((l) => {
       const b = bt[l], r = o && o.leads[l];
       h += `<tr><td style="text-align:left">${leadLab(l)}</td>`;
       h += b ? `<td style="${bl}">${fmt1.format(b.wape)}%</td><td>${isNum(b.wape_pers) ? fmt1.format(b.wape_pers) + "%" : "–"}</td>${skCell(b.skill_pers)}` : `<td style="${bl}">–</td><td>–</td><td>–</td>`;
       h += r ? `<td style="${bl}">${r.n}</td><td>${fmt1.format(r.wape)}%</td><td>${pctS(r.bias)}</td>${skCell(r.skill_pers)}` : `<td style="${bl}">–</td><td>–</td><td>–</td><td>–</td>`;
-      if (opm) { const q = opm.leads[l]; h += q ? `<td style="${bl}">${fmt1.format(q.wape)}%</td>${skCell(q.skill_pers)}` : `<td style="${bl}">–</td><td>–</td>`; }
       h += "</tr>";
     });
     h += "</tbody></table></div>";
     const note = o
       ? `Prognozy wydane od ${fdate(o.first)} do ${fdate(o.last)} (${o.issues} wydań${o.countries ? ", suma " + o.countries + " krajów" : ""}).`
       : `Prognozy wydane: archiwum jest prowadzone od ${since}, a wynik dla danego wyprzedzenia pojawia się po rozliczeniu co najmniej 3 prognoz. Pierwsze wiersze (ten sam dzień, 1 dzień) pojawią się w ciągu kilku dni roboczych, pełna tabela po około dwóch tygodniach.`;
-    $("v-op").innerHTML = h + `<p class="small muted" style="margin-top:8px">Wyprzedzenie 0 to prognoza na dzień wydania (wydawana w nocy, ok. 3:00, znane dane do poprzedniego dnia). W dni robocze po południu (ok. 15:00) prognoza jest liczona drugi raz ze świeższą prognozą pogody; ta aktualizacja jest rozliczana osobno i nie zastępuje porannej. „Jak wczoraj”: błąd metody odniesienia, która powtarza ostatni znany dzień. Umiejętność liczona względem tej metody. ${note}</p>`;
+    $("v-op").innerHTML = h + `<p class="small muted" style="margin-top:8px">Wyprzedzenie 0 to prognoza na dzień wydania (wydawana w nocy, ok. 3:00, znane dane do poprzedniego dnia). Prognozy są liczone raz dziennie, w nocy. „Jak wczoraj”: błąd metody odniesienia, która powtarza ostatni znany dzień. Umiejętność liczona względem tej metody. ${note}</p>`;
   }
 
   function renderVerTable() {

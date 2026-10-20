@@ -142,7 +142,6 @@ def tmp_store(tmp_path, monkeypatch):
     monkeypatch.setattr(store, "PRICES", tmp_path / "prices")
     monkeypatch.setattr(store, "FORECAST", tmp_path / "forecast")
     monkeypatch.setattr(forecast, "ARCHIVE", tmp_path / "forecast" / "archive.csv")
-    monkeypatch.setattr(forecast, "ARCHIVE_PM", tmp_path / "forecast" / "archive_pm.csv")
     return tmp_path
 
 
@@ -667,16 +666,14 @@ def test_flag_partial_last_day():
     assert info is None
 
 
-def test_afternoon_archive_keeps_morning(tmp_store):
-    today = dt.date.today().isoformat()
-    days = [(dt.date.today() + dt.timedelta(days=i)).isoformat() for i in range(3)]
-    am = {"issued": today + "T01:10Z", "days": days, "wind": [10.0, 11.0, 12.0]}
-    pm = {"issued": today + "T12:50Z", "days": days, "wind": [20.0, 21.0, 22.0]}
-    forecast._archive("PL", am)
-    forecast._archive("PL", pm, forecast.ARCHIVE_PM)
-    a = pd.read_csv(forecast.ARCHIVE)
-    b = pd.read_csv(forecast.ARCHIVE_PM)
-    assert a["gwh"].tolist() == [10.0, 11.0, 12.0]      # poranna prognoza nie jest nadpisana
-    assert b["gwh"].tolist() == [20.0, 21.0, 22.0]
-    forecast._archive("PL", dict(pm, wind=[30.0, 31.0, 32.0]), forecast.ARCHIVE_PM)   # ponowny przebieg popołudniowy
-    assert pd.read_csv(forecast.ARCHIVE_PM)["gwh"].tolist() == [30.0, 31.0, 32.0]
+def test_afternoon_prices_only(tmp_store):
+    settings = store.load_settings()
+    client = FakeClient(data_from=dt.date(2020, 1, 1))
+    res = update.update_prices_ahead(settings, budget_minutes=5, client=client)
+    assert set(client.calls) == {"price"}                       # bez produkcji i prognoz
+    zones = {z["zone"] for zl in prices.load_zones(["cc_by"]).values() for z in zl}
+    assert set(res["zones"]) == zones and client.requests_made == len(zones)
+    pl = store.read_zone("PL")
+    tomorrow = pd.Timestamp(dt.date.today() + dt.timedelta(days=1))
+    assert tomorrow in pl.index and pl.loc[tomorrow, "price_avg"] > 0
+    assert not store.DAILY.exists() or not any(store.DAILY.iterdir())   # dane dzienne krajów nietknięte

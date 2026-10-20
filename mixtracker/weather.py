@@ -233,7 +233,7 @@ def forecast_country(code: str, hist: pd.DataFrame, fut: pd.DataFrame, e: pd.Dat
 def update(settings: dict, frames: dict[str, pd.DataFrame], derive, countries: list[dict], log: list,
            archive_path=None) -> dict:
     """Aktualizuje cache pogody, liczy prognozy i zapisuje data/forecast/<KOD>.json.
-    archive_path - plik archiwum prognoz (domyślnie poranny data/forecast/archive.csv)."""
+    archive_path - plik archiwum prognoz (domyślnie data/forecast/archive.csv)."""
     from .forecast import _archive   # archiwum prognoz (ocena trafności)
 
     pts = load_points()
