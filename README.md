@@ -90,7 +90,7 @@ Ustawienia (odstęp między zapytaniami, limit czasu, liczba dni do ponownego po
 
 ## Wspólna pogoda dla innych dashboardów
 
-Osobny przebieg (`.github/workflows/shared_weather.yml`, „Wspólna pogoda dla dashboardów”, codziennie o 00:17 UTC, także w weekendy) pobiera całą pogodę potrzebną raportowi Gaz UE i zapisuje ją w `data/shared_weather/`. Raport nie pobiera pogody sam – czyta te pliki. Dwa zadania idą równolegle na osobnych maszynach (każde ma własny limit Open-Meteo):
+Osobny przebieg (`.github/workflows/shared_weather.yml`, „Wspólna pogoda dla dashboardów”, codziennie o 00:17 i 13:17 UTC, także w weekendy; drugi przebieg odświeża głównie prognozy przed popołudniowym raportem) pobiera całą pogodę potrzebną raportowi Gaz UE i zapisuje ją w `data/shared_weather/`. Raport nie pobiera pogody sam – czyta te pliki. Dwa zadania idą równolegle na osobnych maszynach (każde ma własny limit Open-Meteo):
 
 - **temp** – temperatura dla punktów z `uses` = temp w `config/shared_weather_points.csv` (49 miast UE i 14 punktów w Azji):
   - `temp_hist.csv` – średnia dobowa z archiwum ERA5 od 2019 r.,

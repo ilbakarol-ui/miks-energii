@@ -3,11 +3,14 @@ name: Wspólna pogoda dla dashboardów
 # Cała pogoda dla raportu Gaz UE (i innych dashboardów) pobierana tutaj, do data/shared_weather/:
 # - zadanie "temp": temperatura dla miast UE i Azji – archiwum ERA5, bieżąca prognoza, dawne prognozy (wyprzedzenie 0-7 dni),
 # - zadanie "extra": ensemble ECMWF (51 wariantów) do prognozy energetyki i prognoza sezonowa SEAS5.
-# Zadania idą równolegle na osobnych maszynach (osobny limit Open-Meteo). Codziennie, także w weekendy, wcześnie rano
-# (start planowany bywa opóźniony nawet o 3 godziny), żeby zdążyć przed raportem gazowym o 5:41.
+# Zadania idą równolegle na osobnych maszynach (osobny limit Open-Meteo). Dwa razy dziennie, także w weekendy:
+# - 00:17 UTC – wcześnie rano (start planowany bywa opóźniony nawet o 3 godziny), żeby zdążyć przed raportem gazowym o 5:41,
+# - 13:17 UTC (15:17 latem / 14:17 zimą w Polsce) – świeższe przebiegi modeli przed popołudniowym raportem o 16:41.
+#   Historia, dawne prognozy i SEAS5 dociągają się przyrostowo, więc drugi przebieg odświeża głównie prognozy i ensemble.
 on:
   schedule:
     - cron: "17 0 * * *"
+    - cron: "17 13 * * *"
   workflow_dispatch:
     inputs:
       budget:
