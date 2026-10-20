@@ -15,6 +15,10 @@ on:
         description: "Limit zapytań ważonych Open-Meteo w jednym zadaniu"
         required: false
         default: "8000"
+      minutes:
+        description: "Limit czasu pobierania w minutach (np. 100 przy jednorazowym dociąganiu historii)"
+        required: false
+        default: "35"
 
 permissions:
   contents: write
@@ -30,7 +34,7 @@ jobs:
       matrix:
         job: [temp, extra]
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 130
     steps:
       - uses: actions/checkout@v4
 
@@ -46,10 +50,10 @@ jobs:
         run: python -m pytest -q tests/test_shared_weather.py
 
       - name: Pobranie pogody (${{ matrix.job }})
-        timeout-minutes: 45
+        timeout-minutes: 115
         env:
           BUDGET: ${{ github.event.inputs.budget || '8000' }}
-          MINUTES: "35"
+          MINUTES: ${{ github.event.inputs.minutes || '35' }}
         run: python -m mixtracker.shared_weather --job ${{ matrix.job }} --budget "$BUDGET" --minutes "$MINUTES"
 
       - name: Zapis w repozytorium
