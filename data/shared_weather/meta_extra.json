@@ -13,28 +13,28 @@
   },
   "seasonal": {
    "status": "OK",
-   "seconds": 175,
-   "requests": 3,
-   "weighted": 26.1,
-   "http429": 2,
-   "last_error": "seasonal-api.open-meteo.com: ReadTimeout"
+   "seconds": 0,
+   "requests": 0,
+   "weighted": 0.0,
+   "http429": 1,
+   "last_error": "ensemble-api.open-meteo.com: ReadTimeout"
   }
  },
  "ensemble_issued": "2026-10-20",
  "ensemble_kind": "ensemble",
- "updated": "2026-10-20T04:51Z",
+ "updated": "2026-10-20T14:53Z",
  "coverage": {
   "hist": {
-   "points": 44,
+   "points": 63,
    "from": "2019-01-01",
    "to": "2026-10-14",
-   "rows": 125118
+   "rows": 179172
   },
   "prev": {
-   "points": 24,
+   "points": 49,
    "from": "2024-01-01",
    "to": "2026-10-19",
-   "rows": 13110
+   "rows": 36870
   },
   "recent": {
    "points": 63,
@@ -43,6 +43,6 @@
    "rows": 1811
   }
  },
- "weighted_calls": 119.6,
- "seasonal_refreshed_points": 2
+ "weighted_calls": 93.5,
+ "seasonal_refreshed_points": 0
 }
