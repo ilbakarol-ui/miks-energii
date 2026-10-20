@@ -5,7 +5,7 @@
  "steps": {
   "ensemble": {
    "status": "OK",
-   "seconds": 182,
+   "seconds": 179,
    "requests": 17,
    "weighted": 93.5,
    "http429": 1,
@@ -16,33 +16,13 @@
    "seconds": 0,
    "requests": 0,
    "weighted": 0.0,
-   "http429": 1,
-   "last_error": "ensemble-api.open-meteo.com: ReadTimeout"
+   "http429": 0,
+   "last_error": null
   }
  },
  "ensemble_issued": "2026-10-20",
  "ensemble_kind": "ensemble",
- "updated": "2026-10-20T14:53Z",
- "coverage": {
-  "hist": {
-   "points": 63,
-   "from": "2019-01-01",
-   "to": "2026-10-14",
-   "rows": 179172
-  },
-  "prev": {
-   "points": 49,
-   "from": "2024-01-01",
-   "to": "2026-10-19",
-   "rows": 36870
-  },
-  "recent": {
-   "points": 63,
-   "from": "2026-10-06",
-   "to": "2026-11-03",
-   "rows": 1811
-  }
- },
+ "updated": "2026-10-20T17:42Z",
  "weighted_calls": 93.5,
  "seasonal_refreshed_points": 0
 }
