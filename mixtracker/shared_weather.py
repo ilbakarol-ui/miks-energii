@@ -38,7 +38,8 @@ HIST_START = "2019-01-01"
 PREV_START = "2024-01-01"
 LEADS = 7
 ERA5_LAG = 6            # archiwum ERA5 ma ok. 5 dni opóźnienia
-PREV_CHUNK_DAYS = 120
+PREV_CHUNK_DAYS = 60    # serwer dawnych prognoz odpowiada wolno; duże zapytania kończyły się po 90 s bez odpowiedzi
+PREV_BATCH = 5
 BATCH = 10              # punktów w jednym zapytaniu
 PER_MINUTE = 300        # limit minutowy Open-Meteo to 600 zapytań ważonych (adresy GitHub dzielą limit z innymi)
 DEADLINE = [float("inf")]   # po tym czasie (time.time()) nie zaczynamy nowych zapytań
@@ -86,7 +87,7 @@ def http_get(url: str, params: dict, tries: int = 3) -> list[dict]:
         t0 = time.time()
         STATS["requests"] += 1
         try:
-            r = requests.get(url, params=params, timeout=90,
+            r = requests.get(url, params=params, timeout=150 if "previous-runs" in url else 90,
                              headers={"User-Agent": "energy-dashboards shared weather (GitHub Actions)"})
         except requests.RequestException as e:
             STATS["seconds"] += time.time() - t0
@@ -228,8 +229,8 @@ def _prev_loop(jobs, q, get, end, hourly, new):
     left = 0
     _PREV_LEFT[0] = len(jobs)
     for (start, tz), g in jobs.groupby(["start", "tz"], sort=True):
-        for i in range(0, len(g), BATCH):
-            gg = g.iloc[i:i + BATCH]
+        for i in range(0, len(g), PREV_BATCH):
+            gg = g.iloc[i:i + PREV_BATCH]
             a = start
             while a <= end:
                 b = min(end, a + dt.timedelta(days=PREV_CHUNK_DAYS - 1))
