@@ -338,12 +338,22 @@ def movers(summary: dict, names: dict, groups_meta: dict, top: int) -> list[dict
                                   "label": "Zużycie", "type": "load_yoy", "cur": ld[0], "ref": ld[2],
                                   "delta": round(ch, 1), "score": abs(ch) * 0.8})
     items.sort(key=lambda x: -x["score"])
-    seen, out = set(), []
+    return _dedupe_movers(items, top)
+
+
+def _dedupe_movers(items: list[dict], top: int) -> list[dict]:
+    """Najwyżej 2 pozycje na kraj; ta sama zmiana (±1) tego samego typu w kraju i okresie tylko raz."""
+    seen, out, per_country, shown = set(), [], {}, {}
     for it in items:
         k = (it["code"], it["series"], it["period"])
-        if k in seen:
+        if k in seen or per_country.get(it["code"], 0) >= 2:
+            continue
+        # ten sam fakt innymi słowami (np. wiatr = całe OZE, gaz = reszta) - pomijamy zmianę o tej samej wielkości
+        if any(abs(abs(it["delta"]) - abs(d)) < 1.0 for d in shown.get((it["code"], it["period"], it["type"]), [])):
             continue
         seen.add(k)
+        per_country[it["code"]] = per_country.get(it["code"], 0) + 1
+        shown.setdefault((it["code"], it["period"], it["type"]), []).append(it["delta"])
         out.append(it)
         if len(out) >= top:
             break

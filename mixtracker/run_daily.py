@@ -103,7 +103,9 @@ def main(argv=None):
                                             "kind": "popołudniowy" if args.afternoon else "poranny"})
     out = build.render(payload)
     md = summary_md(payload, run)
-    (store.DATA / "podsumowanie.md").write_text(md, encoding="utf-8")
+    # przebieg popołudniowy (tylko ceny) nie nadpisuje diagnostyki nocnego
+    name = "podsumowanie_popoludnie.md" if args.afternoon else "podsumowanie.md"
+    (store.DATA / name).write_text(md, encoding="utf-8")
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:
             f.write(md)

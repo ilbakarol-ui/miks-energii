@@ -1871,7 +1871,7 @@ const DATA = /*__DATA__*/null;
       h += `<tr><td>${esc(c.name)}</td><td style="text-align:left">${esc(k.source || "")}</td>
         <td class="${lag > 2 ? "cell-hi" : ""}">${k.last ? fdate(k.last) : "–"}</td>
         <td class="${isNum(k.days30) && k.days30 < 28 ? "cell-hi" : ""}">${isNum(k.days30) ? k.days30 : "–"}</td>
-        <td>${k.first ? fdate(k.first) : "–"}</td><td style="text-align:left">${esc(k.load || "–")}</td><td style="text-align:left">${esc(k.prices || "–")}</td><td style="text-align:left">${esc(k.forecast || "–")}</td>
+        <td>${k.first ? fdate(k.first) : "–"}</td><td style="text-align:left;white-space:normal;min-width:160px" class="${String(k.load || "").startsWith("BRAK") ? "cell-hi" : ""}">${esc(k.load || "–")}</td><td style="text-align:left">${esc(k.prices || "–")}</td><td style="text-align:left">${esc(k.forecast || "–")}</td>
         <td style="text-align:left;white-space:normal;min-width:220px">${notes.join("; ") || '<span class="muted">OK</span>'}</td></tr>`;
     });
     $("ctl").innerHTML = h + "</tbody>";

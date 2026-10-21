@@ -677,3 +677,24 @@ def test_afternoon_prices_only(tmp_store):
     tomorrow = pd.Timestamp(dt.date.today() + dt.timedelta(days=1))
     assert tomorrow in pl.index and pl.loc[tomorrow, "price_avg"] > 0
     assert not store.DAILY.exists() or not any(store.DAILY.iterdir())   # dane dzienne krajów nietknięte
+
+
+def test_load_status_stale_series():
+    idx = pd.date_range("2026-08-01", "2026-10-20", freq="D")
+    df = pd.DataFrame({"load": 1000.0}, index=idx)
+    assert build._load_status(df, False, dt.date(2026, 10, 20)) == "ENTSO-E (obciążenie)"
+    s = build._load_status(df.assign(load=df["load"].where(df.index <= "2026-09-20")), False, dt.date(2026, 10, 20))
+    assert s.startswith("BRAK od 2026-09-21 (30 dni)")
+    assert build._load_status(df, True, dt.date(2026, 10, 20)) == "szacowane z bilansu"
+    assert build._load_status(df.assign(load=np.nan), False, dt.date(2026, 10, 20)) == "brak"
+
+
+def test_movers_same_fact_once():
+    def it(code, series, delta, score, kind="week", typ="yoy"):
+        return {"code": code, "name": code, "period": kind, "series": series, "label": series, "type": typ,
+                "cur": 50.0, "ref": 50.0 - delta, "delta": delta, "score": score}
+    items = [it("UK", "wind", 35.4, 35.4), it("UK", "renewable", 35.4, 35.3), it("UK", "gas", -35.1, 35.1),
+             it("UK", "solar", 10.0, 10.0), it("UK", "coal", 9.0, 9.0), it("PL", "wind", 5.0, 5.0)]
+    out = trends._dedupe_movers(items, 8)
+    codes = [(x["code"], x["series"]) for x in out]
+    assert codes == [("UK", "wind"), ("UK", "solar"), ("PL", "wind")]

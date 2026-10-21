@@ -195,7 +195,7 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
             "last": good.max().strftime("%Y-%m-%d") if len(good) else None,
             "first": good.min().strftime("%Y-%m-%d") if len(good) else None,
             "days30": int((last30 >= min_cov).sum()),
-            "load": "szacowane z bilansu" if est else ("ENTSO-E (obciążenie)" if df["load"].notna().any() else "brak"),
+            "load": _load_status(df, est, ref),
             "unknown": st.get("unknown", []),
             "error": st.get("last_error"),
             "history_complete": st.get("history_complete"),
@@ -344,6 +344,20 @@ def wind_tab(fcs: dict, winds: dict[str, pd.Series], n_years: int, min_years: in
         out["countries"][code] = rec
     out["accuracy"] = wind_accuracy(winds)
     return out
+
+
+def _load_status(df: pd.DataFrame, est, ref: dt.date, max_age: int = 7) -> str:
+    """Skąd zużycie; gdy seria ENTSO-E urwała się ponad max_age dni temu - 'BRAK od …' (trafia do kontroli danych)."""
+    if est:
+        return "szacowane z bilansu"
+    s = df["load"].dropna() if "load" in df else pd.Series(dtype=float)
+    if s.empty:
+        return "brak"
+    last = s.index.max()
+    age = (pd.Timestamp(ref) - last).days
+    if age <= max_age:
+        return "ENTSO-E (obciążenie)"
+    return f"BRAK od {(last + pd.Timedelta(days=1)):%Y-%m-%d} ({age} dni) – zużycie i udziały w zużyciu pominięte"
 
 
 GAP_LABEL = {"wind": "wiatr", "solar": "słońce", "load": "zużycie"}
