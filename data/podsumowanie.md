@@ -20,5 +20,4 @@
 - Irlandia Północna (UK): Gaz 22.0% (-35.1 p.p. r/r, tydz.)
 - Słowacja: emisyjność 102 g/kWh (+68.7% r/r, tydz.)
 
-Zapytania do Energy-Charts: 46 (public_power: 30, price: 16); czas: 18 min
-Prognozy pobrane dla: AT, BE, BG, CH, CY, CZ, DE, DK, EE, ES, EU, FI, FR, GB, GR, HR, HU, IE, IT, LT, LU, LV, NL, NO, PL, PT, RO, SE, SI, SK, UK
+Zapytania do Energy-Charts: 15; czas: 7 min
