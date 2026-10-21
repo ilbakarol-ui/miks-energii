@@ -5,7 +5,7 @@
  "steps": {
   "ensemble": {
    "status": "OK",
-   "seconds": 179,
+   "seconds": 183,
    "requests": 17,
    "weighted": 93.5,
    "http429": 1,
@@ -20,9 +20,9 @@
    "last_error": null
   }
  },
- "ensemble_issued": "2026-10-20",
+ "ensemble_issued": "2026-10-21",
  "ensemble_kind": "ensemble",
- "updated": "2026-10-20T17:42Z",
+ "updated": "2026-10-21T01:01Z",
  "weighted_calls": 93.5,
  "seasonal_refreshed_points": 0
 }
