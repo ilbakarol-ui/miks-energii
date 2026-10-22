@@ -698,3 +698,28 @@ def test_movers_same_fact_once():
     out = trends._dedupe_movers(items, 8)
     codes = [(x["code"], x["series"]) for x in out]
     assert codes == [("UK", "wind"), ("UK", "solar"), ("PL", "wind")]
+
+
+def test_storage_capacity(tmp_path, monkeypatch):
+    from mixtracker import storage_cap as sc
+    for k, v in {"DIR": tmp_path, "EC_RAW": tmp_path / "ec.csv", "ES_RAW": tmp_path / "es.csv",
+                 "OUT": tmp_path / "out.csv", "STATE": tmp_path / "st.json"}.items():
+        monkeypatch.setattr(sc, k, v)
+    js = {"time": ["2021", "2022", "2023", "2024", "2025", "2026"], "production_types": [
+        {"name": "Hydro pumped storage", "data": [10, 10, 10, 9.9, 9.9, 2.0]},          # 2026 niepełny agregat - pominięty
+        {"name": "Battery storage (power)", "data": [2.4, 4.2, 8.4, 12.7, 16.9, 21.8]},
+        {"name": "Battery storage (capacity)", "data": [3.7, 6.4, 12.5, 18.7, 25.5, 34.2]},
+        {"name": "Wind onshore", "data": [1, 2, 3, 4, 5, 6]}]}
+    de = sc.parse_ec("DE", js, 2026)
+    assert set(de["series"]) == {"pumped_gw", "bat_gw", "bat_gwh"}
+    assert 2026 not in de[de.series == "pumped_gw"].year.tolist() and 2026 in de[de.series == "bat_gw"].year.tolist()
+    pl = sc.parse_ec("PL", {"time": ["2024"], "production_types": [{"name": "Hydro pumped storage", "data": [1.5]}]}, 2026)
+    es = pd.DataFrame([
+        ("EU", 2024, "bat_gw", 10.0), ("EU", 2024, "bat_gwh", 19.0), ("DE", 2024, "bat_gw", 0.8), ("DE", 2024, "bat_gwh", 0.8),
+        ("PL", 2024, "bat_gw", 0.27), ("PL", 2021, "bat_gw", 0.0), ("PL", 2021, "bat_gwh", 0.0)],
+        columns=["code", "year", "series", "value"])
+    out = sc.combine(pd.concat([de, pl]), es, ["EU", "DE", "PL"]).set_index(["code", "year"])
+    assert out.at[("DE", 2024), "bat_gw"] == 12.7 and out.at[("DE", 2024), "bat_src"].startswith("MaStR")
+    assert out.at[("EU", 2024), "bat_gw"] == pytest.approx(10.0 - 0.8 + 12.7)            # Niemcy wg MaStR
+    assert out.at[("PL", 2024), "bat_gw"] == 0.27 and out.at[("PL", 2024), "pumped_gw"] == 1.5
+    assert pd.isna(out.at[("PL", 2021), "bat_gw"])                                        # zero sprzed 2022 = brak danych

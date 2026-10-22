@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from . import forecast, model, prices, store, trends, verify, weather
+from . import forecast, model, prices, storage_cap, store, trends, verify, weather
 from .categories import DETAIL, DETAIL_KEYS, GROUPS, GROUP_KEYS
 
 TEMPLATE = Path(__file__).with_name("template.html")
@@ -231,6 +231,7 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
                                 settings["movers_count"]),
         "breaks": breaks,
         "eurostat": eurostat_block(eurostat_df, countries, n_years),
+        "storage_cap": storage_cap.block(names),
         "forecast": fcast,
         "prices": price_info,
         "price_map": price_map(zones_ok, zones_all, countries),

@@ -408,6 +408,19 @@ footer a, .notes a { color: var(--accent); }
     </div>
   </section>
 
+  <section aria-labelledby="h-stor" id="stor-sec">
+    <div class="head"><h2 id="h-stor">Magazyny energii: moc zainstalowana</h2><span class="small muted" id="stor-label"></span></div>
+    <div class="grid2">
+      <div class="panel" id="stor-kpi"></div>
+      <div class="panel" style="display:grid;gap:10px">
+        <div class="legend" id="stor-legend"></div>
+        <div class="chart" id="stor-chart"></div>
+      </div>
+    </div>
+    <div class="tablebox" style="margin-top:12px"><table id="stor-table"></table></div>
+    <p class="small muted" id="stor-note"></p>
+  </section>
+
   <section aria-labelledby="h-ctl">
     <div class="head"><h2 id="h-ctl">Kontrola danych</h2></div>
     <div class="tablebox"><table id="ctl"></table></div>
@@ -963,9 +976,9 @@ const DATA = /*__DATA__*/null;
     const ticks = opts.pct ? [0, 25, 50, 75, 100] : niceTicks(0, hi, 4);
     const y1 = ticks[ticks.length - 1];
     const y = (v) => B - (v / y1) * (B - T);
-    yAxis(svg, ticks, y, L, R, opts.pct ? "%" : "GWh");
+    yAxis(svg, ticks, y, L, R, opts.pct ? "%" : (opts.unit || "GWh"));
     const slot = (R - L) / n;
-    const bw = Math.min(24, Math.max(1.5, slot - (slot > 6 ? 2 : 1)));
+    const bw = Math.min(opts.maxBar || 24, Math.max(1.5, slot - (slot > 6 ? 2 : 1)));
     const gap = slot > 6 ? 2 : 0.6;
     const x = (i) => L + slot * i + (slot - bw) / 2;
     for (let i = 0; i < n; i++) {
@@ -1007,9 +1020,10 @@ const DATA = /*__DATA__*/null;
       series.slice().reverse().forEach((s) => {
         const v = s.values[i];
         if (!isNum(v) || v <= 0) return;
-        h += `<div class="r"><span><i class="sw" style="width:8px;height:8px;background:${s.color}"></i>${esc(s.label)}</span><span>${opts.pct ? pct((100 * v) / t) : energy(v)}</span></div>`;
+        h += `<div class="r"><span><i class="sw" style="width:8px;height:8px;background:${s.color}"></i>${esc(s.label)}</span><span>${opts.pct ? pct((100 * v) / t) : (opts.fmt || energy)(v)}</span></div>`;
       });
-      h += `<div class="r"><span><b>Produkcja</b></span><span><b>${energy(t)}</b></span></div>`;
+      h += `<div class="r"><span><b>${esc(opts.totalLabel || "Produkcja")}</b></span><span><b>${(opts.fmt || energy)(t)}</b></span></div>`;
+      if (opts.extra) h += opts.extra(i);
       if (opts.line && isNum(opts.line.values[i])) h += `<div class="r"><span>${esc(opts.line.label)}</span><span>${energy(opts.line.values[i])}</span></div>`;
       placeTip(tip, el, ((L + slot * i + slot) / W) * r.width, 10, h);
     };
@@ -1848,6 +1862,70 @@ const DATA = /*__DATA__*/null;
   }
 
   // ---------- kontrola ----------
+  // ---------- magazyny energii: moc zainstalowana ----------
+  const SC = DATA.storage_cap || {};
+  const SCC = SC.countries || {};
+  const gw = (v) => (isNum(v) ? (v >= 10 ? fmt1.format(v) : fmt2.format(v)) + " GW" : "–");
+  const gwh = (v) => (isNum(v) ? (v >= 10 ? fmt1.format(v) : fmt2.format(v)) + " GWh" : "–");
+  const yLab = (y) => (y === new Date().getFullYear() ? y + "*" : String(y));
+  const lastIdx = (a) => { for (let i = (a || []).length - 1; i >= 0; i--) if (isNum(a[i])) return i; return -1; };
+  const firstIdx = (a) => (a || []).findIndex(isNum);
+  function renderStorage() {
+    const sec = $("stor-sec");
+    if (!SC.years) { sec.hidden = true; return; }
+    sec.hidden = false;
+    const Y = SC.years, c = SCC[S.country];
+    $("stor-label").textContent = cname(S.country) + ", dane roczne";
+    const bcol = css("--accent"), pcol = col("hydro");
+    legend($("stor-legend"), [{ color: pcol, label: "Elektrownie szczytowo-pompowe" }, { color: bcol, label: "Magazyny bateryjne" }]);
+    if (!c) {
+      $("stor-kpi").innerHTML = '<p class="muted">Brak danych o magazynach dla tego kraju (Wielka Brytania i Irlandia Północna nie są w zbiorach Eurostatu ani w danych mocy Energy-Charts).</p>';
+      $("stor-chart").innerHTML = '<p class="empty">Brak danych.</p>';
+    } else {
+      const ib = lastIdx(c.bat), ip = lastIdx(c.pumped), fb = firstIdx(c.bat);
+      const rows = [];
+      rows.push(["Szczytowo-pompowe", ip >= 0 ? `${gw(c.pumped[ip])} (${yLab(Y[ip])})` : "–"]);
+      rows.push(["Baterie: moc", ib >= 0 ? `${gw(c.bat[ib])} (${yLab(Y[ib])})` : "–"]);
+      rows.push(["Baterie: pojemność", ib >= 0 && isNum((c.bat_gwh || [])[ib]) ? gwh(c.bat_gwh[ib]) : "–"]);
+      if (ib >= 0 && isNum(c.bat[ib]) && c.bat[ib] > 0 && isNum((c.bat_gwh || [])[ib])) rows.push(["Średni czas rozładowania", fmt1.format(c.bat_gwh[ib] / c.bat[ib]) + " h"]);
+      if (fb >= 0 && ib > fb && isNum(c.bat[fb])) {
+        const d = c.bat[ib] - c.bat[fb];
+        rows.push([`Przyrost baterii ${yLab(Y[fb])}–${yLab(Y[ib])}`, (d >= 0 ? "+" : "−") + gw(Math.abs(d)) + (c.bat[fb] > 0.05 ? ` (×${fmt1.format(c.bat[ib] / c.bat[fb])})` : "")]);
+      }
+      const tot = (ip >= 0 ? c.pumped[ip] : 0) + (ib >= 0 ? c.bat[ib] : 0);
+      const [n1, u1] = isNum(tot) ? [tot >= 10 ? fmt1.format(tot) : fmt2.format(tot), "GW"] : ["–", ""];
+      $("stor-kpi").innerHTML = `<div class="kpi" style="padding:0;border:0;background:none"><div class="label">Moc magazynów łącznie (ostatnie dostępne lata)</div><div class="value">${n1}<small>${u1}</small></div>
+        <dl class="deltas">${rows.map(([a, b]) => `<dt>${esc(a)}</dt><dd>${esc(b)}</dd>`).join("")}</dl></div>
+        <p class="small muted" style="margin-top:8px">Baterie: ${esc(c.bat_src || "brak danych")}. Moc to maksymalna moc oddawania; pojemność to ilość energii, którą magazyn mieści.</p>`;
+      stacked($("stor-chart"), Y, [
+        { key: "pumped", label: "Szczytowo-pompowe", color: pcol, values: c.pumped },
+        { key: "bat", label: "Baterie", color: bcol, values: c.bat },
+      ], { unit: "GW", fmt: gw, totalLabel: "Razem", maxBar: 44, H: 230, xlab: (i) => yLab(Y[i]), tlab: (i) => yLab(Y[i]) + (Y[i] === new Date().getFullYear() ? " (stan bieżący)" : ""),
+        extra: (i) => isNum((c.bat_gwh || [])[i]) ? `<div class="r"><span>Pojemność baterii</span><span>${gwh(c.bat_gwh[i])}</span></div>` : "" });
+    }
+    // tabela wszystkich krajów
+    const order = Object.keys(SCC).sort((a, b) => {
+      if (a === "EU") return -1; if (b === "EU") return 1;
+      const la = SCC[a].bat[lastIdx(SCC[a].bat)] || 0, lb = SCC[b].bat[lastIdx(SCC[b].bat)] || 0;
+      return lb - la || ((SCC[b].pumped[lastIdx(SCC[b].pumped)] || 0) - (SCC[a].pumped[lastIdx(SCC[a].pumped)] || 0));
+    });
+    const TY = Y.map((y, i) => i).slice(-5);          // 5 ostatnich lat w tabeli
+    let h = `<thead><tr><th>Kraj</th><th>Szczytowo-pompowe, GW</th>${TY.map((i) => `<th>Baterie ${yLab(Y[i])}, GW</th>`).join("")}<th>Baterie, GWh</th></tr></thead><tbody>`;
+    order.forEach((code) => {
+      const c = SCC[code], ip = lastIdx(c.pumped), ib = lastIdx(c.bat);
+      const mark = (c.bat_src || "").includes("MaStR") ? " †" : "";
+      h += `<tr data-c="${code}" tabindex="0" class="${code === S.country ? "sel" : ""}"><td>${esc(cname(code))}${mark}</td><td>${ip >= 0 ? fmt2.format(c.pumped[ip]) : "–"}</td>` +
+        TY.map((i) => `<td>${isNum(c.bat[i]) ? fmt2.format(c.bat[i]) : "–"}</td>`).join("") +
+        `<td>${ib >= 0 && isNum((c.bat_gwh || [])[ib]) ? fmt2.format(c.bat_gwh[ib]) + ` <span class="muted small">(${yLab(Y[ib])})</span>` : "–"}</td></tr>`;
+    });
+    const t = $("stor-table"); t.innerHTML = h + "</tbody>";
+    t.querySelectorAll("tbody tr").forEach((tr) => {
+      tr.addEventListener("click", () => setCountry(tr.dataset.c));
+      tr.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCountry(tr.dataset.c); } });
+    });
+    $("stor-note").textContent = "Moc szczytowo-pompowa: ostatni dostępny rok. Źródła: elektrownie szczytowo-pompowe – Energy-Charts (moc zainstalowana wg ENTSO-E, dla Szwajcarii BFE); baterie – Eurostat nrg_inf_bt (publikacja z opóźnieniem ok. 10 miesięcy, kompletne od 2022 r., dlatego za 2025 r. jeszcze ich nie ma), † dla Niemiec rejestr MaStR przez Energy-Charts (z magazynami domowymi; Eurostat podaje dla Niemiec tylko część magazynów sieciowych), UE-27: Eurostat z Niemcami wg MaStR. * rok bieżący – stan na dziś. Definicje krajów w Eurostacie różnią się (część krajów raportuje tylko magazyny sieciowe), a nagłe zmiany, np. Francja 2023 albo Hiszpania 2022 w danych szczytowo-pompowych, to zwykle rewizje źródła, nie zmiany w instalacjach.";
+  }
+
   function renderControl() {
     let h = '<thead><tr><th>Kraj</th><th class="t">Źródło</th><th>Ostatni dzień</th><th>Dni z danymi (30)</th><th>Historia od</th><th class="t">Zużycie</th><th class="t">Ceny</th><th class="t">Prognozy</th><th class="t">Uwagi</th></tr></thead><tbody>';
     DATA.countries.forEach((c) => {
@@ -1899,11 +1977,12 @@ const DATA = /*__DATA__*/null;
       renderKPIs(); renderMix(); renderTrend(); renderPrices(); renderForecast(); renderDaily(); renderMonthly();
     }
     renderEurostat();
+    renderStorage();
   }
   renderCountry(); renderTable(); renderMap(); renderMovers(); renderControl();
   setTab(TAB);
   let rt;
-  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (DATA.summary[S.country]) { renderTrend(); renderPrices(); renderForecast(); renderDaily(); renderMonthly(); } if (TAB === "wind") renderWindCharts(); if (TAB === "ver") renderVerCharts(); renderEurostat(); }, 150); });
+  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (DATA.summary[S.country]) { renderTrend(); renderPrices(); renderForecast(); renderDaily(); renderMonthly(); } if (TAB === "wind") renderWindCharts(); if (TAB === "ver") renderVerCharts(); renderEurostat(); renderStorage(); }, 150); });
   try {
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { renderCountry(); renderTable(); renderMap(); renderMovers(); if (TAB === "wind") renderWind(); if (TAB === "ver") renderVer(); });
     new MutationObserver(() => { renderCountry(); renderTable(); renderMap(); renderMovers(); if (TAB === "wind") renderWind(); if (TAB === "ver") renderVer(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });

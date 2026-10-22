@@ -9,7 +9,7 @@ import os
 import sys
 import time
 
-from . import build, elexon, eurostat, store, trends, update, weather
+from . import build, elexon, eurostat, storage_cap, store, trends, update, weather
 
 
 def summary_md(payload: dict, run: dict) -> str:
@@ -90,6 +90,11 @@ def main(argv=None):
         wlog = run.setdefault("log", [])
         fcs = weather.update(settings, frames, trends.derive, countries, wlog)
         run["forecasts"] = sorted(fcs)
+    if not args.afternoon and not args.skip_fetch:
+        try:   # moc zainstalowana magazynów: Eurostat co 7 dni, Energy-Charts co 30 dni (po 6 krajów na przebieg)
+            storage_cap.update(settings, run.setdefault("log", []))
+        except Exception as e:
+            run.setdefault("log", []).append(f"Magazyny: {type(e).__name__}: {e}")
     es_df, es_err = (None, None) if args.skip_eurostat else eurostat.update(settings["history_years"])
     if args.skip_eurostat:
         import pandas as pd
