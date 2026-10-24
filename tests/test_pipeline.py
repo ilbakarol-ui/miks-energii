@@ -253,6 +253,13 @@ def test_build_and_render(tmp_path, monkeypatch):
     json.loads((tmp_path / "site" / "data.json").read_text(encoding="utf-8"))
 
 
+def _day_hours(d, tz="Europe/Warsaw"):
+    """Liczba godzin doby lokalnej (23 lub 25 przy zmianie czasu)."""
+    a = pd.Timestamp(d).tz_localize(tz)
+    b = pd.Timestamp(d + dt.timedelta(days=1)).tz_localize(tz)
+    return (b - a) / pd.Timedelta(hours=1)
+
+
 def test_migration_adds_prices_and_forecast(tmp_store):
     """Dane z wersji bez cen: backfill dociąga ceny dla całej historii; prognoza zapisana."""
     settings = store.load_settings()
@@ -269,7 +276,9 @@ def test_migration_adds_prices_and_forecast(tmp_store):
     assert df.loc[pd.Timestamp(start):, "price_avg"].notna().all()
     assert store.read_state()["PL"]["history_complete"] is True
     fc = json.loads((store.FORECAST / "PL.json").read_text())
-    assert fc["solar"][0] == pytest.approx(24.0) and fc["wind"][0] == pytest.approx(48.0)
+    # liczba godzin doby zależy od zmiany czasu (25.10.2026 ma 25 h)
+    hours = _day_hours(dt.date.fromisoformat(fc["days"][0]))
+    assert fc["solar"][0] == pytest.approx(hours) and fc["wind"][0] == pytest.approx(2 * hours)
     assert (store.FORECAST / "archive.csv").exists()
 
 
@@ -467,7 +476,8 @@ def test_price_ahead_and_map(tmp_store):
     assert store.read_daily("PL").index.max().date() < update._today("Europe/Warsaw")
     pm = build.price_map(prices.load_zones(["cc_by"]), prices.all_zones(), store.load_countries(), days=10)
     assert pm["dates"][-1] == tomorrow.isoformat() and len(pm["dates"]) == 10
-    assert pm["countries"]["PL"]["avg"][-1] == pytest.approx((11 * 50 + 12 * 150 - 10) / 24, abs=0.1)
+    h = _day_hours(tomorrow)   # godzina dodana/usunięta przy zmianie czasu to godzina nocna (150)
+    assert pm["countries"]["PL"]["avg"][-1] == pytest.approx((11 * 50 + (h - 12) * 150 - 10) / h, abs=0.1)
     assert pm["countries"]["ES"]["zones"] == [] and pm["countries"]["ES"]["all"] == ["ES"]
     assert "PL" in pm["geo"]["countries"] and pm["geo"]["w"] > 0
 
