@@ -120,7 +120,13 @@ def http_get(url: str, params: dict, tries: int = 3) -> list[dict]:
             continue
         if r.status_code != 200:
             raise RuntimeError(f"HTTP {r.status_code}: {r.text[:200]}")
-        js = r.json()
+        try:
+            js = r.json()
+        except ValueError as e:          # ucięta/niepełna odpowiedź (np. JSONDecodeError) - ponów jak błąd sieci
+            last = f"{type(e).__name__}"
+            STATS["failed"] += 1; STATS["last_error"] = f"{url.split('/')[2]}: {last} ({len(r.content)} B)"
+            time.sleep(10 * (k + 1))
+            continue
         return js if isinstance(js, list) else [js]
     raise RuntimeError(last or "błąd Open-Meteo")
 
@@ -244,6 +250,7 @@ def step_prev(pts, q: Quota, get=http_get, today: dt.date | None = None) -> int:
 
 
 _PREV_LEFT = [0]
+_PREV_FAILED: list[str] = []
 
 
 def _prev_loop(jobs, q, get, end, hourly, new):
@@ -261,8 +268,16 @@ def _prev_loop(jobs, q, get, end, hourly, new):
                     left += len(gg)
                     break
                 q.take(w)
-                for pt, js in zip(gg.pt, get(PREV_URL, {**_coords(gg), "hourly": ",".join(hourly), "timezone": tz,
-                                                         "start_date": a.isoformat(), "end_date": b.isoformat()})):
+                try:
+                    res = get(PREV_URL, {**_coords(gg), "hourly": ",".join(hourly), "timezone": tz,
+                                         "start_date": a.isoformat(), "end_date": b.isoformat()})
+                except (Deadline, DailyLimit):
+                    raise
+                except Exception as e:      # jedna paczka punktów nie przerywa całego kroku
+                    _PREV_FAILED.append(f"{','.join(gg.pt)} {a}..{b}: {type(e).__name__}")
+                    left += len(gg)
+                    break
+                for pt, js in zip(gg.pt, res):
                     h = js.get("hourly") or {}
                     if not h.get("time"):
                         continue
@@ -424,6 +439,9 @@ def run(budget: float = 8000, get=http_get, today: dt.date | None = None, minute
                 meta["seasonal_refreshed_points"] = int(res)
             elif res:
                 meta["pending"][name] = int(res)
+            if name == "prev" and _PREV_FAILED:
+                meta["errors"].append(f"prev: {len(_PREV_FAILED)} paczek punktów bez danych po 3 próbach, np. {_PREV_FAILED[0]}")
+                _PREV_FAILED.clear()
         except Deadline:
             status = "limit czasu"
             meta["errors"].append(f"{name}: limit czasu przebiegu ({minutes:.0f} min) – zebrane dane zapisane, reszta jutro")
@@ -434,6 +452,7 @@ def run(budget: float = 8000, get=http_get, today: dt.date | None = None, minute
         except Exception as e:
             status = f"błąd {type(e).__name__}"
             meta["errors"].append(f"{name}: {type(e).__name__}: {str(e)[:150]}")
+            meta["pending"][name] = _pending(name, _sel(pts, use), today)
         meta["steps"][name] = dict(status=status, seconds=round(time.time() - t0), requests=STATS["requests"] - r0,
                                    weighted=round(q.used - w0, 1), http429=STATS["http429"] - h0, last_error=STATS["last_error"])
         print(f"  {name}: {status} ({time.time() - t0:.0f} s, zapytań {STATS['requests'] - r0}, 429: {STATS['http429'] - h0})"

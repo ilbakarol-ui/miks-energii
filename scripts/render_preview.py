@@ -66,6 +66,9 @@ def main(out: Path):
         vals = {c: v["avg"][i] for c, v in pm["countries"].items() if v.get("avg") and v["avg"][i] is not None}
         brief["ceny_dzien"] = pm["dates"][i]
         brief["ceny_eur_mwh"] = dict(sorted(vals.items(), key=lambda kv: -kv[1]))
+        # kraje, które mają ceny z poprzednich dni, ale nie na ten dzień (aukcja jeszcze nie w Energy-Charts)
+        brief["ceny_brak"] = sorted(c for c, v in pm["countries"].items()
+                                    if v.get("avg") and v["avg"][i] is None and any(x is not None for x in v["avg"][:i]))
     wt = payload.get("wind_tab") or {}
     if wt.get("countries"):
         def w(code):
@@ -83,6 +86,15 @@ def main(out: Path):
     brief["kontrola"] = {k: v for k, v in payload.get("control", {}).items() if v.get("error") or v.get("break") or v.get("partial_last")
                          or str(v.get("load", "")).startswith("BRAK")}
     brief["GB_ostatni_dzien"] = gb.get("last")
+    sw = {}
+    for name in ("meta.json", "meta_extra.json"):
+        p = store.DATA / "shared_weather" / name
+        if p.exists():
+            mm = json.loads(p.read_text(encoding="utf-8"))
+            prev = (mm.get("coverage") or {}).get("prev") or {}
+            sw[name] = {"updated": mm.get("updated"), "errors": mm.get("errors", []), "pending": mm.get("pending", {}),
+                        "prev_punkty_do_konca": f'{prev.get("points_to_end")}/{prev.get("points")}' if prev else None}
+    brief["pogoda_wspolna"] = sw
     (out / "brief.json").write_text(json.dumps(brief, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps(brief, ensure_ascii=False, indent=1))
 

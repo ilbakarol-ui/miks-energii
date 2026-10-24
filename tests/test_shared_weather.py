@@ -213,3 +213,41 @@ def test_meta_step_counters_and_extra_coverage(tmp_path, monkeypatch):
         assert step["http429"] == 0 and step["last_error"] is None
     m = json.loads((tmp_path / "out" / "meta_extra.json").read_text())
     assert "coverage" not in m                         # zakres plików temperatury tylko w meta.json
+
+
+def test_prev_failed_batch_does_not_stop_step(tmp_path, monkeypatch):
+    """B-20261023-1: błąd jednej paczki punktów nie przerywa kroku prev; reszta zapisana, pending i errors opisują braki."""
+    setup(tmp_path, monkeypatch)
+    good = fake_get_factory([])
+
+    def get(url, params):
+        if url == sw.PREV_URL and params.get("timezone") == "Europe/Berlin":
+            raise RuntimeError("JSONDecodeError po 3 próbach")
+        return good(url, params)
+    meta = sw.run(budget=1e6, get=get, today=TODAY)
+    prev = pd.read_csv(tmp_path / "out" / "temp_prev.csv")
+    assert set(prev.pt) == {"A1"}                      # paczka z Azji zapisana mimo błędu paczki europejskiej
+    assert meta["steps"]["prev"]["status"] == "OK"
+    assert meta["pending"]["prev"] >= 3
+    assert any("paczek punktów bez danych" in e for e in meta["errors"])
+
+
+def test_http_get_retries_truncated_json(monkeypatch):
+    """B-20261023-1: ucięta odpowiedź (HTTP 200, niepełny JSON) jest ponawiana jak błąd sieci."""
+    monkeypatch.setattr(sw.time, "sleep", lambda s: None)
+    sw.DEADLINE[0] = float("inf")
+    n = {"k": 0}
+
+    class R:
+        status_code = 200
+        text = '{"hourly": {"time": ["2026'
+        content = text.encode()
+
+        def json(self):
+            n["k"] += 1
+            if n["k"] == 1:
+                raise json.JSONDecodeError("Expecting ',' delimiter", self.text, 27)
+            return {"ok": 1}
+    monkeypatch.setattr(sw.requests, "get", lambda *a, **k: R())
+    assert sw.http_get("https://previous-runs-api.open-meteo.com/v1/forecast", {}) == [{"ok": 1}]
+    assert n["k"] == 2
