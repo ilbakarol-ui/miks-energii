@@ -1,0 +1,29 @@
+name: Testy po zmianie kodu
+
+# B-20261024-2: testy po każdym pushu z kodem, także z „sztucznym zegarem” (zima, lato, zmiana czasu) –
+# wiele testów używa dzisiejszej daty, a krok „Testy” w daily.yml blokuje przebieg danych.
+on:
+  push:
+    branches: [main]
+    paths: ["mixtracker/**", "tests/**", "scripts/**", "requirements.txt", ".github/workflows/**"]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        now: ["", "2026-10-26T00:55:00+00:00", "2026-12-31T12:40:00+00:00", "2027-03-28T00:55:00+00:00", "2027-03-29T12:40:00+00:00", "2027-07-01T00:55:00+00:00"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: pytest (FAKE_NOW=${{ matrix.now || 'teraz' }})
+        env:
+          FAKE_NOW: ${{ matrix.now }}
+        run: python -m pytest -q

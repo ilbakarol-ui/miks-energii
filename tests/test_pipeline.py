@@ -131,7 +131,9 @@ class FakeClient:
         self.calls.append("forecast")
         if not self.forecasts or v2:
             return {}
-        idx = pd.date_range(pd.Timestamp(start).tz_localize("UTC"), periods=24 * 8, freq="h")
+        # od północy czasu lokalnego (jak doby w forecast.daily_energy) - przy starcie od północy UTC
+        # zimą (UTC+1) pierwsza doba ma 23 z 24 h i przechodzi próg pokrycia 0,95, latem (22 h) nie
+        idx = pd.date_range(pd.Timestamp(start).tz_localize("Europe/Warsaw"), periods=24 * 8, freq="h")
         return {"unix_seconds": idx.as_unit("s").asi8.tolist(), "forecast_values": [1000.0] * len(idx)}
 
 
@@ -733,3 +735,19 @@ def test_storage_capacity(tmp_path, monkeypatch):
     assert out.at[("EU", 2024), "bat_gw"] == pytest.approx(10.0 - 0.8 + 12.7)            # Niemcy wg MaStR
     assert out.at[("PL", 2024), "bat_gw"] == 0.27 and out.at[("PL", 2024), "pumped_gw"] == 1.5
     assert pd.isna(out.at[("PL", 2021), "bat_gw"])                                        # zero sprzed 2022 = brak danych
+
+
+def test_movers_intensity_same_fact_as_share():
+    """B-20261024-3: emisyjność i udział tego samego kraju i okresu to jeden fakt; inny okres - obie pozycje."""
+    from mixtracker import trends
+    def it(code, series, period, typ, delta, score):
+        return {"code": code, "name": code, "period": period, "series": series, "label": series, "type": typ,
+                "cur": 0, "ref": 0, "delta": delta, "score": score}
+    items = [it("SI", "nuclear", "week", "yoy", 50.4, 50.4), it("SI", "intensity", "week", "int_yoy", -75.4, 37.7),
+             it("LV", "intensity", "month", "int_yoy", -73.8, 36.9), it("LV", "gas", "month", "yoy", -32.3, 32.3),
+             it("BE", "intensity", "month", "int_yoy", 131.3, 65.6), it("BE", "renewable", "week", "yoy", 32.9, 32.9)]
+    out = trends._dedupe_movers(items, 8)
+    keys = [(x["code"], x["series"]) for x in out]
+    assert ("SI", "intensity") not in keys and ("SI", "nuclear") in keys
+    assert ("LV", "gas") not in keys and ("LV", "intensity") in keys
+    assert ("BE", "intensity") in keys and ("BE", "renewable") in keys      # różne okresy

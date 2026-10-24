@@ -351,6 +351,11 @@ def _dedupe_movers(items: list[dict], top: int) -> list[dict]:
         # ten sam fakt innymi słowami (np. wiatr = całe OZE, gaz = reszta) - pomijamy zmianę o tej samej wielkości
         if any(abs(abs(it["delta"]) - abs(d)) < 1.0 for d in shown.get((it["code"], it["period"], it["type"]), [])):
             continue
+        # emisyjność wynika z udziałów: przy dużej zmianie udziału w tym samym kraju i okresie to ten sam fakt
+        if it["type"] == "int_yoy" and shown.get((it["code"], it["period"], "yoy")):
+            continue
+        if it["type"] == "yoy" and shown.get((it["code"], it["period"], "int_yoy")):
+            continue
         seen.add(k)
         per_country[it["code"]] = per_country.get(it["code"], 0) + 1
         shown.setdefault((it["code"], it["period"], it["type"]), []).append(it["delta"])
