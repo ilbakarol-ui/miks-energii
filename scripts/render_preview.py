@@ -66,9 +66,16 @@ def main(out: Path):
         vals = {c: v["avg"][i] for c, v in pm["countries"].items() if v.get("avg") and v["avg"][i] is not None}
         brief["ceny_dzien"] = pm["dates"][i]
         brief["ceny_eur_mwh"] = dict(sorted(vals.items(), key=lambda kv: -kv[1]))
-        # kraje, które mają ceny z poprzednich dni, ale nie na ten dzień (aukcja jeszcze nie w Energy-Charts)
-        brief["ceny_brak"] = sorted(c for c, v in pm["countries"].items()
-                                    if v.get("avg") and v["avg"][i] is None and any(x is not None for x in v["avg"][:i]))
+        # B-20261025-2: po południu oczekujemy cen na jutro – gdy jutra nie ma w żadnej strefie, brakuje wszystkich
+        want = (dt.date.today() + dt.timedelta(days=1)).isoformat() if brief.get("przebieg") == "popołudniowy" else None
+        brief["ceny_oczekiwany_dzien"] = want
+        brief["ceny_jutro"] = (pm["dates"][i] == want) if want else None
+        if want and pm["dates"][i] < want:
+            brief["ceny_brak"] = sorted(c for c, v in pm["countries"].items() if v.get("avg"))
+        else:
+            # kraje, które mają ceny z poprzednich dni, ale nie na ten dzień (aukcja jeszcze nie w Energy-Charts)
+            brief["ceny_brak"] = sorted(c for c, v in pm["countries"].items()
+                                        if v.get("avg") and v["avg"][i] is None and any(x is not None for x in v["avg"][:i]))
     wt = payload.get("wind_tab") or {}
     if wt.get("countries"):
         def w(code):

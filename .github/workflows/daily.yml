@@ -54,7 +54,7 @@ jobs:
           AFTERNOON: ${{ github.event.schedule == '37 12 * * *' || github.event.inputs.afternoon == 'true' }}
         run: |
           if [ "$AFTERNOON" = "true" ]; then
-            python -m mixtracker.run_daily --budget 15 --afternoon
+            python -m mixtracker.run_daily --budget 40 --afternoon   # B-20261025-1: zapas na 2 ponowienia brakujących cen co 10 min
           else
             python -m mixtracker.run_daily --budget "$BUDGET" --only "$ONLY"
           fi

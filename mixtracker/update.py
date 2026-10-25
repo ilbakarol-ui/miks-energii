@@ -317,7 +317,7 @@ def update_all(settings: dict, budget_minutes: float | None = None, only: list[s
 
 
 def update_prices_ahead(settings: dict, budget_minutes: float | None = None, client: Client | None = None,
-                        days_ahead: int = 1) -> dict:
+                        days_ahead: int = 1, retries: int = 2, retry_wait: float = 600) -> dict:
     """Przebieg popołudniowy: tylko ceny day-ahead stref (dziś i jutro - aukcja ok. 12:45 publikuje ceny
     na następny dzień). Bez produkcji, pogody i prognoz; jedno zapytanie na strefę."""
     client = client or Client(base_url=settings["energycharts_base_url"],
@@ -338,16 +338,57 @@ def update_prices_ahead(settings: dict, budget_minutes: float | None = None, cli
             break
         today = _today(tz)
         try:
-            ser = prices.parse_price(client.price(zone, today, today + dt.timedelta(days=days_ahead)))
+            # B-20261025-1: +1 dzień zapasu – przy dobie 23/25 h (zmiana czasu) koniec zakresu nie ucina jutra
+            ser = prices.parse_price(client.price(zone, today, today + dt.timedelta(days=days_ahead + 1)))
         except FetchError as e:
             log.append(f"ceny {zone}: {e}")
             continue
         zd = prices.zone_daily(ser, tz)
         if zd.empty:
             continue
-        old = store.read_zone(zone)
-        merged = pd.concat([old.drop(index=zd.index.intersection(old.index), errors="ignore"), zd])
-        merged = merged[~merged.index.duplicated(keep="last")].sort_index()
-        store.write_zone(zone, merged)
+        _merge_zone(zone, zd)
         done.append(zone)
-    return {"requests": len(done), "log": log, "zones": done}
+    # B-20261025-1: strefy bez ceny na jutro (aukcja ok. 12:45, Energy-Charts bywa spóźnione) – 2 ponowienia co 10 min
+    want = {z: pd.Timestamp(_today(tz) + dt.timedelta(days=days_ahead)) for z, tz in zones.items()}
+    extra = 0
+    for _ in range(retries):
+        late = [z for z in zones if _last_price_day(z) < want[z]]
+        if not late or not budget.can_request():
+            break
+        time.sleep(retry_wait)
+        for zone in late:
+            if not budget.can_request():
+                break
+            tz = zones[zone]
+            try:
+                ser = prices.parse_price(client.price(zone, _today(tz), _today(tz) + dt.timedelta(days=days_ahead + 1)))
+            except FetchError as e:
+                log.append(f"ceny {zone} (ponowienie): {e}")
+                continue
+            extra += 1
+            zd = prices.zone_daily(ser, tz)
+            if not zd.empty:
+                _merge_zone(zone, zd)
+                if zone not in done:
+                    done.append(zone)
+    missing = sorted(z for z in zones if _last_price_day(z) < want[z])
+    if missing:
+        log.append(f"BRAK cen day-ahead na jutro: {', '.join(missing)} ({len(missing)} z {len(zones)} stref; "
+                   f"mapa pokaże dla nich ostatni dzień z ceną)")
+    return {"requests": len(done) + extra, "log": log, "zones": done, "missing_ahead": missing}
+
+
+def _merge_zone(zone: str, zd: pd.DataFrame):
+    """Dopisuje doby z ceną (doby niepełne – NaN – nie nadpisują zapisanych wartości)."""
+    zd = zd.dropna(subset=["price_avg"])
+    if zd.empty:
+        return
+    old = store.read_zone(zone)
+    merged = pd.concat([old.drop(index=zd.index.intersection(old.index), errors="ignore"), zd])
+    merged = merged[~merged.index.duplicated(keep="last")].sort_index()
+    store.write_zone(zone, merged)
+
+
+def _last_price_day(zone: str) -> pd.Timestamp:
+    s = store.read_zone(zone)["price_avg"].dropna()
+    return s.index.max() if len(s) else pd.Timestamp("1900-01-01")

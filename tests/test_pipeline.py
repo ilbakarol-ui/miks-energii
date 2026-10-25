@@ -691,6 +691,70 @@ def test_afternoon_prices_only(tmp_store):
     assert not store.DAILY.exists() or not any(store.DAILY.iterdir())   # dane dzienne krajów nietknięte
 
 
+def test_afternoon_missing_tomorrow_retry_and_log(tmp_store):
+    """B-20261025-1: strefa bez ceny na jutro – ponowienie, a gdy nadal brak, linia „BRAK cen…” i missing_ahead."""
+    settings = store.load_settings()
+
+    class Late(FakeClient):
+        def __init__(self, *a, late_calls=1, **k):
+            super().__init__(*a, **k)
+            self.late_calls, self.pl_calls = late_calls, 0
+
+        def price(self, zone, start, end):
+            if zone == "PL":
+                self.pl_calls += 1
+                if self.pl_calls <= self.late_calls:     # tylko dzisiejsza doba (aukcja jeszcze nie w Energy-Charts)
+                    self.requests_made += 1
+                    return fake_price(start, start, data_from=self.data_from)
+            return super().price(zone, start, end)
+
+    tomorrow = pd.Timestamp(dt.date.today() + dt.timedelta(days=1))
+    c = Late(data_from=dt.date(2020, 1, 1), late_calls=1)
+    res = update.update_prices_ahead(settings, budget_minutes=5, client=c, retry_wait=0)
+    assert res["missing_ahead"] == [] and c.pl_calls == 2
+    assert tomorrow in store.read_zone("PL").dropna().index
+    assert not any("BRAK cen" in x for x in res["log"])
+
+
+def test_afternoon_missing_tomorrow_after_retries(tmp_store):
+    settings = store.load_settings()
+
+    class Never(FakeClient):
+        def price(self, zone, start, end):
+            self.requests_made += 1
+            return fake_price(start, start, data_from=self.data_from) if zone == "PL" else super().price(zone, start, end)
+
+    res = update.update_prices_ahead(settings, budget_minutes=5, client=Never(data_from=dt.date(2020, 1, 1)), retry_wait=0)
+    assert res["missing_ahead"] == ["PL"]
+    assert any(x.startswith("BRAK cen day-ahead na jutro: PL") for x in res["log"])
+    pl = store.read_zone("PL")
+    assert pl["price_avg"].notna().all()                       # doby bez ceny nie są zapisywane jako puste
+
+
+def test_movers_opposite_shift_once():
+    """B-20261025-3: atom +50 i węgiel −31 tego samego kraju i okresu = jedno przesunięcie w miksie."""
+    def it(code, series, delta, kind="week"):
+        return {"code": code, "name": code, "period": kind, "series": series, "label": series, "type": "yoy",
+                "cur": 50.0, "ref": 50.0 - delta, "delta": delta, "score": abs(delta)}
+    out = trends._dedupe_movers([it("SI", "nuclear", 50.4), it("SI", "coal", -31.4), it("PL", "wind", 5.0)], 8)
+    assert [(x["code"], x["series"]) for x in out] == [("SI", "nuclear"), ("PL", "wind")]
+    out = trends._dedupe_movers([it("SI", "nuclear", 50.4), it("SI", "coal", -31.4, kind="month")], 8)
+    assert len(out) == 2                                       # różne okresy – obie
+    out = trends._dedupe_movers([it("BE", "wind", 20.0), it("BE", "solar", 15.0)], 8)
+    assert len(out) == 2                                       # ten sam znak – obie
+
+
+def test_afternoon_summary_price_table(tmp_store):
+    """B-20261025-2: podsumowanie popołudniowe pokazuje ceny stref i linię BRAK zamiast tabeli tygodnia."""
+    from mixtracker import run_daily
+    settings = store.load_settings()
+    res = update.update_prices_ahead(settings, budget_minutes=5, client=FakeClient(data_from=dt.date(2020, 1, 1)), retry_wait=0)
+    res["log"].append("BRAK cen day-ahead na jutro: XX (1 z 15 stref; mapa pokaże dla nich ostatni dzień z ceną)")
+    md = run_daily.summary_md({"meta": {"ref": "2026-10-24"}, "summary": {}, "movers": []}, res)
+    assert md.startswith("## Ceny day-ahead – przebieg popołudniowy") and "| PL |" in md and "BRAK cen" in md
+    assert "Największe zmiany" not in md
+
+
 def test_load_status_stale_series():
     idx = pd.date_range("2026-08-01", "2026-10-20", freq="D")
     df = pd.DataFrame({"load": 1000.0}, index=idx)

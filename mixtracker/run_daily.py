@@ -12,8 +12,30 @@ import time
 from . import build, elexon, eurostat, storage_cap, store, trends, update, weather
 
 
+def _prices_md(run: dict) -> list[str]:
+    """B-20261025-2: przebieg popołudniowy – tabela cen stref (ostatni dzień z ceną) zamiast powtórzonej tabeli tygodnia."""
+    import datetime as dt
+    tomorrow = (dt.date.today() + dt.timedelta(days=1)).isoformat()
+    rows = []
+    for z in sorted(run.get("zones") or []):
+        d = store.read_zone(z).dropna(subset=["price_avg"])
+        if len(d):
+            last = d.index.max()
+            mark = "" if last.strftime("%Y-%m-%d") >= tomorrow else " (brak jutra)"
+            rows.append(f"| {z} | {last:%Y-%m-%d}{mark} | {d.at[last, 'price_avg']:.1f} | {d.at[last, 'price_min']:.1f} | {d.at[last, 'price_max']:.1f} |")
+    miss = run.get("missing_ahead") or []
+    head = (f"Ceny na {tomorrow}: {len(rows) - len(miss)} z {len(rows)} stref" if rows else "Brak danych cen stref")
+    return [f"## Ceny day-ahead – przebieg popołudniowy", "", head, "",
+            "| strefa | dzień | śr. €/MWh | min | maks |", "|---|---|---|---|---|", *rows, ""]
+
+
 def summary_md(payload: dict, run: dict) -> str:
     m = payload["meta"]
+    if run.get("zones") is not None:          # tylko przebieg popołudniowy (update_prices_ahead) zwraca "zones"
+        lines = _prices_md(run)
+        lines += [f"Dane produkcji do {m['ref']}; zapytania do Energy-Charts: {run.get('requests', 0)}; czas: {run.get('minutes', 0):.0f} min"]
+        lines += [f"- {msg}" for msg in (run.get("log") or [])[:15]]
+        return "\n".join(lines) + "\n"
     lines = [f"## Miks energii UE - dane do {m['ref']}", ""]
     s = payload["summary"].get("EU") or next(iter(payload["summary"].values()), None)
     if s:

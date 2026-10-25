@@ -356,6 +356,10 @@ def _dedupe_movers(items: list[dict], top: int) -> list[dict]:
             continue
         if it["type"] == "yoy" and shown.get((it["code"], it["period"], "int_yoy")):
             continue
+        # B-20261025-3: dwa udziały tego samego kraju i okresu o przeciwnych znakach to zwykle jedno przesunięcie
+        # w miksie (np. atom wraca, węgiel spada) – zostaje pierwsza, większa zmiana
+        if it["type"] == "yoy" and any(d * it["delta"] < 0 for d in shown.get((it["code"], it["period"], "yoy"), [])):
+            continue
         seen.add(k)
         per_country[it["code"]] = per_country.get(it["code"], 0) + 1
         shown.setdefault((it["code"], it["period"], it["type"]), []).append(it["delta"])
