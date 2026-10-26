@@ -200,7 +200,7 @@ def forecast_country(code: str, hist: pd.DataFrame, fut: pd.DataFrame, e: pd.Dat
                 min_n = 14
                 out.setdefault("notes", {})["load"] = f"model uczony od {brk['date']} (skok w danych źródła)"
         y_all = y
-        bad = model.bad_days(y_all, hist, kind)
+        bad = model.bad_days(y_all, hist, kind, code)
         m = model.fit(hist, y_all, kind, last + pd.Timedelta(days=1), code, min_n, bad=bad)
         if m is None or fut[FEATURES].isna().all().all():
             continue

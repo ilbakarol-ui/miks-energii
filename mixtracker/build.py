@@ -375,7 +375,7 @@ def _gap_info(e: pd.DataFrame, code: str, ref: dt.date, days: int = 90) -> dict:
     for kind in ("wind", "solar", "load"):
         if kind not in e or e[kind].dropna().empty:
             continue
-        bad = model.bad_days(e[kind], feat, kind)
+        bad = model.bad_days(e[kind], feat, kind, code)
         bad = bad[(bad >= lo) & (bad <= pd.Timestamp(ref))]
         if not len(bad):
             continue

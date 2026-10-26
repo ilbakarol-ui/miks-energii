@@ -815,3 +815,44 @@ def test_movers_intensity_same_fact_as_share():
     assert ("SI", "intensity") not in keys and ("SI", "nuclear") in keys
     assert ("LV", "gas") not in keys and ("LV", "intensity") in keys
     assert ("BE", "intensity") in keys and ("BE", "renewable") in keys      # różne okresy
+
+
+def test_bad_days_provisional_load_dk():
+    """P-20261026-B1: świeże zaniżone doby DK są luką; starsze i inne kraje - bez zmian."""
+    from mixtracker import model
+    idx = pd.date_range("2026-08-31", "2026-10-25", freq="D")
+    y = pd.Series(100.0, index=idx)
+    y[pd.Timestamp("2026-10-23")] = 70.0          # świeża doba, 0,7 normy
+    y[pd.Timestamp("2026-10-12")] = 70.0          # 13 dni temu - poza oknem 8 dni
+    bad = model.bad_days(y, None, "load", "DK")
+    assert pd.Timestamp("2026-10-23") in bad and pd.Timestamp("2026-10-12") not in bad
+    assert pd.Timestamp("2026-10-23") not in model.bad_days(y, None, "load", "PL")
+    assert pd.Timestamp("2026-10-23") not in model.bad_days(y, None, "load")
+
+
+def test_hours_factor_dst():
+    """P-20261026-B2: doba 25 h przy cofnięciu zegara i 23 h przy przestawieniu na czas letni."""
+    from mixtracker import model
+    f = model.hours_factor(pd.DatetimeIndex(["2026-10-25", "2027-03-28", "2026-10-26"]), "PL")
+    assert f == pytest.approx([25 / 24, 23 / 24, 1.0])
+    assert model.hours_factor(pd.DatetimeIndex(["2026-10-25"]), None) == pytest.approx([1.0])
+
+
+def test_verify_operational_eu_missing_country():
+    """P-20261024-B2: dzień UE liczony, gdy brakuje najwyżej 2 krajów (przy > 5 krajach)."""
+    from mixtracker import verify
+    today = pd.Timestamp(dt.date.today())
+    days = pd.date_range(today - pd.Timedelta(days=20), today - pd.Timedelta(days=1), freq="D")
+    codes = ["AT", "BE", "CZ", "DE", "FR", "PL"]
+    act = {c: pd.DataFrame({"solar": np.full(len(days), 50.0)}, index=days) for c in codes}
+    act["CZ"].loc[days[10:], "solar"] = np.nan        # jeden kraj bez danych w drugiej połowie
+    rows = []
+    for c in codes:
+        for i in range(3, 18):
+            for lead in range(2):
+                d = days[i] + pd.Timedelta(days=lead)
+                rows.append({"issued": days[i].strftime("%Y-%m-%d"), "code": c, "date": d.strftime("%Y-%m-%d"),
+                             "type": "solar", "gwh": 55.0})
+    out = verify.operational(pd.DataFrame(rows), act)
+    eu = out["EU"]["solar"]
+    assert eu["leads"]["0"]["n"] == 15 and eu["leads"]["0"]["bias"] == pytest.approx(10)

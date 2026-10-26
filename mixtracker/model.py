@@ -76,10 +76,46 @@ def calendar(index: pd.DatetimeIndex, code: str | None) -> pd.DataFrame:
     return out
 
 
+# ---------- długość doby (zmiana czasu) ----------
+
+@lru_cache(maxsize=1)
+def _country_tz() -> dict:
+    import csv
+    from pathlib import Path
+    p = Path(__file__).resolve().parent.parent / "config" / "countries.csv"
+    try:
+        with open(p, encoding="utf-8") as f:
+            return {r["code"]: r["tz"] for r in csv.DictReader(f) if r.get("tz")}
+    except OSError:
+        return {}
+
+
+def hours_factor(idx, code: str | None) -> np.ndarray:
+    """Długość doby lokalnej / 24: 25/24 w dniu cofnięcia zegara, 23/24 w dniu przestawienia na czas letni,
+    1 w pozostałe dni (P-20261026-B2). Zużycie jest modelowane na dobę 24-godzinną."""
+    idx = pd.DatetimeIndex(idx)
+    tz = _country_tz().get(code or "")
+    if not tz or code == "EU" or len(idx) == 0:
+        return np.ones(len(idx))
+    d = idx.normalize()
+    a = d.tz_localize(tz)
+    b = (d + pd.Timedelta(days=1)).tz_localize(tz)
+    return np.asarray((b - a).total_seconds() / 86400.0, dtype=float)
+
+
 # ---------- luki w danych źródła ----------
 
-def bad_days(y: pd.Series, feat: pd.DataFrame | None, kind: str) -> pd.DatetimeIndex:
-    """Dni, w których wartość ze źródła jest ewidentnie błędna (luka, zero przy dobrej pogodzie)."""
+# Kraje, których zużycie źródło publikuje najpierw niepełne i poprawia po kilku dniach
+# (DK: doby 14-18.10.2026 poprawione o +40...+60% po 1-7 dniach - historia commitów data/daily/DK.csv).
+# Świeże doby (ostatnie N dni) poniżej 90% mediany tego samego dnia tygodnia z 4 tygodni są traktowane jak luka
+# do czasu poprawki źródła (P-20261026-B1).
+LOAD_PROVISIONAL_DAYS = {"DK": 8}
+LOAD_PROVISIONAL_RATIO = 0.9
+
+
+def bad_days(y: pd.Series, feat: pd.DataFrame | None, kind: str, code: str | None = None) -> pd.DatetimeIndex:
+    """Dni, w których wartość ze źródła jest ewidentnie błędna (luka, zero przy dobrej pogodzie).
+    code - kod kraju (reguły zależne od kraju, np. tymczasowe doby zużycia Danii)."""
     y = y.dropna()
     if y.empty:
         return pd.DatetimeIndex([])
@@ -88,6 +124,11 @@ def bad_days(y: pd.Series, feat: pd.DataFrame | None, kind: str) -> pd.DatetimeI
         med = y.rolling("29D", min_periods=10).median()
         med = med.fillna(y.median())
         bad |= (y < 0.6 * med) | (y > 1.6 * med)
+        lag = LOAD_PROVISIONAL_DAYS.get(code or "", 0)
+        if lag:
+            wk = pd.concat([y.shift(7 * k, freq="D") for k in range(1, 5)], axis=1).reindex(y.index).median(axis=1)
+            fresh = pd.Series(y.index > y.index.max() - pd.Timedelta(days=lag), index=y.index)
+            bad |= fresh & (y < LOAD_PROVISIONAL_RATIO * wk).fillna(False)
     elif feat is not None and not feat.empty:
         x = feat["cf" if kind == "wind" else "ghi"].reindex(y.index)
         lo_x = 0.15 if kind == "wind" else 1.0
@@ -160,7 +201,9 @@ def fit(feat: pd.DataFrame, y: pd.Series, kind: str, end: pd.Timestamp, code: st
     y = y.dropna()
     y = y[y.index < end]
     if gaps:
-        y = y.drop(bad if bad is not None else bad_days(y, feat, kind), errors="ignore")
+        y = y.drop(bad if bad is not None else bad_days(y, feat, kind, code), errors="ignore")
+    if kind == "load" and len(y):
+        y = y / hours_factor(y.index, code)        # doba 25/23 h -> równoważnik doby 24-godzinnej
     y = y[y.index >= start - pd.Timedelta(days=MAX_LAG + AR_DAYS[kind])]
     df = feat.join(y.rename("y"), how="inner")
     df = df[df.index >= start].dropna(subset=NEED[kind] + ["y"])
@@ -207,10 +250,12 @@ def forecast(m: Model, feat: pd.DataFrame, y_known: pd.Series, dates: list[pd.Ti
     if m.rho.any():
         y = y_known.dropna()
         if gaps and len(y):
-            y = y.drop(bad if bad is not None else bad_days(y, feat, m.kind), errors="ignore")
+            y = y.drop(bad if bad is not None else bad_days(y, feat, m.kind, m.code), errors="ignore")
         if len(y):
             last = y.index.max()
             hist = y.loc[last - pd.Timedelta(days=m.ar_days - 1):last]
+            if m.kind == "load":
+                hist = hist / hours_factor(hist.index, m.code)
             fh = feat.reindex(hist.index)
             r = (hist - base(m, fh.fillna(0)).where(fh[NEED[m.kind]].notna().all(axis=1))).dropna()
             if len(r):
@@ -218,6 +263,8 @@ def forecast(m: Model, feat: pd.DataFrame, y_known: pd.Series, dates: list[pd.Ti
                 h = np.array([(d - last).days for d in dates])
                 w = np.array([m.rho[k - 1] if 1 <= k <= MAX_LAG else 0.0 for k in h])
                 p = p + w * z
+    if m.kind == "load":
+        p = p * hours_factor(dates, m.code)
     return p.clip(lower=0)
 
 
@@ -228,7 +275,7 @@ def model_error(feat: pd.DataFrame, y: pd.Series, kind: str, last: pd.Timestamp,
     last = pd.Timestamp(last)
     cut = last - pd.Timedelta(days=days - 1)
     yc = y.dropna()
-    bad = bad_days(yc, feat, kind)
+    bad = bad_days(yc, feat, kind, code)
     m = fit(feat, yc, kind, cut, code, min_n, bad=bad)
     if m is None:
         return None

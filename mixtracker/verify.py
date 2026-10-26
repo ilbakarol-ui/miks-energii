@@ -75,7 +75,7 @@ def backtest(feat: pd.DataFrame, e: pd.DataFrame, kind: str, end: pd.Timestamp, 
     if y.empty or y.tail(60).abs().sum() == 0:
         return None
     end = pd.Timestamp(end)
-    bad = model.bad_days(y, feat, kind) if opts.get("gaps", True) else pd.DatetimeIndex([])
+    bad = model.bad_days(y, feat, kind, code) if opts.get("gaps", True) else pd.DatetimeIndex([])
     yc = y.drop(bad, errors="ignore")
     test_days = pd.date_range(end - pd.Timedelta(days=days - 1), end, freq="D")
     first_issue = test_days[0] - pd.Timedelta(days=leads - 1)
@@ -87,13 +87,15 @@ def backtest(feat: pd.DataFrame, e: pd.DataFrame, kind: str, end: pd.Timestamp, 
     rng = pd.date_range(first_issue - pd.Timedelta(days=model.MAX_LAG + 7), end, freq="D")
     fr = feat.reindex(rng)
     okf = fr[model.NEED[kind]].notna().all(axis=1).to_numpy()
+    # zużycie: model na dobę 24-godzinną, wynik przeliczany na faktyczną długość doby (P-20261026-B2)
+    hf = pd.Series(model.hours_factor(rng, code) if kind == "load" else np.ones(len(rng)), index=rng)
     pre = {}
     for fd, m in fits.items():
         if m is None:
             continue
         b = model.base(m, fr.fillna(0)).to_numpy()
         b = np.where(okf, b, np.nan)
-        r = pd.Series(yc.reindex(rng).to_numpy() - b, index=rng)
+        r = pd.Series(yc.reindex(rng).to_numpy() / hf.to_numpy() - b, index=rng)
         pre[fd] = (m, pd.Series(b, index=rng), r)
     known = yc.index.sort_values()
     preds: dict[int, dict] = {k: {} for k in range(leads)}
@@ -118,7 +120,7 @@ def backtest(feat: pd.DataFrame, e: pd.DataFrame, kind: str, end: pd.Timestamp, 
                     h = (t - last).days
                     if len(z) and 1 <= h <= model.MAX_LAG:
                         p = bt + m.rho[h - 1] * float(z.mean())
-            preds[k][t] = max(0.0, float(p))
+            preds[k][t] = max(0.0, float(p) * float(hf.get(t, 1.0)))
     if len(preds[0]) < 10:
         return None
     f = pd.Series(preds[0])
@@ -202,8 +204,9 @@ def operational(archive: pd.DataFrame, actual: dict[str, pd.DataFrame], days_bac
                 members: set[str] | None = None, feats: dict | None = None) -> dict:
     """Weryfikacja zapisanych prognoz wg wyprzedzenia. actual[code] - ramka z kolumnami wind/solar/load (GWh).
 
-    UE łącznie liczona jest z sumy krajów (prognoz i wartości rzeczywistych), tylko dla par
-    (dzień wydania, dzień prognozy), w których rozliczono wszystkie kraje danej wielkości.
+    UE łącznie liczona jest z sumy krajów (prognoz i wartości rzeczywistych), dla par
+    (dzień wydania, dzień prognozy), w których brakuje wartości rzeczywistej najwyżej 2 krajów;
+    sumy tylko z krajów rozliczonych.
     """
     if archive is None or archive.empty:
         return {}
@@ -219,7 +222,7 @@ def operational(archive: pd.DataFrame, actual: dict[str, pd.DataFrame], days_bac
         if e is None or kind not in e:
             continue
         y = e[kind].dropna()
-        y = y.drop(model.bad_days(y, (feats or {}).get(code), kind), errors="ignore")   # luki w danych źródła
+        y = y.drop(model.bad_days(y, (feats or {}).get(code), kind, code), errors="ignore")   # luki w danych źródła
         g = g.assign(d=pd.to_datetime(g["date"]), i=pd.to_datetime(g["issued"]))
         g["y"] = g["d"].map(y)
         # persystencja: ostatni znany dzień w chwili wydania (dzień przed wydaniem)
@@ -237,11 +240,17 @@ def operational(archive: pd.DataFrame, actual: dict[str, pd.DataFrame], days_bac
         if len(parts) < 2:
             continue
         df = pd.concat(parts)
+        # P-20261024-B2: dzień UE liczy się, gdy brakuje wartości rzeczywistej najwyżej 2 krajów; prognoza
+        # i rzeczywistość sumowane tylko z krajów, które mają wartość rzeczywistą (sumy porównywalne)
+        df = df.dropna(subset=["y"])
+        if df.empty:
+            continue
         grp = df.groupby(["issued", "date", "lead"])
         n_ok = grp["y"].count()
         tot = grp[["gwh", "y", "pers"]].sum(min_count=1)
-        tot.loc[grp["pers"].count() < len(parts), "pers"] = np.nan
-        tot = tot[n_ok == len(parts)].reset_index()
+        tot.loc[grp["pers"].count() < n_ok, "pers"] = np.nan
+        need = len(parts) - 2 if len(parts) > 5 else len(parts)   # przy kilku krajach - komplet
+        tot = tot[n_ok >= need].reset_index()
         if tot.empty:
             continue
         leads = _lead_scores(tot)
