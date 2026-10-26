@@ -1,23 +1,24 @@
-## Miks energii UE - dane do 2026-10-24
+## Ceny day-ahead – przebieg popołudniowy
 
-**tydz. 42/2026 (12.10–18.10)** (UE-27)
+Ceny na 2026-10-27: 13 z 15 stref
 
-| | bieżący | poprz. tydz. | rok temu | śr. 5 lat |
+| strefa | dzień | śr. €/MWh | min | maks |
 |---|---|---|---|---|
-| Zużycie, GWh | 45 964 | 45 139 | 46 931 | 46 811 |
-| Produkcja, GWh | 45 984 | 45 423 | 46 770 | 46 771 |
-| Udział OZE | 43.7% | 47.0% | 35.7% | 39.8% |
-| Emisyjność, g/kWh | 213 | 187 | 233 | 225 |
+| AT | 2026-10-27 | 247.7 | 197.0 | 300.5 |
+| BE | 2026-10-27 | 160.4 | 49.5 | 289.8 |
+| CH | 2026-10-27 | 244.3 | 206.9 | 271.1 |
+| CZ | 2026-10-27 | 198.6 | 114.8 | 297.4 |
+| DE-LU | 2026-10-27 | 155.1 | 38.6 | 272.7 |
+| DK1 | 2026-10-27 | 92.3 | 23.1 | 155.7 |
+| DK2 | 2026-10-27 | 92.4 | 22.7 | 153.2 |
+| FR | 2026-10-27 | 161.5 | 50.0 | 288.3 |
+| HU | 2026-10-26 (brak jutra) | 267.4 | 77.4 | 389.6 |
+| IT-North | 2026-10-27 | 254.4 | 197.0 | 331.1 |
+| NL | 2026-10-26 (brak jutra) | 141.8 | 13.2 | 324.5 |
+| NO2 | 2026-10-27 | 109.0 | 17.1 | 143.2 |
+| PL | 2026-10-27 | 162.6 | -35.1 | 417.8 |
+| SE4 | 2026-10-27 | 68.2 | 16.9 | 116.4 |
+| SI | 2026-10-27 | 237.0 | 186.3 | 300.1 |
 
-**Największe zmiany**
-
-- Belgia: emisyjność 183 g/kWh (+131.3% r/r, mies.)
-- Słowenia: Jądrowa 50.4% (+50.4 p.p. r/r, tydz.)
-- Łotwa: emisyjność 27 g/kWh (-73.8% r/r, mies.)
-- Irlandia Północna (UK): Wiatr 78.0% (+35.4 p.p. r/r, tydz.)
-- Słowacja: emisyjność 102 g/kWh (+68.6% r/r, tydz.)
-- Belgia: OZE łącznie 49.8% (+32.9 p.p. r/r, tydz.)
-- Łotwa: Gaz 13.0% (-32.3 p.p. r/r, tydz.)
-- Słowenia: Węgiel 7.0% (-31.4 p.p. r/r, tydz.)
-
-Zapytania do Energy-Charts: 15; czas: 7 min
+Dane produkcji do 2026-10-25; zapytania do Energy-Charts: 19; czas: 28 min
+- BRAK cen day-ahead na jutro: HU, NL (2 z 15 stref; mapa pokaże dla nich ostatni dzień z ceną)
