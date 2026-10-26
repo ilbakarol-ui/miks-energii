@@ -5,7 +5,7 @@
  "steps": {
   "ensemble": {
    "status": "OK",
-   "seconds": 179,
+   "seconds": 180,
    "requests": 17,
    "weighted": 93.5,
    "http429": 1,
@@ -13,16 +13,16 @@
   },
   "seasonal": {
    "status": "OK",
-   "seconds": 0,
-   "requests": 0,
-   "weighted": 0.0,
-   "http429": 0,
-   "last_error": null
+   "seconds": 177,
+   "requests": 6,
+   "weighted": 183.0,
+   "http429": 1,
+   "last_error": "seasonal-api.open-meteo.com: ReadTimeout"
   }
  },
- "ensemble_issued": "2026-10-25",
+ "ensemble_issued": "2026-10-26",
  "ensemble_kind": "ensemble",
- "updated": "2026-10-25T00:56Z",
- "weighted_calls": 93.5,
- "seasonal_refreshed_points": 0
+ "updated": "2026-10-26T01:14Z",
+ "weighted_calls": 276.5,
+ "seasonal_refreshed_points": 14
 }
