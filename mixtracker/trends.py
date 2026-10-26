@@ -343,7 +343,7 @@ def movers(summary: dict, names: dict, groups_meta: dict, top: int) -> list[dict
 
 def _dedupe_movers(items: list[dict], top: int) -> list[dict]:
     """Najwyżej 2 pozycje na kraj; ta sama zmiana (±1) tego samego typu w kraju i okresie tylko raz."""
-    seen, out, per_country, shown = set(), [], {}, {}
+    seen, out, per_country, shown, ser_type = set(), [], {}, {}, set()
     for it in items:
         k = (it["code"], it["series"], it["period"])
         if k in seen or per_country.get(it["code"], 0) >= 2:
@@ -360,7 +360,16 @@ def _dedupe_movers(items: list[dict], top: int) -> list[dict]:
         # w miksie (np. atom wraca, węgiel spada) – zostaje pierwsza, większa zmiana
         if it["type"] == "yoy" and any(d * it["delta"] < 0 for d in shown.get((it["code"], it["period"], "yoy"), [])):
             continue
+        # B-20261026-3: emisyjność obok rekordu udziału z 5 lat (min5/max5) tego samego kraju i okresu – ten sam fakt
+        if it["type"] == "int_yoy" and any(shown.get((it["code"], it["period"], t)) for t in ("min5", "max5")):
+            continue
+        if it["type"] in ("min5", "max5") and shown.get((it["code"], it["period"], "int_yoy")):
+            continue
+        # ta sama seria i typ zmiany w tygodniu i w miesiącu (np. emisyjność Łotwy) – zostaje pierwsza, większa
+        if (it["code"], it["series"], it["type"]) in ser_type:
+            continue
         seen.add(k)
+        ser_type.add((it["code"], it["series"], it["type"]))
         per_country[it["code"]] = per_country.get(it["code"], 0) + 1
         shown.setdefault((it["code"], it["period"], it["type"]), []).append(it["delta"])
         out.append(it)

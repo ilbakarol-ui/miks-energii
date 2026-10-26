@@ -59,7 +59,10 @@ def main(out: Path):
     for k in ("load", "gen_total", "share_renewable", "intensity"):
         if k in eu:
             brief["UE_" + k] = {"biezacy": eu[k][0], "poprz_tydzien": eu[k][1], "rok_temu": eu[k][2], "sr_5_lat": eu[k][3]}
-    brief["najwieksze_zmiany"] = payload.get("movers", [])[:5]
+    # B-20261026-2: każda pozycja z nazwą okresu (np. „wrz 2026” – ostatni pełny miesiąc, nie bieżący stan)
+    _per = (payload.get("meta") or {}).get("periods") or {}
+    brief["najwieksze_zmiany"] = [{**it, "okres": (_per.get(it.get("period")) or {}).get("short")}
+                                  for it in payload.get("movers", [])[:5]]
     pm = payload.get("price_map") or {}
     if pm.get("dates"):
         i = len(pm["dates"]) - 1

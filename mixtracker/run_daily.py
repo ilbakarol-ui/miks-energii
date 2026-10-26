@@ -54,7 +54,8 @@ def summary_md(payload: dict, run: dict) -> str:
     if payload["movers"]:
         lines += ["**Największe zmiany**", ""]
         for it in payload["movers"][:8]:
-            per = "tydz." if it["period"] == "week" else "mies."
+            # B-20261026-2: nazwa okresu („tydz. 43”, „wrz 2026”) zamiast „mies.”, żeby wrzesień nie wyglądał na stan bieżący
+            per = ((m.get("periods") or {}).get(it["period"]) or {}).get("short") or ("tydz." if it["period"] == "week" else "mies.")
             if it["type"] == "int_yoy":
                 lines.append(f"- {it['name']}: emisyjność {it['cur']:.0f} g/kWh ({it['delta']:+.1f}% r/r, {per})")
             elif it["type"] == "load_yoy":

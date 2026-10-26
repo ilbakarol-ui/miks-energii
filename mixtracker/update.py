@@ -316,6 +316,15 @@ def update_all(settings: dict, budget_minutes: float | None = None, only: list[s
             "log": log, "history_complete": done, "forecasts": sorted(forecasts)}
 
 
+def _ahead_hours(ser, tz: str, day: dt.date) -> tuple[float, int | None]:
+    """B-20261026-1: ile godzin ceny przyszło dla doby `day` (czas lokalny strefy) i jaki krok czasowy (min)."""
+    if ser is None or len(ser.dropna()) == 0:
+        return 0.0, None
+    loc = ser.dropna().tz_convert(tz)
+    step = int(pd.Series(loc.index).diff().median().total_seconds() // 60) if len(loc) > 1 else 60
+    return round(float((loc.index.date == day).sum()) * step / 60, 2), step
+
+
 def update_prices_ahead(settings: dict, budget_minutes: float | None = None, client: Client | None = None,
                         days_ahead: int = 1, retries: int = 2, retry_wait: float = 600) -> dict:
     """Przebieg popołudniowy: tylko ceny day-ahead stref (dziś i jutro - aukcja ok. 12:45 publikuje ceny
@@ -332,6 +341,7 @@ def update_prices_ahead(settings: dict, budget_minutes: float | None = None, cli
             zones.setdefault(z["zone"], tz_of.get(code, "Europe/Brussels"))
     log: list[str] = []
     done = []
+    last_ser: dict = {}
     for zone, tz in sorted(zones.items()):
         if not budget.can_request():
             log.append(f"ceny: limit czasu, pominięto strefy od {zone}")
@@ -343,6 +353,7 @@ def update_prices_ahead(settings: dict, budget_minutes: float | None = None, cli
         except FetchError as e:
             log.append(f"ceny {zone}: {e}")
             continue
+        last_ser[zone] = ser
         zd = prices.zone_daily(ser, tz)
         if zd.empty:
             continue
@@ -351,10 +362,17 @@ def update_prices_ahead(settings: dict, budget_minutes: float | None = None, cli
     # B-20261025-1: strefy bez ceny na jutro (aukcja ok. 12:45, Energy-Charts bywa spóźnione) – 2 ponowienia co 10 min
     want = {z: pd.Timestamp(_today(tz) + dt.timedelta(days=days_ahead)) for z, tz in zones.items()}
     extra = 0
+    prev_hrs = None
     for _ in range(retries):
         late = [z for z in zones if _last_price_day(z) < want[z]]
         if not late or not budget.can_request():
             break
+        # B-20261026-1: gdy ponowienie nic nie zmieniło (te same godziny jutra), kolejne czekanie nic nie da
+        hrs = {z: _ahead_hours(last_ser.get(z), zones[z], want[z].date())[0] for z in late}
+        if prev_hrs is not None and hrs == prev_hrs:
+            log.append(f"ceny: ponowienie bez zmian dla {', '.join(late)} – koniec ponowień")
+            break
+        prev_hrs = hrs
         time.sleep(retry_wait)
         for zone in late:
             if not budget.can_request():
@@ -366,6 +384,7 @@ def update_prices_ahead(settings: dict, budget_minutes: float | None = None, cli
                 log.append(f"ceny {zone} (ponowienie): {e}")
                 continue
             extra += 1
+            last_ser[zone] = ser
             zd = prices.zone_daily(ser, tz)
             if not zd.empty:
                 _merge_zone(zone, zd)
@@ -375,6 +394,18 @@ def update_prices_ahead(settings: dict, budget_minutes: float | None = None, cli
     if missing:
         log.append(f"BRAK cen day-ahead na jutro: {', '.join(missing)} ({len(missing)} z {len(zones)} stref; "
                    f"mapa pokaże dla nich ostatni dzień z ceną)")
+        # B-20261026-1: ile godzin jutra przyszło (diagnoza: niepełna doba < 18 h, inna rozdzielczość, brak danych)
+        det = []
+        for z in missing:
+            h, step = _ahead_hours(last_ser.get(z), zones[z], want[z].date())
+            det.append(f"{z}: {h:g} h na {want[z]:%d.%m} (krok {step if step is not None else '–'} min)")
+            if last_ser.get(z) is not None:
+                try:
+                    (store.PRICES.parent / "debug").mkdir(parents=True, exist_ok=True)
+                    last_ser[z].to_csv(store.PRICES.parent / "debug" / f"price_{z}.csv")   # ostatnia odpowiedź, nadpisywana
+                except OSError:
+                    pass
+        log.append("szczegóły braków: " + "; ".join(det))
     return {"requests": len(done) + extra, "log": log, "zones": done, "missing_ahead": missing}
 
 
