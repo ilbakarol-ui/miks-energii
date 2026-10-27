@@ -191,7 +191,9 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
         good = df.index[df["cov"] >= min_cov]
         last30 = df.loc[pd.Timestamp(ref) - pd.Timedelta(days=29):pd.Timestamp(ref), "cov"]
         control[code] = {
-            "source": store.SOURCE_LABEL.get(c.get("source", ""), c.get("source", "")),
+            "source": store.SOURCE_LABEL.get(c.get("source", ""), c.get("source", ""))
+            + (f" + ENTSO-E od {st['entsoe']['from']}" if (st.get("entsoe") or {}).get("load_days")
+               or (st.get("entsoe") or {}).get("gen_days") else ""),
             "last": good.max().strftime("%Y-%m-%d") if len(good) else None,
             "first": good.min().strftime("%Y-%m-%d") if len(good) else None,
             "days30": int((last30 >= min_cov).sum()),

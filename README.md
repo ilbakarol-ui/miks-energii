@@ -54,6 +54,15 @@ Następne przebiegi startują same codziennie (także w weekendy) o 00:53 UTC (0
 
 Jeśli pierwszy przebieg wpiszesz z mniejszym limitem, historia uzupełni się sama w kolejnych dniach. Do tego czasu porównania z 5 lat pokazują „–”, a Kontrola danych ma uwagę „historia 5 lat w trakcie uzupełniania”.
 
+### Opcjonalnie: token ENTSO-E (zużycie Irlandii Północnej, poprawione dane Holandii)
+
+Energy-Charts przestało podawać zużycie Irlandii Północnej (od 24.10.2025), a dla Holandii od jesieni 2026 r. podaje zaniżone zużycie, słońce i „inne”. Z tokenem ENTSO-E przebieg nocny pobiera te serie wprost z ENTSO-E Transparency Platform i zastępuje nimi dane Energy-Charts od daty z `config/settings.json` (`"entsoe"`: UK – zużycie od 2025-10-24; NL – zużycie i produkcja od 2026-09-01; ceny i saldo wymiany zostają z Energy-Charts). Brakująca historia dociąga się w pierwszym przebiegu (limit `entsoe_budget_minutes`, domyślnie 15 min).
+
+1. Załóż darmowe konto na [transparency.entsoe.eu](https://transparency.entsoe.eu) i poproś o dostęp do API (e-mail do transparency@entsoe.eu z tematem „Restful API access” i adresem konta); token wygenerujesz potem w **My Account Settings → Web API Security Token**.
+2. W repozytorium: **Settings → Secrets and variables → Actions → New repository secret**, nazwa `ENTSOE_TOKEN`, wartość – token.
+
+Bez sekretu nic się nie zmienia (w podsumowaniu przebiegu jest tylko jedna linia o braku tokenu). Surowe doby z ENTSO-E są w `data/entsoe/<KOD>.csv`, a w Kontroli danych źródło kraju ma dopisek „+ ENTSO-E od …”. Po pierwszym przebiegu w podsumowaniu jest porównanie z Energy-Charts (np. `load +28%, solar +900%`) – jeśli ENTSO-E ma ten sam błąd co Energy-Charts, różnica będzie bliska zera i warto wyłączyć dany kraj (`"load": false`, `"generation": false`). Kod: `mixtracker/entsoe.py`, testy: `tests/test_entsoe.py`.
+
 ## Na co dzień
 
 - **Dashboard**: stały adres z GitHub Pages. Bez Pages pobierzesz go z wyników przebiegu w zakładce **Actions** (sekcja *Artifacts* → `dashboard`, plik `index.html`).
@@ -114,7 +123,7 @@ Każdy krok ma limit czasu (35 min na zadanie) i zapisuje to, co zdążył zebra
 
 - Energy-Charts pozwala na ok. 2 zapytania na minutę na każdy rodzaj danych (produkcja, ceny, prognozy osobno), więc codzienny przebieg trwa ok. 20–30 minut. Nie skracaj `request_interval_seconds` poniżej 30.
 - **Wielka Brytania**: dane z Elexon BMRS (bez klucza API). Produkcja z FUELHH obejmuje elektrownie przyłączone do sieci przesyłowej. Słońce pochodzi z AGPT (szacunek NESO dla instalacji rozproszonych). Rozproszona energetyka wiatrowa (ok. 2 GW średnio) nie jest ujęta, więc udział wiatru jest nieco zaniżony. Wiatr dzielony jest na ląd i morze według proporcji z AGPT. Zużycie liczone jest z bilansu: produkcja + saldo interkonektorów (oznaczone „szac.”), bez pompowania w elektrowniach szczytowo-pompowych. Kod UK w Energy-Charts obejmuje tylko Irlandię Północną, pokazaną osobno. Dla GB nie ma ceny day-ahead na wolnej licencji. Elexon ma osobny limit czasu w przebiegu (`elexon_budget_minutes`, domyślnie 40 min).
-- **Holandia**: od 18.09.2026 źródło raportuje zużycie i „inne” źródła inaczej (skok o ok. −30%), a produkcja ze słońca jest w nim zaniżona. Dashboard wykrywa takie skoki automatycznie i ostrzega przy kraju; porównania r/r są wtedy niewiarygodne.
+- **Holandia**: od 18.09.2026 źródło raportuje zużycie i „inne” źródła inaczej (skok o ok. −30%), a produkcja ze słońca jest w nim zaniżona. Dashboard wykrywa takie skoki automatycznie i ostrzega przy kraju; porównania r/r są wtedy niewiarygodne. Z tokenem ENTSO-E (wyżej) te serie są zastępowane danymi ENTSO-E. Dane UE-27 to osobny agregat Energy-Charts, więc poprawka Holandii go nie zmienia.
 - Dni z brakującymi lub niepełnymi danymi są pobierane ponownie automatycznie (każdy zakres najwyżej raz na 7 dni).
 - Bez cen na wolnej licencji (np. Hiszpania, Rumunia, kraje bałtyckie) kafelek ceny i sekcja cen pokazują wyjaśnienie zamiast liczb.
 - Dla Malty nie ma danych dziennych w żadnym darmowym źródle, jest tylko w panelu Eurostatu.

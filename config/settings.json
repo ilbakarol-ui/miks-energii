@@ -24,5 +24,20 @@
   "weather_history_days": 420,
   "forecasts_energycharts": false,
   "elexon_budget_minutes": 40,
-  "verify_archive_from": "2026-10-20"
+  "verify_archive_from": "2026-10-20",
+  "entsoe_budget_minutes": 15,
+  "entsoe": {
+    "UK": {
+      "domain": "10Y1001A1001A016",
+      "from": "2025-10-24",
+      "load": true,
+      "generation": false
+    },
+    "NL": {
+      "domain": "10YNL----------L",
+      "from": "2026-09-01",
+      "load": true,
+      "generation": true
+    }
+  }
 }

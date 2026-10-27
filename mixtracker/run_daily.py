@@ -9,7 +9,7 @@ import os
 import sys
 import time
 
-from . import build, elexon, eurostat, storage_cap, store, trends, update, weather
+from . import build, elexon, entsoe, eurostat, storage_cap, store, trends, update, weather
 
 
 def _prices_md(run: dict) -> list[str]:
@@ -107,6 +107,14 @@ def main(argv=None):
                 run.setdefault("history_complete", {})["GB"] = gb["history_complete"]
             except Exception as e:
                 run.setdefault("log", []).append(f"GB: błąd Elexon: {type(e).__name__}: {e}")
+    # U-20261027: ENTSO-E zamiast urwanych/zaniżonych serii Energy-Charts (zużycie UK/NI, NL) – po pobraniu z EC,
+    # bo nocny przebieg nadpisuje ostatnie 10/45 dni; bez sekretu ENTSOE_TOKEN tylko linia w logu
+    if not args.skip_fetch and settings.get("entsoe"):
+        conf = {k: v for k, v in settings["entsoe"].items() if not only or k in only}
+        try:
+            entsoe.update({**settings, "entsoe": conf}, run.setdefault("log", []), settings.get("entsoe_budget_minutes", 15))
+        except Exception as e:
+            run.setdefault("log", []).append(f"ENTSO-E: {type(e).__name__}: {e}")
     if settings.get("weather_forecast", True) and not args.skip_weather:
         countries = [c for c in store.load_countries() if store.has_daily(c)]
         frames = {c["code"]: store.read_daily(c["code"]) for c in countries}
