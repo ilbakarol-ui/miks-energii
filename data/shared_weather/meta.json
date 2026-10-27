@@ -5,7 +5,7 @@
  "steps": {
   "recent": {
    "status": "OK",
-   "seconds": 3,
+   "seconds": 7,
    "requests": 7,
    "weighted": 135.0,
    "http429": 0,
@@ -13,7 +13,7 @@
   },
   "hist": {
    "status": "OK",
-   "seconds": 3,
+   "seconds": 5,
    "requests": 7,
    "weighted": 63.0,
    "http429": 0,
@@ -21,35 +21,35 @@
   },
   "prev": {
    "status": "OK",
-   "seconds": 509,
-   "requests": 16,
+   "seconds": 340,
+   "requests": 15,
    "weighted": 63.0,
    "http429": 0,
    "last_error": "previous-runs-api.open-meteo.com: ReadTimeout"
   }
  },
- "forecast_issued": "2026-10-26",
- "updated": "2026-10-26T01:17Z",
+ "forecast_issued": "2026-10-27",
+ "updated": "2026-10-27T01:07Z",
  "coverage": {
   "hist": {
    "points": 63,
    "points_to_end": 63,
    "from": "2019-01-01",
-   "to": "2026-10-20",
-   "rows": 179550
+   "to": "2026-10-21",
+   "rows": 179613
   },
   "prev": {
    "points": 63,
    "points_to_end": 63,
    "from": "2024-01-01",
-   "to": "2026-10-25",
-   "rows": 64827
+   "to": "2026-10-26",
+   "rows": 64890
   },
   "recent": {
    "points": 63,
    "points_to_end": 47,
-   "from": "2026-10-12",
-   "to": "2026-11-09",
+   "from": "2026-10-13",
+   "to": "2026-11-10",
    "rows": 1811
   }
  },
