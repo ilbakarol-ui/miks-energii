@@ -31,6 +31,16 @@ def load_countries(path: Path | None = None) -> list[dict]:
 SOURCE_LABEL = {"energycharts": "Energy-Charts", "elexon": "Elexon BMRS", "eurostat": "Eurostat (tylko miesięcznie)"}
 
 
+def read_known_breaks(path: Path | None = None) -> list[dict]:
+    """Znane skoki raportowania (config/known_breaks.csv): code, series, date, aggs (agregaty rozdzielone |), note."""
+    p = path or ROOT / "config" / "known_breaks.csv"
+    if not p.exists():
+        return []
+    import csv
+    with open(p, encoding="utf-8") as f:
+        return [r for r in csv.DictReader(f) if r.get("code") and r.get("date")]
+
+
 def has_daily(c: dict) -> bool:
     """Czy kraj ma źródło danych dziennych (Energy-Charts albo Elexon)."""
     return bool(c.get("ec")) or c.get("source") == "elexon"

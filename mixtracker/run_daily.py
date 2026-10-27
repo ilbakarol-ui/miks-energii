@@ -89,6 +89,8 @@ def main(argv=None):
     ap.add_argument("--skip-weather", action="store_true")
     ap.add_argument("--afternoon", action="store_true",
                     help="przebieg popołudniowy: tylko ceny day-ahead na jutro (bez produkcji, pogody, prognoz i Eurostatu)")
+    ap.add_argument("--only-missing", action="store_true",
+                    help="z --afternoon: tylko strefy bez ceny na jutro (drugi przebieg popołudniowy, B-20261027-1)")
     args = ap.parse_args(argv)
     settings = store.load_settings()
     if args.afternoon:
@@ -97,9 +99,11 @@ def main(argv=None):
     run = {"requests": 0, "log": []}
     only = [x.strip().upper() for x in args.only.split(",") if x.strip()] or None
     if args.afternoon:
-        run = update.update_prices_ahead(settings, args.budget)
+        run = update.update_prices_ahead(settings, args.budget, only_missing=args.only_missing)
     elif not args.skip_fetch:
         run = update.update_all(settings, args.budget, only)
+    # B-20261027-1: przy komplecie cen drugi przebieg nie nadpisuje podsumowania z 12:37 (strona i tak jest budowana – Pages)
+    nothing_to_do = bool(args.only_missing and run.get("requests", 0) == 0 and not run.get("missing_ahead"))
     if not args.skip_fetch and any(c.get("source") == "elexon" for c in store.load_countries()):
         if not only or "GB" in only:
             try:
@@ -141,6 +145,9 @@ def main(argv=None):
     md = summary_md(payload, run)
     # przebieg popołudniowy (tylko ceny) nie nadpisuje diagnostyki nocnego
     name = "podsumowanie_popoludnie.md" if args.afternoon else "podsumowanie.md"
+    if nothing_to_do:
+        print("\n".join(run.get("log", [])))
+        return
     (store.DATA / name).write_text(md, encoding="utf-8")
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:

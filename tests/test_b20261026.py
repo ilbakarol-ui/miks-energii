@@ -21,7 +21,8 @@ def test_afternoon_missing_details_and_early_stop(tmp_store, monkeypatch):
     assert res["missing_ahead"] == ["PL"]
     det = [x for x in res["log"] if x.startswith("szczegóły braków:")]
     assert det and "PL: 0 h na" in det[0]
-    assert (store.PRICES.parent / "debug" / "price_PL.csv").exists()
+    tomorrow = (dt.date.today() + dt.timedelta(days=1)).strftime("%Y%m%d")
+    assert (store.PRICES.parent / "debug" / f"price_PL_{tomorrow}.csv").exists()   # B-20261027-3: data w nazwie
     assert len(sleeps) == 1                                     # drugie czekanie pominięte – ponowienie nic nie zmieniło
     assert any("ponowienie bez zmian" in x for x in res["log"])
 

@@ -4,6 +4,7 @@ on:
   schedule:
     - cron: "53 0 * * *"        # codziennie 00:53 UTC = 02:53 czasu letniego w Polsce (01:53 zimą); zapas na opóźnienia startów GitHub (do ~3 h) przed odświeżeniem o 5:40
     - cron: "37 12 * * *"       # przebieg popołudniowy (codziennie): 12:37 UTC = 14:37 latem (13:37 zimą) - tylko ceny day-ahead na jutro (ok. 10 min), przed odświeżeniem o 16:40
+    - cron: "7 14 * * *"        # B-20261027-1: uzupełnienie cen na jutro dla stref, których nie było przy 12:37 (2–3 min; przy komplecie bez commitu)
   workflow_dispatch:
     inputs:
       budget:
@@ -51,11 +52,13 @@ jobs:
         env:
           BUDGET: ${{ github.event.inputs.budget || '80' }}
           ONLY: ${{ github.event.inputs.only || '' }}
-          AFTERNOON: ${{ github.event.schedule == '37 12 * * *' || github.event.inputs.afternoon == 'true' }}
+          AFTERNOON: ${{ github.event.schedule == '37 12 * * *' || github.event.schedule == '7 14 * * *' || github.event.inputs.afternoon == 'true' }}
+          ONLY_MISSING: ${{ github.event.schedule == '7 14 * * *' }}
           ENTSOE_TOKEN: ${{ secrets.ENTSOE_TOKEN }}   # U-20261027: zużycie UK/NI i dane NL z ENTSO-E (bez sekretu – pominięte)
         run: |
           if [ "$AFTERNOON" = "true" ]; then
-            python -m mixtracker.run_daily --budget 40 --afternoon   # B-20261025-1: zapas na 2 ponowienia brakujących cen co 10 min
+            extra=""; [ "$ONLY_MISSING" = "true" ] && extra="--only-missing"
+            python -m mixtracker.run_daily --budget 40 --afternoon $extra   # B-20261025-1: zapas na 2 ponowienia brakujących cen co 10 min
           else
             python -m mixtracker.run_daily --budget "$BUDGET" --only "$ONLY"
           fi
@@ -63,7 +66,7 @@ jobs:
       - name: Zapis danych w repozytorium
         if: always()
         env:
-          SUFFIX: ${{ (github.event.schedule == '37 12 * * *' || github.event.inputs.afternoon == 'true') && ' (popołudnie)' || '' }}
+          SUFFIX: ${{ (github.event.schedule == '37 12 * * *' || github.event.schedule == '7 14 * * *' || github.event.inputs.afternoon == 'true') && ' (popołudnie)' || '' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

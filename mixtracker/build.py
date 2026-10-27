@@ -136,6 +136,41 @@ def forecast_block(fc: dict, e: pd.DataFrame, ref: dt.date, n_years: int, min_ye
     return out
 
 
+def apply_known_breaks(frames: dict, known: list[dict], window: int = 28) -> dict:
+    """B-20261027-2: znane skoki raportowania (config/known_breaks.csv). Poziom serii przed datą skoku jest przesuwany
+    o skok oszacowany różnicą różnic (średnia `window` dni po minus przed, minus to samo rok wcześniej), także w
+    agregatach (np. EU) – inaczej UE-27 r/r i średnia 5 lat są zaniżone (NL 2026: ok. −650 GWh/tydz.).
+    Zmienia tylko ramki w pamięci (pliki data/daily bez zmian). Zwraca {kod: opis skoku} dla kontroli danych."""
+    out = {}
+    for kb in known:
+        code, col = kb["code"], kb.get("series") or "load"
+        f = frames.get(code)
+        if f is None or f.empty or col not in f:
+            continue
+        b = pd.Timestamp(kb["date"])
+        s = f[col]
+        def jump(bb):
+            pre = s.loc[bb - pd.Timedelta(days=window):bb - pd.Timedelta(days=1)].mean()
+            post = s.loc[bb:bb + pd.Timedelta(days=window - 1)].mean()
+            return post - pre
+        if s.loc[b:].dropna().shape[0] < window:
+            continue
+        base = jump(b - pd.Timedelta(days=364))
+        shift = jump(b) - (base if pd.notna(base) else 0.0)
+        if pd.isna(shift):
+            continue
+        for k in [code] + [a for a in (kb.get("aggs") or "").split("|") if a]:
+            if k in frames and col in frames[k]:
+                g = frames[k].copy()
+                m = g.index < b
+                g.loc[m, col] = g.loc[m, col] + shift
+                frames[k] = g
+        out[code] = {"date": kb["date"], "series": col, "known": True, "shift_per_day": round(float(shift), 1),
+                     "change": round(float(100 * shift / s.loc[b - pd.Timedelta(days=window):b - pd.Timedelta(days=1)].mean()), 1),
+                     "note": kb.get("note", "")}
+    return out
+
+
 def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dict | None = None,
           folder: Path | None = None, today: dt.date | None = None, forecasts: dict | None = None) -> dict:
     countries = store.load_countries()
@@ -148,6 +183,7 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
         if p:
             partial[k] = p
     ref = _ref_date(frames, min_cov) or (today or dt.date.today()) - dt.timedelta(days=1)
+    known_breaks = apply_known_breaks(frames, store.read_known_breaks())
     periods = trends.reference_periods(ref)
     state = store.read_state()
 
@@ -184,7 +220,7 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
         if allz:
             price_info[code] = {"zones": used, "all": allz, "partial": bool(used) and len(used) < len(allz),
                                 "zone_daily": _zone_recent(used, ref, settings["daily_chart_days"]) if len(used) > 1 else {}}
-        brk = trends.detect_break(e, ref)
+        brk = known_breaks.get(code) or trends.detect_break(e, ref)
         if brk:
             breaks[code] = brk
         fst = state.get("forecast", {}).get(code, {})

@@ -326,7 +326,8 @@ def _ahead_hours(ser, tz: str, day: dt.date) -> tuple[float, int | None]:
 
 
 def update_prices_ahead(settings: dict, budget_minutes: float | None = None, client: Client | None = None,
-                        days_ahead: int = 1, retries: int = 2, retry_wait: float = 600) -> dict:
+                        days_ahead: int = 1, retries: int = 2, retry_wait: float = 600,
+                        only_missing: bool = False) -> dict:
     """Przebieg popołudniowy: tylko ceny day-ahead stref (dziś i jutro - aukcja ok. 12:45 publikuje ceny
     na następny dzień). Bez produkcji, pogody i prognoz; jedno zapytanie na strefę."""
     client = client or Client(base_url=settings["energycharts_base_url"],
@@ -342,6 +343,23 @@ def update_prices_ahead(settings: dict, budget_minutes: float | None = None, cli
     log: list[str] = []
     done = []
     last_ser: dict = {}
+    # B-20261027-3: diagnostyka tylko z bieżącego przebiegu – stare pliki z dni z brakami usuwamy
+    dbg = store.PRICES.parent / "debug"
+    if dbg.exists():
+        for f in dbg.glob("price_*.csv"):
+            try:
+                f.unlink()
+            except OSError:
+                pass
+    if only_missing:
+        # B-20261027-1: drugi przebieg popołudniowy – tylko strefy bez ceny na jutro, bez czekania
+        zones = {z: tz for z, tz in zones.items()
+                 if _last_price_day(z) < pd.Timestamp(_today(tz) + dt.timedelta(days=days_ahead))}
+        retries = 0
+        if not zones:
+            return {"requests": 0, "log": ["ceny na jutro: komplet stref – uzupełnienie niepotrzebne"],
+                    "zones": [], "missing_ahead": []}
+        log.append(f"ceny: uzupełnienie stref bez ceny na jutro: {', '.join(sorted(zones))}")
     for zone, tz in sorted(zones.items()):
         if not budget.can_request():
             log.append(f"ceny: limit czasu, pominięto strefy od {zone}")
@@ -402,7 +420,7 @@ def update_prices_ahead(settings: dict, budget_minutes: float | None = None, cli
             if last_ser.get(z) is not None:
                 try:
                     (store.PRICES.parent / "debug").mkdir(parents=True, exist_ok=True)
-                    last_ser[z].to_csv(store.PRICES.parent / "debug" / f"price_{z}.csv")   # ostatnia odpowiedź, nadpisywana
+                    last_ser[z].to_csv(store.PRICES.parent / "debug" / f"price_{z}_{want[z]:%Y%m%d}.csv")   # ostatnia odpowiedź
                 except OSError:
                     pass
         log.append("szczegóły braków: " + "; ".join(det))
