@@ -1,2 +1,2 @@
-code,series,date,aggs,note
-NL,load,2026-09-28,EU,"Energy-Charts: zmiana definicji obciążenia Holandii (ok. −27%); w danych miks-energii spadek od 28.09, w danych Gaz UE od 18.09 (B-20261027-2)"
+code,series,date,aggs,shift_per_day,note
+NL,load,2026-09-28,EU,-98257.3,"Energy-Charts: zmiana definicji obciążenia Holandii (ok. −27%); w danych miks-energii spadek od 28.09, w danych Gaz UE od 18.09 (B-20261027-2). shift_per_day (MWh/d, różnica różnic z 28.10) używane tylko dla agregatu EU, gdy NL pochodzi z ENTSO-E (U-20261027)"

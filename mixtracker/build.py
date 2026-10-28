@@ -136,14 +136,33 @@ def forecast_block(fc: dict, e: pd.DataFrame, ref: dt.date, n_years: int, min_ye
     return out
 
 
-def apply_known_breaks(frames: dict, known: list[dict], window: int = 28) -> dict:
+def apply_known_breaks(frames: dict, known: list[dict], window: int = 28, replaced: set | None = None) -> dict:
     """B-20261027-2: znane skoki raportowania (config/known_breaks.csv). Poziom serii przed datą skoku jest przesuwany
     o skok oszacowany różnicą różnic (średnia `window` dni po minus przed, minus to samo rok wcześniej), także w
     agregatach (np. EU) – inaczej UE-27 r/r i średnia 5 lat są zaniżone (NL 2026: ok. −650 GWh/tydz.).
-    Zmienia tylko ramki w pamięci (pliki data/daily bez zmian). Zwraca {kod: opis skoku} dla kontroli danych."""
+    Zmienia tylko ramki w pamięci (pliki data/daily bez zmian). Zwraca {kod: opis skoku} dla kontroli danych.
+
+    `replaced` – kraje, których seria pochodzi już z ENTSO-E (U-20261027): ich własnej serii nie korygujemy (inne źródło,
+    skok Energy-Charts jej nie dotyczy), a agregaty (EU z Energy-Charts) – tylko stałym skokiem z kolumny shift_per_day."""
     out = {}
     for kb in known:
         code, col = kb["code"], kb.get("series") or "load"
+        if replaced and code in replaced:
+            try:
+                fixed = float(kb.get("shift_per_day") or "nan")
+            except ValueError:
+                fixed = float("nan")
+            if pd.isna(fixed):
+                continue
+            b = pd.Timestamp(kb["date"])
+            for k in [a for a in (kb.get("aggs") or "").split("|") if a]:
+                if k in frames and col in frames[k]:
+                    g = frames[k].copy()
+                    g.loc[g.index < b, col] = g.loc[g.index < b, col] + fixed
+                    frames[k] = g
+            out[code] = {"date": kb["date"], "series": col, "known": True, "shift_per_day": round(fixed, 1),
+                         "entsoe": True, "note": kb.get("note", "")}
+            continue
         f = frames.get(code)
         if f is None or f.empty or col not in f:
             continue
@@ -183,9 +202,11 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
         if p:
             partial[k] = p
     ref = _ref_date(frames, min_cov) or (today or dt.date.today()) - dt.timedelta(days=1)
-    known_breaks = apply_known_breaks(frames, store.read_known_breaks())
-    periods = trends.reference_periods(ref)
     state = store.read_state()
+    # U-20261027: kraje z serią z ENTSO-E – skok Energy-Charts ich nie dotyczy (korekta tylko agregatu UE)
+    from_entsoe = {k for k, v in state.items() if isinstance(v, dict) and (v.get("entsoe") or {}).get("load_days")}
+    known_breaks = apply_known_breaks(frames, store.read_known_breaks(), replaced=from_entsoe)
+    periods = trends.reference_periods(ref)
 
     summary, weekly, daily, monthly, control = {}, {}, {}, {}, {}
     est_load, fcast, price_info, breaks = {}, {}, {}, {}

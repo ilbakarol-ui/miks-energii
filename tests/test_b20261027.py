@@ -62,3 +62,19 @@ def test_known_break_shifts_country_and_aggregate():
 def test_known_breaks_config():
     kb = store.read_known_breaks()
     assert any(r["code"] == "NL" and r["series"] == "load" and "EU" in r["aggs"] for r in kb)
+
+
+def test_known_break_with_entsoe_country_corrects_only_aggregate():
+    """Gdy NL pochodzi z ENTSO-E (U-20261027), seria NL bez korekty, a EU – stałym skokiem z konfiguracji."""
+    idx = pd.date_range("2026-08-01", "2026-11-15", freq="D")
+    b = pd.Timestamp("2026-09-28")
+    nl = pd.DataFrame({"load": 300.0, "cov": 1.0}, index=idx)
+    eu = pd.DataFrame({"load": 8000.0 + np.where(idx >= b, -80.0, 0.0), "cov": 1.0}, index=idx)
+    frames = {"NL": nl, "EU": eu}
+    kb = [{"code": "NL", "series": "load", "date": "2026-09-28", "aggs": "EU", "shift_per_day": "-80"}]
+    info = build.apply_known_breaks(frames, kb, replaced={"NL"})
+    assert info["NL"]["entsoe"] and frames["NL"]["load"].nunique() == 1 and frames["NL"]["load"].iloc[0] == 300.0
+    assert frames["EU"]["load"].nunique() == 1
+    kb[0]["shift_per_day"] = ""
+    frames = {"NL": nl, "EU": eu}
+    assert build.apply_known_breaks(frames, kb, replaced={"NL"}) == {} and frames["EU"]["load"].iloc[0] == 8000.0
