@@ -25,3 +25,14 @@ def test_prev_timeout_short_for_daily_increment():
     assert sw._timeout(u, {"start_date": "2026-08-30", "end_date": "2026-10-28"}) == 150
     assert sw._timeout(u, {}) == 150
     assert sw._timeout("https://api.open-meteo.com/v1/forecast", {"start_date": "2026-10-24", "end_date": "2026-10-28"}) == 90
+
+
+def test_summary_numbers_with_decimal_comma():
+    """B-20261028-6: podsumowania z przecinkiem dziesiętnym i spacją tysięcy."""
+    assert run_daily._pl(1234.56) == "1 234,6" and run_daily._pl(-84.2, 1, True) == "-84,2"
+    assert run_daily._pl(131.3, 1, True) == "+131,3" and run_daily._pl(183, 0) == "183"
+    meta = {"ref": "2026-10-26", "periods": {"week": {"label": "tydz. 43", "short": "tydz. 43"}}}
+    mv = [{"type": "int_yoy", "name": "Belgia", "cur": 183.0, "delta": 131.3, "period": "week"},
+          {"type": "yoy", "name": "Słowenia", "label": "Jądrowa", "cur": 49.8, "delta": 49.8, "period": "week"}]
+    md = run_daily.summary_md({"meta": meta, "summary": {}, "movers": mv}, {"requests": 1})
+    assert "+131,3% r/r" in md and "Jądrowa 49,8% (+49,8 p.p." in md and "131.3" not in md

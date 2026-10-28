@@ -34,21 +34,45 @@ jobs:
   update:
     runs-on: ubuntu-latest
     timeout-minutes: 330
+    outputs:
+      run: ${{ steps.need.outputs.run }}
     steps:
       - uses: actions/checkout@v4
 
+      # B-20261028-5: przebieg uzupełniający 14:07 UTC tylko wtedy, gdy któraś strefa nie ma jeszcze ceny na jutro
+      - name: Czy brakuje cen na jutro
+        id: need
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          if [ "$SCHEDULE" = "7 14 * * *" ]; then
+            t=$(date -u -d tomorrow +%Y-%m-%d); miss=0; brak=""
+            for f in data/prices/*.csv; do
+              d=$(tail -1 "$f" | cut -d, -f1 | cut -c1-10)
+              if [[ "$d" < "$t" ]]; then miss=1; brak="$brak $(basename "$f" .csv)"; fi
+            done
+            echo "run=$miss" >> "$GITHUB_OUTPUT"
+            if [ "$miss" = "0" ]; then echo "Wszystkie strefy mają cenę na $t – przebieg uzupełniający pominięty."; else echo "Bez ceny na $t:$brak"; fi
+          else
+            echo "run=1" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/setup-python@v5
+        if: steps.need.outputs.run == '1'
         with:
           python-version: "3.12"
           cache: pip
 
       - name: Instalacja
+        if: steps.need.outputs.run == '1'
         run: pip install -r requirements.txt
 
       - name: Testy
+        if: steps.need.outputs.run == '1'
         run: python -m pytest -q
 
       - name: Pobranie danych, trendy, dashboard
+        if: steps.need.outputs.run == '1'
         env:
           BUDGET: ${{ github.event.inputs.budget || '80' }}
           ONLY: ${{ github.event.inputs.only || '' }}
@@ -64,7 +88,7 @@ jobs:
           fi
 
       - name: Zapis danych w repozytorium
-        if: always()
+        if: always() && steps.need.outputs.run == '1'
         env:
           SUFFIX: ${{ (github.event.schedule == '37 12 * * *' || github.event.schedule == '7 14 * * *' || github.event.inputs.afternoon == 'true') && ' (popołudnie)' || '' }}
         run: |
@@ -83,6 +107,7 @@ jobs:
           exit 1
 
       - name: Dashboard do pobrania (zakładka Actions)
+        if: steps.need.outputs.run == '1'
         uses: actions/upload-artifact@v4
         with:
           name: dashboard
@@ -90,14 +115,14 @@ jobs:
           retention-days: 30
 
       - name: Przygotowanie strony GitHub Pages
-        if: vars.PAGES != 'off'
+        if: vars.PAGES != 'off' && steps.need.outputs.run == '1'
         uses: actions/upload-pages-artifact@v3
         with:
           path: site/
 
   deploy:
     needs: update
-    if: vars.PAGES != 'off'
+    if: vars.PAGES != 'off' && needs.update.outputs.run == '1'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

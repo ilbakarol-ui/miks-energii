@@ -12,6 +12,12 @@ import time
 from . import build, elexon, entsoe, eurostat, storage_cap, store, trends, update, weather
 
 
+def _pl(v, nd: int = 1, sign: bool = False) -> str:
+    """B-20261028-6: liczba z przecinkiem dziesiętnym i spacją tysięcy (jak w tekstach dla użytkowniczki)."""
+    s = f"{v:{'+' if sign else ''},.{nd}f}"
+    return s.replace(",", " ").replace(".", ",")
+
+
 def _prices_md(run: dict) -> list[str]:
     """B-20261025-2: przebieg popołudniowy – tabela cen stref (ostatni dzień z ceną) zamiast powtórzonej tabeli tygodnia."""
     import datetime as dt
@@ -23,7 +29,7 @@ def _prices_md(run: dict) -> list[str]:
         if len(d):
             last = d.index.max()
             mark = "" if last.strftime("%Y-%m-%d") >= tomorrow else " (brak jutra)"
-            rows.append(f"| {z} | {last:%Y-%m-%d}{mark} | {d.at[last, 'price_avg']:.1f} | {d.at[last, 'price_min']:.1f} | {d.at[last, 'price_max']:.1f} |")
+            rows.append(f"| {z} | {last:%Y-%m-%d}{mark} | {_pl(d.at[last, 'price_avg'])} | {_pl(d.at[last, 'price_min'])} | {_pl(d.at[last, 'price_max'])} |")
     miss = run.get("missing_ahead") or []
     head = (f"Ceny na {tomorrow}: {len(rows) - len(miss)} z {len(rows)} stref" if rows else "Brak danych cen stref")
     if rows and run.get("only_missing") and run.get("zones"):
@@ -46,7 +52,7 @@ def summary_md(payload: dict, run: dict) -> str:
         def f(v):
             return "–" if v is None else f"{v:,.0f}".replace(",", " ")
         def pp(v):
-            return "–" if v is None else f"{v:.1f}%"
+            return "–" if v is None else f"{_pl(v)}%"
         lines += [f"**{m['periods']['week']['label']}** (UE-27)", "",
                   "| | bieżący | poprz. tydz. | rok temu | śr. 5 lat |", "|---|---|---|---|---|",
                   f"| Zużycie, GWh | {f(w['load'][0])} | {f(w['load'][1])} | {f(w['load'][2])} | {f(w['load'][3])} |",
@@ -60,14 +66,14 @@ def summary_md(payload: dict, run: dict) -> str:
             # B-20261026-2: nazwa okresu („tydz. 43”, „wrz 2026”) zamiast „mies.”, żeby wrzesień nie wyglądał na stan bieżący
             per = ((m.get("periods") or {}).get(it["period"]) or {}).get("short") or ("tydz." if it["period"] == "week" else "mies.")
             if it["type"] == "int_yoy":
-                lines.append(f"- {it['name']}: emisyjność {it['cur']:.0f} g/kWh ({it['delta']:+.1f}% r/r, {per})")
+                lines.append(f"- {it['name']}: emisyjność {_pl(it['cur'], 0)} g/kWh ({_pl(it['delta'], 1, True)}% r/r, {per})")
             elif it["type"] == "load_yoy":
-                lines.append(f"- {it['name']}: zużycie {it['delta']:+.1f}% r/r ({per})")
+                lines.append(f"- {it['name']}: zużycie {_pl(it['delta'], 1, True)}% r/r ({per})")
             elif it["type"] == "yoy":
-                lines.append(f"- {it['name']}: {it['label']} {it['cur']:.1f}% ({it['delta']:+.1f} p.p. r/r, {per})")
+                lines.append(f"- {it['name']}: {it['label']} {_pl(it['cur'])}% ({_pl(it['delta'], 1, True)} p.p. r/r, {per})")
             else:
                 word = "powyżej maks." if it["type"] == "max5" else "poniżej min."
-                lines.append(f"- {it['name']}: {it['label']} {it['cur']:.1f}% - {word} z 5 lat ({per})")
+                lines.append(f"- {it['name']}: {it['label']} {_pl(it['cur'])}% – {word} z 5 lat ({per})")
         lines.append("")
     be = run.get("by_endpoint") or {}
     detail = f" ({', '.join(f'{k}: {v}' for k, v in be.items())})" if be else ""
