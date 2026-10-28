@@ -1,0 +1,28 @@
+{
+ "source": "Open-Meteo (CC BY 4.0): ERA5, ECMWF IFS (prognozy bieżące, dawne, ensemble), ECMWF SEAS5",
+ "errors": [],
+ "pending": {},
+ "steps": {
+  "recent": {
+   "status": "OK",
+   "seconds": 3,
+   "requests": 7,
+   "weighted": 135.0,
+   "http429": 0,
+   "last_error": null
+  },
+  "ensemble": {
+   "status": "OK",
+   "seconds": 179,
+   "requests": 17,
+   "weighted": 93.5,
+   "http429": 1,
+   "last_error": "ensemble-api.open-meteo.com: ReadTimeout"
+  }
+ },
+ "forecast_issued": "2026-10-28",
+ "updated": "2026-10-28T20:26Z",
+ "weighted_calls": 228.5,
+ "ensemble_issued": "2026-10-28",
+ "ensemble_kind": "ensemble"
+}
