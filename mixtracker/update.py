@@ -351,6 +351,7 @@ def update_prices_ahead(settings: dict, budget_minutes: float | None = None, cli
                 f.unlink()
             except OSError:
                 pass
+    all_zones = sorted(zones)          # B-20261028-1: pełna lista stref do podsumowania popołudniowego
     if only_missing:
         # B-20261027-1: drugi przebieg popołudniowy – tylko strefy bez ceny na jutro, bez czekania
         zones = {z: tz for z, tz in zones.items()
@@ -358,7 +359,7 @@ def update_prices_ahead(settings: dict, budget_minutes: float | None = None, cli
         retries = 0
         if not zones:
             return {"requests": 0, "log": ["ceny na jutro: komplet stref – uzupełnienie niepotrzebne"],
-                    "zones": [], "missing_ahead": []}
+                    "zones": [], "zones_all": all_zones, "missing_ahead": []}
         log.append(f"ceny: uzupełnienie stref bez ceny na jutro: {', '.join(sorted(zones))}")
     for zone, tz in sorted(zones.items()):
         if not budget.can_request():
@@ -424,7 +425,8 @@ def update_prices_ahead(settings: dict, budget_minutes: float | None = None, cli
                 except OSError:
                     pass
         log.append("szczegóły braków: " + "; ".join(det))
-    return {"requests": len(done) + extra, "log": log, "zones": done, "missing_ahead": missing}
+    return {"requests": len(done) + extra, "log": log, "zones": done, "zones_all": all_zones,
+            "only_missing": bool(only_missing), "missing_ahead": missing}
 
 
 def _merge_zone(zone: str, zd: pd.DataFrame):

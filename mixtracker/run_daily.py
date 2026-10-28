@@ -17,7 +17,8 @@ def _prices_md(run: dict) -> list[str]:
     import datetime as dt
     tomorrow = (dt.date.today() + dt.timedelta(days=1)).isoformat()
     rows = []
-    for z in sorted(run.get("zones") or []):
+    # B-20261028-1: drugi przebieg (--only-missing) zwraca w "zones" tylko uzupełniane strefy – tabela ze wszystkich
+    for z in (run.get("zones_all") or sorted(run.get("zones") or [])):
         d = store.read_zone(z).dropna(subset=["price_avg"])
         if len(d):
             last = d.index.max()
@@ -25,6 +26,8 @@ def _prices_md(run: dict) -> list[str]:
             rows.append(f"| {z} | {last:%Y-%m-%d}{mark} | {d.at[last, 'price_avg']:.1f} | {d.at[last, 'price_min']:.1f} | {d.at[last, 'price_max']:.1f} |")
     miss = run.get("missing_ahead") or []
     head = (f"Ceny na {tomorrow}: {len(rows) - len(miss)} z {len(rows)} stref" if rows else "Brak danych cen stref")
+    if rows and run.get("only_missing") and run.get("zones"):
+        head += f" (w tym przebiegu uzupełniono: {', '.join(sorted(run['zones']))})"
     return [f"## Ceny day-ahead – przebieg popołudniowy", "", head, "",
             "| strefa | dzień | śr. €/MWh | min | maks |", "|---|---|---|---|---|", *rows, ""]
 

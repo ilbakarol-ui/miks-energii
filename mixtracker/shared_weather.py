@@ -92,6 +92,18 @@ class DailyLimit(RuntimeError):
     pass
 
 
+def _timeout(url: str, params: dict) -> float:
+    """B-20261028-3: dawne prognozy w dużych paczkach (do 60 dni) potrzebują 150 s; dzienny przyrost (< 10 dni)
+    serwer zwraca w kilka sekund – zawieszone zapytanie lepiej szybko ponowić niż czekać 150 s."""
+    if "previous-runs" not in url:
+        return 90
+    try:
+        days = (dt.date.fromisoformat(params["end_date"]) - dt.date.fromisoformat(params["start_date"])).days + 1
+    except (KeyError, TypeError, ValueError):
+        return 150
+    return 40 if days < 10 else 150
+
+
 def http_get(url: str, params: dict, tries: int = 3) -> list[dict]:
     last = None
     for k in range(tries):
@@ -100,7 +112,7 @@ def http_get(url: str, params: dict, tries: int = 3) -> list[dict]:
         t0 = time.time()
         STATS["requests"] += 1
         try:
-            r = requests.get(url, params=params, timeout=150 if "previous-runs" in url else 90,
+            r = requests.get(url, params=params, timeout=_timeout(url, params),
                              headers={"User-Agent": "energy-dashboards shared weather (GitHub Actions)"})
         except requests.RequestException as e:
             STATS["seconds"] += time.time() - t0
