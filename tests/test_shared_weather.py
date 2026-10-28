@@ -251,3 +251,24 @@ def test_http_get_retries_truncated_json(monkeypatch):
     monkeypatch.setattr(sw.requests, "get", lambda *a, **k: R())
     assert sw.http_get("https://previous-runs-api.open-meteo.com/v1/forecast", {}) == [{"ok": 1}]
     assert n["k"] == 2
+
+
+def test_evening_job_only_forecast_and_ensemble(tmp_path, monkeypatch):
+    """Przebieg wieczorny: tylko prognoza temperatury i ensemble, własny meta_evening.json; nocne pliki meta bez zmian."""
+    setup_extra(tmp_path, monkeypatch)
+    out = tmp_path / "out"
+    sw.run(budget=1e6, get=fake_get_factory([]), today=TODAY)                 # noc: temp
+    sw.run(budget=1e6, get=fake_get_factory([]), today=TODAY, job="extra")    # noc: extra
+    m0, x0 = (out / "meta.json").read_text(), (out / "meta_extra.json").read_text()
+    hist0 = (out / "temp_hist.csv").read_text()
+    calls = []
+    ev = sw.run(budget=1e6, get=fake_get_factory(calls), today=TODAY, minutes=10, job="evening")
+    assert ev["errors"] == [] and ev["forecast_issued"] == TODAY.isoformat() and ev["ensemble_issued"] == TODAY.isoformat()
+    assert set(ev["steps"]) == {"recent", "ensemble"} and all(v["status"] == "OK" for v in ev["steps"].values())
+    urls = {c[0] for c in calls}
+    assert urls <= {sw.FORECAST_URL, sw.ENSEMBLE_URL} and sw.ENSEMBLE_URL in urls     # bez ERA5, dawnych prognoz i SEAS5
+    m = json.loads((out / "meta_evening.json").read_text())
+    assert m["forecast_issued"] == TODAY.isoformat() and "coverage" not in m
+    assert (out / "meta.json").read_text() == m0 and (out / "meta_extra.json").read_text() == x0
+    assert (out / "temp_hist.csv").read_text() == hist0
+    assert pd.read_csv(out / "temp_recent.csv").fc.sum() > 0 and (out / "ensemble_power.csv.gz").exists()

@@ -104,7 +104,7 @@ Ustawienia (odstęp między zapytaniami, limit czasu, liczba dni do ponownego po
 
 ## Wspólna pogoda dla innych dashboardów
 
-Osobny przebieg (`.github/workflows/shared_weather.yml`, „Wspólna pogoda dla dashboardów”, codziennie o 00:17 UTC, także w weekendy) pobiera całą pogodę potrzebną raportowi Gaz UE i zapisuje ją w `data/shared_weather/`. Raport nie pobiera pogody sam – czyta te pliki. Dwa zadania idą równolegle na osobnych maszynach (każde ma własny limit Open-Meteo):
+Osobny przebieg (`.github/workflows/shared_weather.yml`, „Wspólna pogoda dla dashboardów”, codziennie o 00:17 UTC, także w weekendy; do tego lekki przebieg wieczorny o 17:47 UTC – patrz niżej) pobiera całą pogodę potrzebną raportowi Gaz UE i zapisuje ją w `data/shared_weather/`. Raport nie pobiera pogody sam – czyta te pliki. Dwa zadania idą równolegle na osobnych maszynach (każde ma własny limit Open-Meteo):
 
 - **temp** – temperatura dla punktów z `uses` = temp w `config/shared_weather_points.csv` (49 miast UE i 14 punktów w Azji):
   - `temp_hist.csv` – średnia dobowa z archiwum ERA5 od 2019 r.,
@@ -116,6 +116,8 @@ Osobny przebieg (`.github/workflows/shared_weather.yml`, „Wspólna pogoda dla 
   - `ensemble_hist.csv` – minione dni z ensemble (średnia wariantów), 400 dni – do kalibracji pogoda → produkcja prądu,
   - `seasonal.csv.gz` – prognoza sezonowa ECMWF SEAS5 (51 wariantów, 183 dni) dla punktów z `uses` = seas, odświeżana co 7 dni,
   - `meta_extra.json` – jak `meta.json`.
+
+- **evening** (17:47 UTC, czyli 18:47 zimą i 19:47 latem w Polsce; limit 12 min) – tylko świeża prognoza temperatury (`temp_recent.csv`) i ensemble do energetyki (`ensemble_power.csv.gz`) z nowszych przebiegów modeli, przed wieczornym raportem Gaz UE (20:41). Stan w `meta_evening.json` (forecast_issued, ensemble_issued, statusy kroków); `meta.json` i `meta_extra.json` zostają z nocy. Ręcznie: Actions → „Wspólna pogoda dla dashboardów” → Run workflow z zaznaczonym „Lekki przebieg wieczorny”.
 
 Każdy krok ma limit czasu (35 min na zadanie) i zapisuje to, co zdążył zebrać; brakującą historię dociąga partiami w kolejnych dniach. Przebieg nie zmienia danych ani działania Miksu energii. Kod: `mixtracker/shared_weather.py`, testy: `tests/test_shared_weather.py`.
 

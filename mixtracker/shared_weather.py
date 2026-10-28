@@ -14,7 +14,10 @@ Punkty: config/shared_weather_points.csv (pt, group, cc, lat, lon, tz). Pliki w 
                     temperatura, średnio po punktach kraju (miasta + rejony farm OZE); 5 dni wstecz i 12 dni prognozy,
 - ensemble_hist.csv – code,date,ws,sr,t: minione dni z ensemble (średnia wariantów), 400 dni – do kalibracji pogoda → produkcja,
 - seasonal.csv.gz – pt,member,date,temp,fetched: prognoza sezonowa ECMWF SEAS5 (51 wariantów, 183 dni), odświeżana co 7 dni,
-- meta_extra.json – to samo co meta.json dla ensemble i SEAS5 (osobne zadanie w przebiegu, osobny limit Open-Meteo).
+- meta_extra.json – to samo co meta.json dla ensemble i SEAS5 (osobne zadanie w przebiegu, osobny limit Open-Meteo),
+- meta_evening.json – lekki przebieg wieczorny (zadanie "evening", ok. 18 UTC): tylko świeża prognoza temperatury
+                    (temp_recent.csv) i ensemble do energetyki (ensemble_power.csv.gz); forecast_issued, ensemble_issued
+                    i statusy kroków. ERA5, dawne prognozy i SEAS5 tylko w nocy. Czyta go raport Gaz UE (WEATHER EVENING).
 
 Kolumna uses w pliku punktów: temp (temperatura: historia, prognoza, dawne prognozy), ens (ensemble do energetyki),
 seas (prognoza sezonowa).
@@ -419,6 +422,8 @@ JOBS = {
     # zadanie -> (plik meta, kroki: nazwa, funkcja, flaga punktów)
     "temp": ("meta.json", [("recent", step_recent, "temp"), ("hist", step_hist, "temp"), ("prev", step_prev, "temp")]),
     "extra": ("meta_extra.json", [("ensemble", step_ensemble, "ens"), ("seasonal", step_seasonal, "seas")]),
+    # lekki przebieg wieczorny: nowsze przebiegi modeli przed wieczornym raportem gazowym (20:41); bez historii i SEAS5
+    "evening": ("meta_evening.json", [("recent", step_recent, "temp"), ("ensemble", step_ensemble, "ens")]),
 }
 
 
@@ -479,7 +484,7 @@ def run(budget: float = 8000, get=http_get, today: dt.date | None = None, minute
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--job", choices=list(JOBS), default="temp", help="temp = temperatura; extra = ensemble i SEAS5")
+    ap.add_argument("--job", choices=list(JOBS), default="temp", help="temp = temperatura; extra = ensemble i SEAS5; evening = wieczorem tylko prognoza temperatury i ensemble")
     ap.add_argument("--budget", type=float, default=8000, help="limit zapytań ważonych Open-Meteo w tym przebiegu")
     ap.add_argument("--minutes", type=float, default=35, help="po tylu minutach nie zaczyna nowych zapytań i zapisuje wynik")
     a = ap.parse_args()
