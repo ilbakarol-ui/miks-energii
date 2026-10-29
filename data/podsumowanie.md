@@ -20,6 +20,7 @@
 - Czechy: emisyjność 496 g/kWh (+52,3% r/r, tydz. 43)
 - Rumunia: Jądrowa 0,0% (-24,8 p.p. r/r, wrz 2026)
 
-Zapytania do Energy-Charts: 46 (public_power: 30, price: 16); czas: 16 min
+Zapytania do Energy-Charts: 3 (public_power: 2, price: 1); czas: 9 min
 Prognozy pobrane dla: AT, BE, BG, CH, CY, CZ, DE, DK, EE, ES, EU, FI, FR, GB, GR, HR, HU, IE, IT, LT, LU, LV, NL, NO, PL, PT, RO, SE, SI, SK, UK
-- ENTSO-E: brak sekretu ENTSOE_TOKEN – zużycie UK i dane NL zostają z Energy-Charts
+- UK: ENTSO-E od 2025-10-24 – zużycie 0 dób, produkcja 0 dób
+- NL: ENTSO-E od 2026-09-01 – zużycie 58 dób, produkcja 58 dób; wobec Energy-Charts (14 dób): load +0%, solar -0%, misc -0%

@@ -671,8 +671,15 @@
  },
  "NL": {
   "cursor": "2021-01-01",
+  "entsoe": {
+   "from": "2026-09-01",
+   "gen_days": 58,
+   "last": "2026-10-28",
+   "load_days": 58,
+   "updated": "2026-10-29T16:41+00:00"
+  },
   "history_complete": true,
-  "last_ok": "2026-10-29T01:50+00:00",
+  "last_ok": "2026-10-29T16:35+00:00",
   "names": [
    "Biomass",
    "Cross border electricity trading",
@@ -901,8 +908,15 @@
  },
  "UK": {
   "cursor": "2021-01-01",
+  "entsoe": {
+   "from": "2025-10-24",
+   "gen_days": 0,
+   "last": null,
+   "load_days": 0,
+   "updated": "2026-10-29T16:39+00:00"
+  },
   "history_complete": true,
-  "last_ok": "2026-10-29T01:58+00:00",
+  "last_ok": "2026-10-29T16:35+00:00",
   "names": [
    "Biomass",
    "Cross border electricity trading",
