@@ -9,7 +9,7 @@ import os
 import sys
 import time
 
-from . import build, elexon, entsoe, eurostat, storage_cap, store, trends, update, weather
+from . import build, elexon, entsoe, eurostat, shared_outages, storage_cap, store, trends, update, weather
 
 
 def _pl(v, nd: int = 1, sign: bool = False) -> str:
@@ -128,6 +128,12 @@ def main(argv=None):
             entsoe.update({**settings, "entsoe": conf}, run.setdefault("log", []), settings.get("entsoe_budget_minutes", 15))
         except Exception as e:
             run.setdefault("log", []).append(f"ENTSO-E: {type(e).__name__}: {e}")
+    # niedostępność elektrowni (ENTSO-E A80) – wspólne dane dla dashboardu „Gaz UE” (data/shared_outages)
+    if not args.skip_fetch and not only and settings.get("outages"):
+        try:
+            shared_outages.update(settings, run.setdefault("log", []))
+        except Exception as e:
+            run.setdefault("log", []).append(f"Niedostępność elektrowni (ENTSO-E): {type(e).__name__}: {e}"[:300])
     if settings.get("weather_forecast", True) and not args.skip_weather:
         countries = [c for c in store.load_countries() if store.has_daily(c)]
         frames = {c["code"]: store.read_daily(c["code"]) for c in countries}

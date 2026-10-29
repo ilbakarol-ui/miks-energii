@@ -63,6 +63,8 @@ Energy-Charts przestało podawać zużycie Irlandii Północnej (od 24.10.2025),
 
 Bez sekretu nic się nie zmienia (w podsumowaniu przebiegu jest tylko jedna linia o braku tokenu). Surowe doby z ENTSO-E są w `data/entsoe/<KOD>.csv`, a w Kontroli danych źródło kraju ma dopisek „+ ENTSO-E od …”. Po pierwszym przebiegu w podsumowaniu jest porównanie z Energy-Charts (np. `load +28%, solar +900%`) – jeśli ENTSO-E ma ten sam błąd co Energy-Charts, różnica będzie bliska zera i warto wyłączyć dany kraj (`"load": false`, `"generation": false`). Kod: `mixtracker/entsoe.py`, testy: `tests/test_entsoe.py`.
 
+Z tym samym tokenem przebieg nocny pobiera też **niedostępność elektrowni** (komunikaty UMM, dokument A80) dla Francji, Belgii, Hiszpanii, Holandii i Niemiec (`"outages"` w `config/settings.json`) – to wspólne dane dla dashboardu „Gaz UE” (gdy stoją bloki jądrowe, Europa spala więcej gazu). Okno: 400 dni wstecz i 180 dni naprzód; po pierwszym przebiegu pobierane są tylko komunikaty zmienione od poprzedniego (limit `budget_minutes`, domyślnie 20 min). Pliki w `data/shared_outages/`: `daily.csv` (średnia niedostępna moc w dobie wg paliw, osobno planowe i awaryjne), `units.json` (bloki jądrowe i gazowe ≥ 400 MW wyłączone teraz albo w ciągu 30 dni), `events.csv` (ostatnie rewizje komunikatów) i `meta.json`. W podsumowaniu przebiegu jest linia „Niedostępność elektrowni (ENTSO-E, dla Gaz UE): …”. Kod: `mixtracker/shared_outages.py`, testy: `tests/test_shared_outages.py`.
+
 ## Na co dzień
 
 - **Dashboard**: stały adres z GitHub Pages. Bez Pages pobierzesz go z wyników przebiegu w zakładce **Actions** (sekcja *Artifacts* → `dashboard`, plik `index.html`).

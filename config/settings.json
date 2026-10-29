@@ -39,5 +39,18 @@
       "load": true,
       "generation": true
     }
+  },
+  "outages": {
+    "zones": {
+      "FR": "10YFR-RTE------C",
+      "BE": "10YBE----------2",
+      "ES": "10YES-REE------0",
+      "NL": "10YNL----------L",
+      "DE": "10Y1001A1001A82H"
+    },
+    "history_days": 400,
+    "horizon_days": 180,
+    "budget_minutes": 20,
+    "min_unit_mw": 400
   }
 }
