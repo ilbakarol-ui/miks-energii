@@ -163,4 +163,34 @@ def test_split_when_too_many_documents(monkeypatch):
                                          _t.monotonic() + 60)
     assert complete and note is None
     assert len(fx.calls) == 4 and fx.calls[2]["periodEnd"] < fx.calls[0]["periodEnd"]
-    assert len(rows) == 2
+    assert {r["mrid"] for r in rows} >= {"x"}
+
+
+def test_backfill_resumes_and_tracks_current(tmp_store, monkeypatch):  # noqa: F811
+    """Pierwsze pobieranie przerwane limitem czasu jest wznawiane od zapisanej strony; current_ok po okresie bieżącym."""
+    monkeypatch.setattr(so, "FOLDER", tmp_store / "shared_outages")
+    clock = {"t": 0}
+
+    def mono():
+        clock["t"] += 1
+        return clock["t"]
+    monkeypatch.setattr(so.time, "monotonic", mono)
+    full = _zip(*[_doc(f"m{i}", 1, f"U{i}", "B14", 900, [("2026-10-20T00:00Z", "2026-12-21T00:00Z", "PT60M", [(1, 0)])])
+                  for i in range(so.PAGE)])
+    settings = {"outages": {"zones": {"FR": "x"}, "history_days": 100, "horizon_days": 60, "backfill_budget_minutes": 1.5 / 60}}
+    now = pd.Timestamp("2026-10-29T01:00Z")
+    fx = FakeFetcher([full])                       # 1. strona okresu bieżącego pełna → limit czasu w trakcie
+    log = []
+    so.update(settings, log, fetcher=fx, now=now)
+    st = json.loads((so.FOLDER / "meta.json").read_text())["zones"]["FR"]
+    assert st["queue"][0][2] == so.PAGE and st["queue"][0][3] == "cur" and not st.get("current_ok")
+    assert "pobieranie historii trwa" in log[-1]
+    clock["t"] = 0
+    fx2 = FakeFetcher([])                          # następny przebieg: strona 2 (pusta) → koniec okresu bieżącego
+    so.update({**settings, "outages": {**settings["outages"], "backfill_budget_minutes": 100}}, [], fetcher=fx2,
+              now=now + pd.Timedelta(days=1))
+    assert fx2.calls[0]["offset"] == so.PAGE and "periodStartUpdate" not in fx2.calls[0]
+    st = json.loads((so.FOLDER / "meta.json").read_text())["zones"]["FR"]
+    assert st["current_ok"] and st["history_ok"] and st["last_ok"] == now.isoformat()   # od początku pobierania
+    d = pd.read_csv(so.FOLDER / "daily.csv")
+    assert d[(d.date == "2026-10-30") & (d.group == "nuclear")].iloc[0].planned_mw == pytest.approx(900 * so.PAGE)

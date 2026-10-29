@@ -48,8 +48,9 @@ GROUPS = {"B14": "nuclear", "B04": "gas", "B02": "coal", "B05": "coal", "B03": "
           "B06": "oil", "B10": "hydro", "B11": "hydro", "B12": "hydro"}
 RES_MIN = {"PT1M": 1, "PT15M": 15, "PT30M": 30, "PT60M": 60, "P1D": 1440}
 DEFAULTS = {"history_days": 400, "horizon_days": 180, "budget_minutes": 20, "min_unit_mw": 400,
+            "backfill_budget_minutes": 60,
             "zones": {"FR": "10YFR-RTE------C", "BE": "10YBE----------2", "ES": "10YES-REE------0",
-                      "NL": "10YNL----------L", "DE": "10Y1001A1001A82H"}}
+                      "NL": "10YNL----------L"}}
 TZ = {"FR": "Europe/Paris", "BE": "Europe/Brussels", "ES": "Europe/Madrid", "NL": "Europe/Amsterdam",
       "DE": "Europe/Berlin", "CH": "Europe/Zurich", "SE": "Europe/Stockholm", "FI": "Europe/Helsinki",
       "CZ": "Europe/Prague", "SK": "Europe/Bratislava", "HU": "Europe/Budapest", "IT": "Europe/Rome"}
@@ -178,50 +179,67 @@ class Fetcher:
         raise EntsoeError(last or "błąd ENTSO-E")
 
 
-def fetch_zone(fx, domain: str, zone: str, a: pd.Timestamp, b: pd.Timestamp, since: pd.Timestamp | None,
-               now: pd.Timestamp, t_end: float) -> tuple[list[dict], bool, str | None]:
-    """Wszystkie strony odpowiedzi dla [a, b) (kawałki po CHUNK_DAYS; kawałek z ponad MAX_OFFSET + PAGE
-    dokumentami dzielony na pół, najkrócej do 7 dni). Zwraca (segmenty, komplet?, uwaga)."""
+def run_queue(fx, domain: str, zone: str, queue: list, since: pd.Timestamp | None, now: pd.Timestamp,
+              t_end: float) -> tuple[list[dict], list[str]]:
+    """Przetwarza kolejkę okresów [[start_iso, end_iso, offset], …] (zmienia ją w miejscu – po przerwaniu
+    przez limit czasu następny przebieg zaczyna od zapisanej strony). Okres z ponad MAX_OFFSET + PAGE dokumentami
+    dzielony na pół (najkrócej 14 dni). Zwraca (segmenty, uwagi)."""
     rows, notes = [], []
     use_update = since is not None
-    queue, cur = [], a
+    while queue:
+        c0, c1, offset = pd.Timestamp(queue[0][0]), pd.Timestamp(queue[0][1]), int(queue[0][2])
+        if time.monotonic() > t_end:
+            notes.append("limit czasu")
+            return rows, notes
+        p = {"documentType": "A80", "biddingZone_domain": domain, "periodStart": _fmt(c0), "periodEnd": _fmt(c1),
+             "offset": offset}
+        if use_update:
+            p.update(periodStartUpdate=_fmt(since), periodEndUpdate=_fmt(now))
+        try:
+            got, n = parse_response(fx.get(p), zone)
+        except EntsoeError as e:
+            if use_update and "HTTP 400" in str(e):   # serwer nie przyjął filtra aktualizacji – pełne okno
+                use_update = False
+                notes.append("bez filtra aktualizacji (HTTP 400)")
+                continue
+            raise
+        rows += got
+        if n < PAGE:
+            queue.pop(0)
+        elif offset + PAGE > MAX_OFFSET:
+            item = queue.pop(0)
+            tag = item[3:]                          # znacznik okresu (np. „cur”) przechodzi na połówki
+            if c1 - c0 > pd.Timedelta(days=14):     # za dużo dokumentów – dzielimy okres na pół
+                mid = (c0 + (c1 - c0) / 2).floor("D")
+                queue[:0] = [[c0.isoformat(), mid.isoformat(), 0, *tag], [mid.isoformat(), c1.isoformat(), 0, *tag]]
+            else:
+                notes.append(f"ponad {MAX_OFFSET + PAGE} dokumentów w {c0.date()}–{c1.date()} – część pominięta")
+        else:
+            queue[0][2] = offset + PAGE
+    return rows, notes
+
+
+def fetch_zone(fx, domain, zone, a, b, since, now, t_end):
+    """Całe okno [a, b) w kawałkach po CHUNK_DAYS (zgodność z testami). Zwraca (segmenty, komplet?, uwaga)."""
+    q, cur = [], a
     while cur < b:
         nxt = min(b, cur + pd.Timedelta(days=CHUNK_DAYS))
-        queue.append((cur, nxt))
+        q.append([cur.isoformat(), nxt.isoformat(), 0])
         cur = nxt
-    while queue:
-        c0, c1 = queue.pop(0)
-        offset, part = 0, []
-        while True:
-            if time.monotonic() > t_end:
-                return rows + part, False, "limit czasu"
-            p = {"documentType": "A80", "biddingZone_domain": domain, "periodStart": _fmt(c0), "periodEnd": _fmt(c1),
-                 "offset": offset}
-            if use_update:
-                p.update(periodStartUpdate=_fmt(since), periodEndUpdate=_fmt(now))
-            try:
-                got, n = parse_response(fx.get(p), zone)
-            except EntsoeError as e:
-                if use_update and "HTTP 400" in str(e):   # serwer nie przyjął filtra aktualizacji – pełne okno
-                    use_update = False
-                    notes.append("bez filtra aktualizacji (HTTP 400)")
-                    continue
-                raise
-            part += got
-            if n < PAGE:
-                break
-            if offset + PAGE > MAX_OFFSET:
-                if c1 - c0 > pd.Timedelta(days=14):     # za dużo dokumentów – dzielimy okres na pół
-                    mid = c0 + (c1 - c0) / 2
-                    queue[:0] = [(c0, mid.floor("D")), (mid.floor("D"), c1)]
-                    part = None
-                else:
-                    notes.append(f"ponad {MAX_OFFSET + PAGE} dokumentów w {c0.date()}–{c1.date()} – część pominięta")
-                break
-            offset += PAGE
-        if part:
-            rows += part
-    return rows, True, "; ".join(notes) or None
+    rows, notes = run_queue(fx, domain, zone, q, since, now, t_end)
+    return rows, not q, "; ".join(notes) or None
+
+
+def backfill_queue(today: dt.date, history_days: int, ahead_days: int, step_days: int = 60) -> list:
+    """Kolejność pierwszego pobierania: najpierw okres bieżący i przyszły, potem historia wstecz kawałkami."""
+    t = pd.Timestamp(today).tz_localize("UTC")
+    q = [[(t - pd.Timedelta(days=35)).isoformat(), (t + pd.Timedelta(days=ahead_days)).isoformat(), 0, "cur"]]
+    end, start = t - pd.Timedelta(days=35), t - pd.Timedelta(days=history_days)
+    while end > start:
+        s0 = max(start, end - pd.Timedelta(days=step_days))
+        q.append([s0.isoformat(), end.isoformat(), 0])
+        end = s0
+    return q
 
 
 # ---------- scalanie i agregacja ----------
@@ -335,6 +353,9 @@ def _read_events() -> pd.DataFrame:
 
 
 def update(settings: dict, log: list, fetcher=None, now: pd.Timestamp | None = None) -> dict:
+    """Pierwsze pobieranie (backfill) jest wznawiane między przebiegami: najpierw okres bieżący i przyszły
+    (current_ok), potem historia (history_ok, potrzebna do porównań r/r). Potem tylko komunikaty zmienione
+    od ostatniego przebiegu, a raz w tygodniu dalszy horyzont bez filtra (nowe dni na końcu okna)."""
     conf = {**DEFAULTS, **(settings.get("outages") or {})}
     if not conf.get("zones"):
         return {}
@@ -348,27 +369,67 @@ def update(settings: dict, log: list, fetcher=None, now: pd.Timestamp | None = N
     meta_p = FOLDER / "meta.json"
     meta = json.loads(meta_p.read_text(encoding="utf-8")) if meta_p.exists() else {}
     zstate = meta.setdefault("zones", {})
+    for z in list(zstate):
+        if z not in conf["zones"]:
+            zstate.pop(z)
     events = _read_events()
+    events = events[events.zone.isin(list(conf["zones"]))] if len(events) else events
     today = now.tz_convert("Europe/Brussels").date()
     a = pd.Timestamp(today - dt.timedelta(days=conf["history_days"])).tz_localize("UTC")
-    b = pd.Timestamp(today + dt.timedelta(days=conf["horizon_days"] + 1)).tz_localize("UTC")
-    t_end = time.monotonic() + conf["budget_minutes"] * 60
+    ahead = min(CHUNK_DAYS - 35, max(conf["horizon_days"] + 1, conf.get("fetch_ahead_days", 330)))
+    b = pd.Timestamp(today + dt.timedelta(days=ahead)).tz_localize("UTC")
+    backfilling = any(not zstate.get(z, {}).get("history_ok") for z in conf["zones"])
+    budget = conf.get("backfill_budget_minutes", 60) if backfilling else conf["budget_minutes"]
+    t_end = time.monotonic() + budget * 60
     res = {}
-    for zone, domain in conf["zones"].items():
+    # kolejność: strefy bez bieżących danych najpierw, potem reszta
+    order = sorted(conf["zones"], key=lambda z: (bool(zstate.get(z, {}).get("current_ok")), list(conf["zones"]).index(z)))
+    for zone in order:
+        domain = conf["zones"][zone]
         st = zstate.setdefault(zone, {})
-        since = pd.Timestamp(st["last_ok"]) - pd.Timedelta(hours=2) if st.get("last_ok") else None
         try:
-            rows, complete, note = fetch_zone(fx, domain, zone, a, b, since, now, t_end)
+            if not st.get("history_ok"):
+                rows, notes = [], []
+                if st.get("current_ok") and st.get("upd_since"):   # w trakcie pobierania historii – zmiany bieżących komunikatów
+                    ru, cu, nu = fetch_zone(fx, domain, zone, a, b, pd.Timestamp(st["upd_since"]) - pd.Timedelta(hours=2), now, t_end)
+                    rows += ru
+                    if cu:
+                        st["upd_since"] = now.isoformat()
+                q = st.get("queue")
+                if not q:
+                    q = backfill_queue(today, conf["history_days"], ahead)
+                    st["started"] = now.isoformat()
+                r, notes2 = run_queue(fx, domain, zone, q, None, now, t_end)
+                rows += r
+                notes += notes2
+                if not st.get("current_ok") and not any(x[3:] == ["cur"] for x in q):
+                    st["current_ok"] = True
+                    st["upd_since"] = st.get("started", now.isoformat())
+                st["queue"] = q
+                if not q:
+                    st["history_ok"] = True
+                    st["last_ok"] = st.get("upd_since", now.isoformat())
+                    for k in ("queue", "started", "upd_since"):
+                        st.pop(k, None)
+                complete = not q
+            else:
+                since = pd.Timestamp(st["last_ok"]) - pd.Timedelta(hours=2)
+                rows, complete, note = fetch_zone(fx, domain, zone, a, b, since, now, t_end)
+                notes = [note] if note else []
+                if complete and now.weekday() == 0:   # nowe dni na końcu okna: komunikaty opublikowane dawno
+                    r2, c2, n2 = fetch_zone(fx, domain, zone, b - pd.Timedelta(days=40), b, None, now, t_end)
+                    rows += r2
+                    complete = complete and c2
+                if complete:
+                    st["last_ok"] = now.isoformat()
+            events = merge_events(events, rows)
+            st.pop("last_error", None)
+            st["note"] = "; ".join(notes) or None
+            res[zone] = (len(rows), complete)
         except Exception as e:
             st["last_error"] = f"{now.isoformat()} {type(e).__name__}: {e}"[:300]
             log.append(f"Niedostępność {zone}: błąd ENTSO-E: {type(e).__name__}: {e}"[:300])
-            continue
-        events = merge_events(events, rows)
-        if complete:
-            st["last_ok"] = now.isoformat()
-            st.pop("last_error", None)
-        st["note"] = note
-        res[zone] = (len(rows), complete)
+            res[zone] = (0, False)
     # porządek: bez segmentów zakończonych przed oknem historii
     if len(events):
         events = events[events.end > a - pd.Timedelta(days=30)]
@@ -389,10 +450,12 @@ def update(settings: dict, log: list, fetcher=None, now: pd.Timestamp | None = N
                 window=[a.date().isoformat(), (b - pd.Timedelta(days=1)).date().isoformat()],
                 events=int(len(events)), zones_conf=conf["zones"])
     meta_p.write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
-    ok = [z for z, (_, c) in res.items() if c]
-    nuc = dd[(dd.group == "nuclear") & (dd.date == today.isoformat())] if len(dd) else pd.DataFrame()
+    cur = [z for z in conf["zones"] if zstate.get(z, {}).get("current_ok")]
+    hist = [z for z in conf["zones"] if zstate.get(z, {}).get("history_ok")]
+    nuc = dd[(dd.group == "nuclear") & (dd.date == today.isoformat()) & dd.zone.isin(cur)] if len(dd) else pd.DataFrame()
     now_txt = ", ".join(f"{r.zone} {((r.planned_mw + r.forced_mw) / 1000):.1f} GW" for r in nuc.itertuples())
-    log.append(f"Niedostępność elektrowni (ENTSO-E, dla Gaz UE): strefy {','.join(ok) or '—'}"
-               f"{' (niepełne: ' + ','.join(z for z, (_, c) in res.items() if not c) + ')' if len(ok) < len(res) else ''}; "
-               f"{getattr(fx, 'requests_made', 0)} zapytań; atom dziś niedostępny: {now_txt or '—'}")
+    left = {z: len(zstate[z].get("queue") or []) for z in conf["zones"] if not zstate.get(z, {}).get("history_ok")}
+    log.append(f"Niedostępność elektrowni (ENTSO-E, dla Gaz UE): bieżące {','.join(cur) or '—'}; historia {','.join(hist) or '—'}"
+               + (f" (pobieranie historii trwa, zostało okresów: {left})" if left else "")
+               + f"; {getattr(fx, 'requests_made', 0)} zapytań; atom dziś niedostępny: {now_txt or '—'}")
     return res
