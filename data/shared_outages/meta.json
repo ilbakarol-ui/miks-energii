@@ -1,0 +1,33 @@
+{
+ "zones": {
+  "FR": {
+   "note": "limit czasu"
+  },
+  "BE": {
+   "note": "limit czasu"
+  },
+  "ES": {
+   "note": "limit czasu"
+  },
+  "NL": {
+   "note": "limit czasu"
+  },
+  "DE": {
+   "note": "limit czasu"
+  }
+ },
+ "updated_at": "2026-10-29T17:14:00+00:00",
+ "requests": 55,
+ "window": [
+  "2025-09-24",
+  "2027-04-27"
+ ],
+ "events": 4252,
+ "zones_conf": {
+  "FR": "10YFR-RTE------C",
+  "BE": "10YBE----------2",
+  "ES": "10YES-REE------0",
+  "NL": "10YNL----------L",
+  "DE": "10Y1001A1001A82H"
+ }
+}
