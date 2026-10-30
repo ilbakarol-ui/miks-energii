@@ -454,6 +454,7 @@ def test_weather_update_first_run(tmp_store, monkeypatch):
     res = weather.update(store.load_settings(), {"PL": store.read_daily("PL")}, trends.derive, countries, log)
     assert not [m for m in log if "błąd" in m], log
     assert "PL" in res and len(res["PL"]["days"]) == 7 and all(v is not None for v in res["PL"]["load"])
+    assert len(res["PL"]["ext"]["days"]) == 7 and all(v is not None for v in res["PL"]["ext"]["load"])   # dni 8–14
     assert set(res["PL"]["errors"]) == {"wind", "solar", "load"}
 
 

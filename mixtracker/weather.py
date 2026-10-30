@@ -34,6 +34,8 @@ HOURLY = "wind_speed_100m,shortwave_radiation,temperature_2m"
 WEATHER = store.DATA / "weather"
 FEATURES = ["cf", "ws", "ghi", "temp", "hdd", "cdd"]
 METHOD = "model pogodowy (Open-Meteo)"
+FORECAST_DAYS = 16   # pobierana prognoza pogody (Open-Meteo: do 16 dni)
+EXT_DAYS = 7         # dni 8–14: prognoza rozszerzona (tylko trend tygodniowy, pole "ext"; bez archiwum i weryfikacji)
 
 
 def load_points() -> dict[str, list[dict]]:
@@ -172,23 +174,28 @@ TARGETS = {"wind": "wind", "solar": "solar", "load": "load"}
 
 def forecast_country(code: str, hist: pd.DataFrame, fut: pd.DataFrame, e: pd.DataFrame,
                      today: dt.date, days: int = 7, hourly: pd.DataFrame | None = None,
-                     tz: str = "Europe/Brussels") -> dict | None:
-    """Prognoza dzienna (GWh) na `days` dni od dziś z modeli dopasowanych do historii kraju."""
+                     tz: str = "Europe/Brussels", ext: int = 0) -> dict | None:
+    """Prognoza dzienna (GWh) na `days` dni od dziś z modeli dopasowanych do historii kraju.
+    ext > 0: dodatkowo kolejne `ext` dni w polu "ext" (ten sam model, dłuższa prognoza pogody - mniej pewna)."""
     if fut.empty or e.empty:
         return None
     last = e["gen_total"].dropna().index.max()
     if pd.isna(last):
         return None
-    sel = [pd.Timestamp(today) + pd.Timedelta(days=i) for i in range(days)]
-    fut = fut.reindex(sel)
+    sel_all = [pd.Timestamp(today) + pd.Timedelta(days=i) for i in range(days + ext)]
+    sel = sel_all[:days]
+    fut = fut.reindex(sel_all)
     out = {"issued": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),
            "days": [d.strftime("%Y-%m-%d") for d in sel], "methods": {}, "errors": {}}
+    xo = {"days": [d.strftime("%Y-%m-%d") for d in sel_all[days:]]} if ext else None
     for kind, col in TARGETS.items():
         y = e[col].dropna() if col in e else pd.Series(dtype=float)
         if y.empty or (y.tail(60).abs().sum() == 0 and kind != "load"):
             if kind in ("wind", "solar") and not y.empty:
                 out[kind] = [0.0] * days
                 out["methods"][kind] = METHOD
+                if xo is not None:
+                    xo[kind] = [0.0] * ext
             continue
         min_n = None
         if kind == "load":
@@ -206,7 +213,10 @@ def forecast_country(code: str, hist: pd.DataFrame, fut: pd.DataFrame, e: pd.Dat
             continue
         # dni bez prognozy pogody zostają puste (bez przenoszenia ostatniej wartości)
         allf = pd.concat([hist[~hist.index.isin(fut.index)], fut]).sort_index()
-        p = model.forecast(m, allf, y_all.drop(bad, errors="ignore"), sel, gaps=False)
+        p_all = model.forecast(m, allf, y_all.drop(bad, errors="ignore"), sel_all, gaps=False)
+        p = p_all.iloc[:days]
+        if xo is not None:
+            xo[kind] = [None if pd.isna(v) else round(float(v), 2) for v in p_all.iloc[days:].tolist()]
         if bad.size and (bad >= last - pd.Timedelta(days=89)).any():
             out.setdefault("gaps", {})[kind] = int((bad >= last - pd.Timedelta(days=89)).sum())
         out[kind] = [None if pd.isna(v) else round(float(v), 2) for v in p.tolist()]
@@ -225,6 +235,8 @@ def forecast_country(code: str, hist: pd.DataFrame, fut: pd.DataFrame, e: pd.Dat
         out["errors"][kind] = model.model_error(hist, y, kind, last, days=14 if min_n else 28, code=code, min_n=min_n)
     if not any(k in out for k in TARGETS):
         return None
+    if xo is not None and any(any(v is not None for v in xo.get(k) or []) for k in TARGETS):
+        out["ext"] = xo
     return out
 
 
@@ -247,7 +259,7 @@ def update(settings: dict, frames: dict[str, pd.DataFrame], derive, countries: l
         return {}
     # prognoza + ostatnie dni analizy (uzupełnia cache)
     try:
-        fr = fetch_points(flat, FORECAST_URL, {"forecast_days": 8, "past_days": 10})
+        fr = fetch_points(flat, FORECAST_URL, {"forecast_days": FORECAST_DAYS, "past_days": 10})
     except Exception as e:
         log.append(f"Open-Meteo: prognoza niedostępna ({e})")
         return {}
@@ -281,7 +293,7 @@ def update(settings: dict, frames: dict[str, pd.DataFrame], derive, countries: l
         e, _ = derive(frames[code], min_cov)
         try:
             hw = hourly_wind(by_code.get(code, []), pts[code])
-            fc = forecast_country(code, cache, fut, e, today, hourly=hw, tz=tz)
+            fc = forecast_country(code, cache, fut, e, today, hourly=hw, tz=tz, ext=EXT_DAYS)
         except Exception as ex:
             log.append(f"{code}: błąd modelu prognozy ({type(ex).__name__}: {ex})")
             fc = None
@@ -299,6 +311,15 @@ def update(settings: dict, frames: dict[str, pd.DataFrame], derive, countries: l
             if all(results[m].get(k) for m in members):
                 eu[k] = [round(sum(results[m][k][i] or 0 for m in members), 2) for i in range(len(days))]
                 eu["methods"][k] = METHOD + ", suma krajów"
+        # dni 8–14: suma tylko tam, gdzie mają ją wszystkie kraje
+        xs = [results[m].get("ext") for m in members]
+        if all(xs) and len({tuple(x["days"]) for x in xs}) == 1:
+            xe = {"days": xs[0]["days"]}
+            for k in TARGETS:
+                if all(x.get(k) for x in xs):
+                    xe[k] = [None if any(x[k][i] is None for x in xs) else round(sum(x[k][i] for x in xs), 2)
+                             for i in range(len(xe["days"]))]
+            eu["ext"] = xe
         hs = [results[m].get("wind_hourly") for m in members]
         if all(hs) and len({h["start"] for h in hs}) <= 3:
             # strefy czasowe krajów różnią się - suma na wspólnej osi UTC

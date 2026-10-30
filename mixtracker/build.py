@@ -227,6 +227,12 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
         summary[code] = {k: trends.compare(e, k, p, n_years, min_years) for k, p in periods.items()}
         weekly[code] = trends.weekly_profile(e, ref.year, n_years, min_years,
                                              periods["week"]["iso"][1] if periods["week"]["iso"][0] == ref.year else 53)
+        fc0 = (forecasts or {}).get(code) if forecasts is not None else forecast.read_latest(code)
+        wfc = trends.weekly_forecast(e, fc0, ref, ref.year,
+                                     periods["week"]["iso"][1] if periods["week"]["iso"][0] == ref.year else 0)
+        for k, v in wfc.items():   # prognoza tygodniowa (wiatr, słońce, zużycie) w serii trendu
+            if k in weekly[code]:
+                weekly[code][k].update(v)
         daily[code] = trends.daily_recent(e, ref, settings["daily_chart_days"])
         monthly[code] = trends.monthly_recent(e, periods["month"]["end"], settings["monthly_chart_months"])
         winds[code] = e["wind"] if "wind" in e else pd.Series(dtype=float)

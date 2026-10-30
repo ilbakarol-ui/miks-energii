@@ -4,7 +4,7 @@
 tu nie pobieramy, tylko czytamy pliki z repozytorium.
 
 - Wiatr (GWh/dobę): produkcja rzeczywista z ostatnich 14 dni, prognoza modelu z zakładki „Prognozy wiatru”
-  (7 dni) i dłuższa prognoza z 51 wariantów ECMWF ensemble (ok. 12 dni). Warianty podają prędkość wiatru
+  (7 dni, z przedłużeniem do 14 dni, gdy jest) i dłuższa prognoza z 51 wariantów ECMWF ensemble (ok. 12 dni). Warianty podają prędkość wiatru
   na 100 m; na produkcję przelicza ją zależność liniowa dopasowana do produkcji rzeczywistej z ostatnich
   dni (ensemble_hist.csv – historia rośnie z każdym przebiegiem). Kraj bez wiarygodnego dopasowania
   (za mało dni albo R² < min_r2) nie dostaje pasma. Dla UE prędkość jest średnią krajów ważoną produkcją
@@ -149,6 +149,9 @@ def wind_block(code: str, e: pd.DataFrame | None, fc: dict | None, ws_m: pd.Data
     act = act[act.index <= pd.Timestamp(ref)].tail(conf["recent_days"])
     rdates = [d.strftime("%Y-%m-%d") for d in act.index]
     det = dict(zip(fc["days"], fc["wind"])) if fc and fc.get("wind") else {}
+    x = (fc or {}).get("ext") or {}
+    if det and x.get("wind"):   # przedłużenie modelu (dni 8–14)
+        det.update({d: v for d, v in zip(x["days"], x["wind"]) if v is not None})
     cal = calibrate(ws_h, e["wind"] if e is not None and "wind" in e else None,
                     conf["calib_days"], conf["min_calib_days"], conf["min_r2"])
     q = {}

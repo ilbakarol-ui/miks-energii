@@ -918,7 +918,7 @@ const DATA = /*__DATA__*/null;
     tip.style.left = left + "px"; tip.style.top = Math.max(0, y - 10) + "px";
   }
   function legend(el, items) {
-    el.innerHTML = items.map((it) => `<span>${it.band ? '<i class="bd"></i>' : it.line ? `<i class="ln" style="background:${it.color}"></i>` : `<i class="sw" style="background:${it.color}"></i>`}${esc(it.label)}</span>`).join("");
+    el.innerHTML = items.map((it) => `<span>${it.band ? '<i class="bd"></i>' : it.line ? `<i class="ln" style="background:${it.dash ? `repeating-linear-gradient(90deg, ${it.color} 0 5px, transparent 5px 8px)` : it.color}"></i>` : `<i class="sw" style="background:${it.color}"></i>`}${esc(it.label)}</span>`).join("");
   }
 
   function renderTrend() {
@@ -927,8 +927,10 @@ const DATA = /*__DATA__*/null;
     const unit = UNIT(S.trend);
     const isShare = unit === "%";
     const color = GK.includes(S.trend) ? col(S.trend) : css("--s-total");
+    const hasFc = !!(w && w.fc && w.fc.some(isNum));
     legend($("trend-legend"), [
       { line: 1, color, label: String(DATA.meta.year) },
+      ...(hasFc ? [{ line: 1, dash: 1, color, label: "prognoza" }] : []),
       { line: 1, color: css("--ly"), label: String(DATA.meta.year - 1) },
       { line: 1, color: css("--muted"), label: "średnia " + DATA.meta.years5 },
       { band: 1, label: "zakres min–maks " + DATA.meta.years5 },
@@ -937,7 +939,7 @@ const DATA = /*__DATA__*/null;
     const H = el.clientWidth < 520 ? 220 : 270;
     const { svg, tip, W } = frame(el, H);
     const L = 46, R = W - 34, T = 24, B = H - 24;
-    const all = [...w.cur, ...w.ly, ...w.min, ...w.max].filter(isNum);
+    const all = [...w.cur, ...w.ly, ...w.min, ...w.max, ...(hasFc ? w.fc : [])].filter(isNum);
     if (!all.length) { el.innerHTML = '<p class="empty">Brak danych dla tej serii.</p>'; return; }
     let lo = Math.min(...all), hi = Math.max(...all);
     const padY = (hi - lo) * 0.08 || 1;
@@ -964,15 +966,21 @@ const DATA = /*__DATA__*/null;
     };
     for (let i = 0; i < 53; i++) { if (isNum(w.min[i]) && isNum(w.max[i])) seg.push(i); else flush(); }
     flush();
-    const path = (arr, stroke, width) => {
+    const path = (arr, stroke, width, dash) => {
       let d = "", pen = false;
       arr.forEach((v, i) => { if (isNum(v)) { d += (pen ? "L" : "M") + x(i).toFixed(1) + "," + y(v).toFixed(1); pen = true; } else pen = false; });
-      if (d) mk("path", { d, fill: "none", stroke, "stroke-width": width, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+      if (d) { const p = mk("path", { d, fill: "none", stroke, "stroke-width": width, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg); if (dash) p.setAttribute("stroke-dasharray", "5 4"); }
     };
     path(w.avg, css("--muted"), 1.5);
     path(w.ly, css("--ly"), 2);
     path(w.cur, color, 2.5);
     let last = -1; w.cur.forEach((v, i) => { if (isNum(v)) last = i; });
+    if (hasFc) {   // prognoza: od ostatniego pełnego tygodnia, linia przerywana i puste kółka
+      const fl = w.fc.slice();
+      if (last >= 0 && isNum(fl[last + 1])) fl[last] = w.cur[last];
+      path(fl, color, 2.5, true);
+      w.fc.forEach((v, i) => { if (isNum(v)) mk("circle", { cx: x(i), cy: y(v), r: 3.5, fill: css("--surface"), stroke: color, "stroke-width": 2 }, svg); });
+    }
     if (last >= 0) {
       mk("circle", { cx: x(last), cy: y(w.cur[last]), r: 4.5, fill: color, stroke: css("--surface"), "stroke-width": 2 }, svg);
       const lb = mk("text", { x: Math.min(x(last) + 8, R - 2), y: y(w.cur[last]) - 8, "text-anchor": x(last) + 8 > R - 40 ? "end" : "start" }, svg);
@@ -986,7 +994,8 @@ const DATA = /*__DATA__*/null;
     else if (S.trend === "price_avg") $("trend-note").textContent = "Średnia tygodniowa ceny day-ahead (" + priceNote() + ").";
     else if (S.trend.startsWith("capture_")) $("trend-note").textContent = "Średnia cena uzyskana przez źródło: ceny godzinowe ważone jego produkcją.";
     else if (S.trend === "price_neg_h") $("trend-note").textContent = "Liczba godzin w tygodniu z ceną day-ahead poniżej zera.";
-    else $("trend-note").textContent = "Suma tygodniowa (tydzień ISO, pon.–niedz.).";
+    else $("trend-note").textContent = "Suma tygodniowa (tydzień ISO, pon.–niedz.)." +
+      (hasFc ? " Linia przerywana: prognoza – dni już znane plus model pogodowy na 7 dni i jego przedłużenie do 14 dni (dni 8–14 są mniej pewne, bo opierają się na dalszej prognozie pogody)." : "");
     // warstwa interakcji
     const cross = mk("line", { y1: T, y2: B, stroke: css("--axis"), "stroke-width": 1, visibility: "hidden" }, svg);
     const hit = mk("rect", { x: L, y: T, width: R - L, height: B - T, fill: "transparent" }, svg);
@@ -999,6 +1008,7 @@ const DATA = /*__DATA__*/null;
       placeTip(tip, el, (x(i) / W) * r.width, (T / H) * r.height + 10,
         `<b>Tydzień ${i + 1}</b>
         <div class="r"><span><i class="ln" style="width:10px;height:2px;background:${color}"></i>${DATA.meta.year}</span><span>${f(w.cur[i])}</span></div>
+        ${hasFc && isNum(w.fc[i]) ? `<div class="r"><span><i class="ln" style="width:10px;height:2px;background:${color}"></i>prognoza</span><span>${f(w.fc[i])}</span></div><div class="r"><span>dni prognozy</span><span>${w.fc_days[i]} z 7</span></div>` : ""}
         <div class="r"><span><i class="ln" style="width:10px;height:2px;background:${css("--ly")}"></i>${DATA.meta.year - 1}</span><span>${f(w.ly[i])}</span></div>
         <div class="r"><span>średnia 5 lat</span><span>${f(w.avg[i])}</span></div>
         <div class="r"><span>min–maks</span><span>${isNum(w.min[i]) ? f(w.min[i]) + " – " + f(w.max[i]) : "–"}</span></div>`);
@@ -1682,7 +1692,7 @@ const DATA = /*__DATA__*/null;
 
   function renderWxKPIs() {
     const c = WXC[S.country] || {};
-    const w7 = wxWindAgg(c.wind, 0, 7), w8 = wxWindAgg(c.wind, 7, 16);
+    const w7 = wxWindAgg(c.wind, 0, 7), w8 = wxWindAgg(c.wind, 7, 14);
     const t7 = wxTempAgg(c.temp, 0, 7), t8 = wxTempAgg(c.temp, 7, 14);
     const sm = (c.seas || {}).months || [];
     const winter = sm.filter((x) => ["12", "01", "02"].includes(x.m.slice(5)));
@@ -1691,7 +1701,7 @@ const DATA = /*__DATA__*/null;
     const tiles = [];
     tiles.push({ label: "Wiatr · najbliższe 7 dni", val: w7 && isNum(w7.pct) ? `${sgn(w7.pct)}<small>% normy</small>` : w7 ? `${n1}<small>${u1}/dobę</small>` : "–",
       rows: [["średnio na dobę", w7 ? `${n1} ${u1}` : "–"], ["norma", w7 ? fmtU(w7.avg / w7.n, "GWh") : "–"],
-        ["dni 8–" + (w8 ? 7 + w8.n : 12) + " (ensemble)", w8 && isNum(w8.pct) ? sgn(w8.pct) + "%" : "brak"]],
+        ["dni 8–" + (w8 ? 7 + w8.n : 12), w8 && isNum(w8.pct) ? sgn(w8.pct) + "%" : "brak"]],
       chip: w7 && isNum(w7.pct) ? anomBin(w7.pct) : null, chipT: (k) => (k > 0 ? "więcej wiatru niż zwykle" : k < 0 ? "mniej wiatru niż zwykle" : "w normie (±10%)") });
     tiles.push({ label: "Temperatura · najbliższe 7 dni", val: t7 ? `${degS(t7.anom).replace("°C", "")}<small>°C vs norma</small>` : "–",
       rows: [["średnio", t7 ? fmt1.format(t7.t) + "°C" : "–"], ["norma", t7 ? fmt1.format(t7.norm) + "°C" : "–"],
@@ -1720,7 +1730,7 @@ const DATA = /*__DATA__*/null;
       const det = w.det.slice(), p50 = w.p50.slice();
       if (sp > 0 && sp < n) { if (isNum(det[sp])) det[sp - 1] = w.act[sp - 1]; if (isNum(p50[sp])) p50[sp - 1] = w.act[sp - 1]; }
       const items = [{ line: 1, color: css("--ink-2"), label: "rzeczywista" }];
-      if (hasDet) items.push({ line: 1, color: wcol, label: "model 7-dniowy (przerywana)" });
+      if (hasDet) items.push({ line: 1, color: wcol, label: "model pogodowy (przerywana)" });
       if (hasEns) { items.push({ line: 1, color: css("--s-total"), label: "mediana ensemble (kropki)" }); items.push({ band: 1, label: "80% wariantów ensemble" }); }
       items.push({ line: 1, color: css("--muted"), label: "norma " + DATA.meta.years5 });
       legend($("x-wind-legend"), items);
@@ -1731,7 +1741,7 @@ const DATA = /*__DATA__*/null;
         band: hasEns ? { lo: w.p10, hi: w.p90 } : null,
         xlab: (j) => dayLab(w.dates[j]), tlab: (j) => dayLong(w.dates[j]) + (j >= sp ? " · prognoza" : ""),
         rows: (j) => (j < sp ? [["rzeczywista", fmtU(w.act[j], "GWh"), css("--ink-2")]] : [])
-          .concat(j >= sp && isNum(w.det[j]) ? [["model 7-dniowy", fmtU(w.det[j], "GWh"), wcol]] : [])
+          .concat(j >= sp && isNum(w.det[j]) ? [["model pogodowy", fmtU(w.det[j], "GWh"), wcol]] : [])
           .concat(j >= sp && isNum(w.p50[j]) ? [["mediana ensemble", fmtU(w.p50[j], "GWh"), css("--s-total")], ["80% wariantów", fmtU(w.p10[j], "GWh") + " – " + fmtU(w.p90[j], "GWh")]] : [])
           .concat([["norma", fmtU(w.avg[j], "GWh"), css("--muted")]]),
       });
@@ -1740,7 +1750,7 @@ const DATA = /*__DATA__*/null;
       if (hasEns) note = `Pasmo i mediana: 51 wariantów ECMWF ensemble do ${fdate(w.dates[n - 1])}. Prędkość wiatru na 100 m przeliczona na produkcję zależnością dopasowaną do ${f.n} ostatnich dni (R² ${isNum(f.r2) ? String(f.r2).replace(".", ",") : "–"}, średni błąd ±${fmt0.format(f.mae_pct)}% przy znanej pogodzie; dopasowanie poprawia się z każdym dniem historii).`;
       else if (f.why && f.why !== "brak historii") note = `Bez pasma ensemble: ${f.why} – przelicznik prędkości wiatru na produkcję jest jeszcze niewiarygodny dla tego kraju.`;
       else note = "Brak prognoz ensemble dla tego kraju (wspólna baza pogodowa obejmuje kraje UE).";
-      if (hasDet) note += " Model 7-dniowy: prognoza z zakładki „Prognozy wiatru”.";
+      if (hasDet) note += " Model pogodowy: prognoza z zakładki „Prognozy wiatru” (7 dni) z przedłużeniem do 14 dni.";
       $("x-wind-note").textContent = note;
     } else {
       $("x-wind").innerHTML = '<p class="empty">Brak danych o wietrze dla tego kraju.</p>';
@@ -1825,7 +1835,7 @@ const DATA = /*__DATA__*/null;
   }
 
   function renderWxTable() {
-    const rows = Object.entries(WXC).filter(([, c]) => c.temp || c.seas || [wxWindAgg(c.wind, 0, 7), wxWindAgg(c.wind, 7, 16)].some((a) => a && isNum(a.pct)));
+    const rows = Object.entries(WXC).filter(([, c]) => c.temp || c.seas || [wxWindAgg(c.wind, 0, 7), wxWindAgg(c.wind, 7, 14)].some((a) => a && isNum(a.pct)));
     const months = [];
     rows.forEach(([, c]) => ((c.seas || {}).months || []).forEach((m) => { if (!months.includes(m.m)) months.push(m.m); }));
     months.sort();
@@ -1836,10 +1846,10 @@ const DATA = /*__DATA__*/null;
     };
     let h = `<thead><tr><th></th><th class="grp" colspan="2">Wiatr, % normy</th><th class="grp" colspan="2">Temperatura, °C vs norma</th>` +
       (months.length ? `<th class="grp" colspan="${months.length}">SEAS5, mediana °C vs norma</th>` : "") + `</tr>` +
-      `<tr><th>Kraj</th><th style="text-align:center">dni 1–7</th><th style="text-align:center">dni 8–12</th><th style="text-align:center">dni 1–7</th><th style="text-align:center">dni 8–14</th>` +
+      `<tr><th>Kraj</th><th style="text-align:center">dni 1–7</th><th style="text-align:center">dni 8–14</th><th style="text-align:center">dni 1–7</th><th style="text-align:center">dni 8–14</th>` +
       months.map((m) => `<th style="text-align:center">${monL(m)}</th>`).join("") + "</tr></thead><tbody>";
     rows.forEach(([code, c]) => {
-      const w7 = wxWindAgg(c.wind, 0, 7), w8 = wxWindAgg(c.wind, 7, 16);
+      const w7 = wxWindAgg(c.wind, 0, 7), w8 = wxWindAgg(c.wind, 7, 14);
       const t7 = wxTempAgg(c.temp, 0, 7), t8 = wxTempAgg(c.temp, 7, 14);
       const sm = Object.fromEntries(((c.seas || {}).months || []).map((m) => [m.m, m]));
       h += `<tr data-c="${code}" tabindex="0" class="${code === S.country ? "sel" : ""}"><td>${esc(cname(code))}</td>`;

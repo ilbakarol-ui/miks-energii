@@ -267,6 +267,44 @@ def weekly_profile(e: pd.DataFrame, year: int, n_years: int, min_years: int, las
     return res
 
 
+FC_WEEKLY = ("wind", "solar", "load")
+
+
+def weekly_forecast(e: pd.DataFrame, fc: dict | None, ref: dt.date, year: int, last_week: int,
+                    min_days: int = 6) -> dict:
+    """Prognoza sum tygodniowych (tyg. ISO roku `year` po `last_week`) dla wiatru, słońca i zużycia:
+    dni znane (do `ref`) + prognoza modelu (7 dni) i jej przedłużenie (pole "ext", dni 8–14).
+    Tydzień z co najmniej `min_days` dniami jest skalowany do 7 dni, jak w weekly_profile.
+    Wynik: {seria: {"fc": [53 wartości], "fc_days": [liczba dni prognozy w tygodniu]}}."""
+    if not fc or e.empty:
+        return {}
+    days = list(fc.get("days") or [])
+    x = fc.get("ext") or {}
+    out = {}
+    for key in FC_WEEKLY:
+        vals = dict(zip(days, fc.get(key) or []))
+        vals.update(zip(x.get("days") or [], x.get(key) or []))
+        f = pd.Series({pd.Timestamp(d): v for d, v in vals.items() if v is not None and d > ref.isoformat()}, dtype=float)
+        if f.empty or key not in e:
+            continue
+        a = e[key].dropna()
+        a = a[a.index <= pd.Timestamp(ref)]
+        s = pd.concat([a, f]).sort_index()
+        s = s[~s.index.duplicated(keep="last")]
+        iso = s.index.isocalendar()
+        df = pd.DataFrame({"v": s.to_numpy(), "y": iso["year"].to_numpy(), "w": iso["week"].to_numpy(),
+                           "f": s.index.isin(f.index)})
+        res, fdays = [None] * 53, [None] * 53
+        for (y, w), g in df.groupby(["y", "w"]):
+            if y != year or w <= last_week or w > 53 or not g["f"].any() or len(g) < min_days:
+                continue
+            res[w - 1] = _r(g["v"].sum() * 7 / len(g), 1)
+            fdays[w - 1] = int(g["f"].sum())
+        if any(v is not None for v in res):
+            out[key] = {"fc": res, "fc_days": fdays}
+    return out
+
+
 def daily_recent(e: pd.DataFrame, ref: dt.date, days: int) -> dict:
     idx = pd.date_range(pd.Timestamp(ref) - pd.Timedelta(days=days - 1), pd.Timestamp(ref), freq="D")
     b = e.reindex(idx).copy()
