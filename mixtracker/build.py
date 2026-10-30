@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from . import forecast, model, prices, storage_cap, store, trends, verify, weather
+from . import forecast, model, prices, storage_cap, store, trends, verify, weather, weather_tab
 from .categories import DETAIL, DETAIL_KEYS, GROUPS, GROUP_KEYS
 
 TEMPLATE = Path(__file__).with_name("template.html")
@@ -295,6 +295,7 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
         "prices": price_info,
         "price_map": price_map(zones_ok, zones_all, countries),
         "wind_tab": wind_tab(fc_raw, winds, n_years, min_years),
+        "weather_tab": _weather_tab(derived, fc_raw, [c["code"] for c in countries], ref, n_years, min_years, settings),
         "verify": _verify(derived, ref, settings, n_years, min_years,
                           {c["code"] for c in countries if c.get("group") == "UE"}),
         "factors": {k: v for k, v in trends.emission_factors().items() if v > 0},
@@ -404,6 +405,14 @@ def wind_tab(fcs: dict, winds: dict[str, pd.Series], n_years: int, min_years: in
         out["countries"][code] = rec
     out["accuracy"] = wind_accuracy(winds)
     return out
+
+
+def _weather_tab(derived, fcs, codes, ref, n_years, min_years, settings) -> dict:
+    """Zakładka „Pogoda” (weather_tab.py); jej błąd nie może zatrzymać budowy strony."""
+    try:
+        return weather_tab.build(derived, fcs, codes, ref, n_years, min_years, settings)
+    except Exception as e:
+        return {"error": f"{type(e).__name__}: {e}"}
 
 
 def _load_status(df: pd.DataFrame, est, ref: dt.date, max_age: int = 7) -> str:

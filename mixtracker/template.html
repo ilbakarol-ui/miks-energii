@@ -201,6 +201,8 @@ td.na, .na { color: var(--muted); }
 .heat td.h.cur { box-shadow: inset 0 0 0 2px var(--ink); }
 @media (max-width: 560px) { #w-kpis { grid-template-columns: 1fr; } }
 .acc td, .acc th { text-align: right; }
+@media (max-width: 560px) { #x-kpis { grid-template-columns: 1fr; } }
+#x-table th.grp { text-align: center; color: var(--ink-2); font-weight: 600; border-bottom: 0; padding-bottom: 0; }
 [hidden] { display: none !important; }
 .method { display: grid; gap: 10px; max-width: 78ch; font-size: 14.5px; line-height: 1.55; }
 .method h3 { color: var(--ink); font-size: 17px; margin-top: 6px; }
@@ -209,7 +211,7 @@ td.na, .na { color: var(--muted); }
 .method code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; color: var(--ink); }
 .vtable td.sk { font-weight: 600; }
 @media (max-width: 860px) { .tabs button { padding: 8px 12px; font-size: 13.5px; } }
-@media (max-width: 560px) { .tabs { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; } .tabs button { padding: 8px 4px; font-size: 13px; line-height: 1.25; } }
+@media (max-width: 560px) { .tabs { display: grid; grid-template-columns: repeat(2, 1fr); width: 100%; } .tabs button + button { border-left: 0; } .tabs button:nth-child(even) { border-left: 1px solid var(--line); } .tabs button:nth-child(n+3) { border-top: 1px solid var(--line); } .tabs button { padding: 8px 4px; font-size: 13px; line-height: 1.25; } }
 .map-wrap { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(240px, 1fr); gap: 12px; align-items: start; }
 @media (max-width: 820px) { .map-wrap { grid-template-columns: 1fr; } }
 .map-box { position: relative; min-width: 0; }
@@ -264,6 +266,7 @@ footer a, .notes a { color: var(--accent); }
     <div class="tabs" role="tablist" aria-label="Zakładki">
       <button type="button" role="tab" id="tab-btn-mix" data-tab="mix" aria-selected="true" aria-controls="tab-mix">Miks i ceny</button>
       <button type="button" role="tab" id="tab-btn-wind" data-tab="wind" aria-selected="false" aria-controls="tab-wind">Prognozy wiatru</button>
+      <button type="button" role="tab" id="tab-btn-wx" data-tab="wx" aria-selected="false" aria-controls="tab-wx">Pogoda</button>
       <button type="button" role="tab" id="tab-btn-ver" data-tab="ver" aria-selected="false" aria-controls="tab-ver">Weryfikacja prognoz</button>
     </div>
     <select id="country" aria-label="Kraj"></select>
@@ -485,6 +488,46 @@ footer a, .notes a { color: var(--accent); }
     </section>
   </div>
 
+  <div id="tab-wx" role="tabpanel" aria-labelledby="tab-btn-wx" style="display:grid;gap:28px" hidden>
+    <section aria-labelledby="h-x">
+      <div class="head">
+        <h2 id="h-x">Pogoda: wiatr i temperatura w najdłuższym horyzoncie</h2>
+        <span class="small muted" id="x-issued"></span>
+      </div>
+    </section>
+    <div class="kpis" id="x-kpis"></div>
+    <div class="grid2">
+      <section aria-labelledby="h-xw">
+        <div class="head"><h2 id="h-xw">Produkcja z wiatru</h2><span class="small muted">GWh na dobę</span></div>
+        <div class="panel" style="display:grid;gap:10px">
+          <div class="legend" id="x-wind-legend"></div>
+          <div class="chart" id="x-wind"></div>
+          <p class="small muted" id="x-wind-note"></p>
+        </div>
+      </section>
+      <section aria-labelledby="h-xt">
+        <div class="head"><h2 id="h-xt">Temperatura</h2><span class="small muted">°C, średnia dobowa</span></div>
+        <div class="panel" style="display:grid;gap:10px">
+          <div class="legend" id="x-temp-legend"></div>
+          <div class="chart" id="x-temp"></div>
+          <p class="small muted" id="x-temp-note"></p>
+        </div>
+      </section>
+    </div>
+    <section aria-labelledby="h-xs">
+      <div class="head"><h2 id="h-xs">Prognoza sezonowa temperatury</h2><span class="small muted">ECMWF SEAS5 · odchylenie średniej miesięcznej od normy</span></div>
+      <div class="panel" style="display:grid;gap:10px">
+        <div class="legend" id="x-seas-legend"></div>
+        <div class="chart" id="x-seas"></div>
+        <p class="small muted" id="x-seas-note"></p>
+      </div>
+    </section>
+    <section aria-labelledby="h-xa">
+      <div class="head"><h2 id="h-xa">Wszystkie kraje</h2><span class="small muted">odchylenie od normy · kliknij wiersz, żeby wybrać kraj</span></div>
+      <div class="tablebox"><table class="heat" id="x-table"></table></div>
+    </section>
+  </div>
+
   <div id="tab-ver" role="tabpanel" aria-labelledby="tab-btn-ver" style="display:grid;gap:28px" hidden>
     <section aria-labelledby="h-v">
       <div class="head">
@@ -686,6 +729,7 @@ const DATA = /*__DATA__*/null;
     try { history.replaceState(null, "", "#" + c.toLowerCase()); } catch (e) { /* bez zmiany adresu */ }
     renderCountry(); renderTable(); renderMap();
     if (TAB === "wind") renderWind();
+    if (TAB === "wx") renderWx();
     if (TAB === "ver") renderVer();
   }
   document.querySelectorAll("#period button").forEach((b) => b.addEventListener("click", () => {
@@ -1070,7 +1114,7 @@ const DATA = /*__DATA__*/null;
     if (!all.length) { el.innerHTML = '<p class="empty">Brak danych.</p>'; return; }
     let lo = Math.min(...all), hi = Math.max(...all);
     const pad = (hi - lo) * 0.08 || 1;
-    lo = Math.min(...all) >= 0 && o.unit !== "€/MWh" ? Math.max(0, lo - pad) : lo - pad;
+    lo = o.zero !== false && Math.min(...all) >= 0 && o.unit !== "€/MWh" ? Math.max(0, lo - pad) : lo - pad;
     hi += pad;
     const ticks = niceTicks(lo, hi, 4);
     const y0 = ticks[0], y1 = ticks[ticks.length - 1];
@@ -1099,7 +1143,7 @@ const DATA = /*__DATA__*/null;
       l.values.forEach((v, i) => { if (isNum(v)) { d += (pen ? "L" : "M") + x(i).toFixed(1) + "," + y(v).toFixed(1); pen = true; } else pen = false; });
       if (d) {
         const p = mk("path", { d, fill: "none", stroke: l.color, "stroke-width": l.width || 2, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
-        if (l.dash) p.setAttribute("stroke-dasharray", "5 4");
+        if (l.dash) p.setAttribute("stroke-dasharray", typeof l.dash === "string" ? l.dash : "5 4");
       }
     });
     if (o.ticks) {
@@ -1595,6 +1639,232 @@ const DATA = /*__DATA__*/null;
     renderWindDays(); renderWindKPIs(); renderWindMap(); renderWindCharts(); renderWindTable(); renderWindAccuracy();
   }
 
+  // ---------- zakładka: pogoda (najdłuższy horyzont) ----------
+  const WX = DATA.weather_tab || {};
+  const WXC = WX.countries || {};
+  const TB = [-3, -1.5, -0.5, 0.5, 1.5, 3];   // progi odchylenia temperatury, °C
+  function tempBin(v) {   // chłodniej = niebieski (dodatnie klasy palety), cieplej = czerwony
+    if (!isNum(v)) return null;
+    let k = -3;
+    for (const t of TB) { if (v >= t) k++; }
+    return -k;
+  }
+  const dsh = (s) => { const [, mm, dd] = s.split("-"); return `${+dd}.${mm}`; };
+  const tempCol = () => css("--dv-2");
+  const sumIf = (idx, f) => idx.reduce((a, i) => a + f(i), 0);
+  // wiatr: prognoza modelu (dni 1–7) albo mediana ensemble; procent względem normy
+  function wxWindAgg(w, from, to) {
+    if (!w) return null;
+    const idx = [];
+    for (let i = w.split + from; i < Math.min(w.dates.length, w.split + to); i++) idx.push(i);
+    const v = (i) => (isNum(w.det[i]) ? w.det[i] : w.p50[i]);
+    const ok = idx.filter((i) => isNum(v(i)) && isNum(w.avg[i]));
+    if (!ok.length || ok.length < Math.min(3, idx.length)) return null;
+    const fc = sumIf(ok, v), avg = sumIf(ok, (i) => w.avg[i]);
+    // przy normie < 1 GWh/d (mała energetyka wiatrowa) odchylenie procentowe to szum – jak w zakładce wiatru
+    return { fc, avg, pct: avg / ok.length >= 1 ? 100 * (fc / avg - 1) : null, n: ok.length, from: w.dates[ok[0]], to: w.dates[ok[ok.length - 1]] };
+  }
+  function wxTempAgg(t, from, to) {
+    if (!t) return null;
+    const idx = [];
+    for (let i = t.split + from; i < Math.min(t.dates.length, t.split + to); i++) idx.push(i);
+    const v = (i) => (isNum(t.det[i]) ? t.det[i] : t.p50[i]);
+    const ok = idx.filter((i) => isNum(v(i)) && isNum(t.norm[i]));
+    if (!ok.length || ok.length < Math.min(3, idx.length)) return null;
+    let cold = ok[0];
+    ok.forEach((i) => { if (v(i) < v(cold)) cold = i; });
+    return { t: sumIf(ok, v) / ok.length, norm: sumIf(ok, (i) => t.norm[i]) / ok.length,
+      anom: sumIf(ok, (i) => v(i) - t.norm[i]) / ok.length, n: ok.length, cold: { d: t.dates[cold], v: v(cold), a: v(cold) - t.norm[cold] },
+      from: t.dates[ok[0]], to: t.dates[ok[ok.length - 1]] };
+  }
+  const degS = (v) => (isNum(v) ? sgn(v, 1) + "°C" : "–");
+  const monL = (m) => MONTHS[+m.slice(5) - 1] + " " + m.slice(2, 4);
+
+  function renderWxKPIs() {
+    const c = WXC[S.country] || {};
+    const w7 = wxWindAgg(c.wind, 0, 7), w8 = wxWindAgg(c.wind, 7, 16);
+    const t7 = wxTempAgg(c.temp, 0, 7), t8 = wxTempAgg(c.temp, 7, 14);
+    const sm = (c.seas || {}).months || [];
+    const winter = sm.filter((x) => ["12", "01", "02"].includes(x.m.slice(5)));
+    const wAn = winter.length ? winter.reduce((a, x) => a + x.p50, 0) / winter.length : null;
+    const [n1, u1] = energyParts(w7 ? w7.fc / w7.n : null);
+    const tiles = [];
+    tiles.push({ label: "Wiatr · najbliższe 7 dni", val: w7 && isNum(w7.pct) ? `${sgn(w7.pct)}<small>% normy</small>` : w7 ? `${n1}<small>${u1}/dobę</small>` : "–",
+      rows: [["średnio na dobę", w7 ? `${n1} ${u1}` : "–"], ["norma", w7 ? fmtU(w7.avg / w7.n, "GWh") : "–"],
+        ["dni 8–" + (w8 ? 7 + w8.n : 12) + " (ensemble)", w8 && isNum(w8.pct) ? sgn(w8.pct) + "%" : "brak"]],
+      chip: w7 && isNum(w7.pct) ? anomBin(w7.pct) : null, chipT: (k) => (k > 0 ? "więcej wiatru niż zwykle" : k < 0 ? "mniej wiatru niż zwykle" : "w normie (±10%)") });
+    tiles.push({ label: "Temperatura · najbliższe 7 dni", val: t7 ? `${degS(t7.anom).replace("°C", "")}<small>°C vs norma</small>` : "–",
+      rows: [["średnio", t7 ? fmt1.format(t7.t) + "°C" : "–"], ["norma", t7 ? fmt1.format(t7.norm) + "°C" : "–"],
+        ["dni 8–" + (t8 ? 7 + t8.n : 14), t8 ? degS(t8.anom) : "brak"],
+        ["najzimniej w prognozie", (() => { const cs = [t7, t8].filter(Boolean).map((a) => a.cold); if (!cs.length) return "–"; const x = cs.reduce((a, b) => (b.v < a.v ? b : a)); return `${fmt1.format(x.v)}°C (${dsh(x.d)})`; })()]],
+      chip: t7 ? tempBin(t7.anom) : null, chipT: (k) => (k > 0 ? "chłodniej niż zwykle" : k < 0 ? "cieplej niż zwykle" : "w normie (±0,5°C)") });
+    const nx = sm[0];
+    tiles.push({ label: "Prognoza sezonowa SEAS5", val: nx ? `${degS(nx.p50).replace("°C", "")}<small>°C · ${monL(nx.m)}</small>` : "–",
+      rows: [["zakres 80% wariantów", nx ? degS(nx.p10) + " … " + degS(nx.p90) : "–"],
+        ["zima (gru–lut), mediana", isNum(wAn) ? degS(wAn) : "–"], ["szansa cieplejszego " + (nx ? monL(nx.m) : "miesiąca"), nx ? fmt0.format(nx.warm) + "%" : "–"]],
+      chip: nx ? tempBin(nx.p50) : null, chipT: (k) => (k > 0 ? "chłodniej niż zwykle" : k < 0 ? "cieplej niż zwykle" : "blisko normy") });
+    $("x-kpis").innerHTML = tiles.map((t) => `<div class="panel kpi">
+      <div class="label">${t.label}</div><div class="value">${t.val}</div>
+      <dl class="deltas">${t.rows.map(([a, b]) => `<dt>${esc(a)}</dt><dd>${b}</dd>`).join("")}</dl>
+      ${t.chip !== null && t.chip !== undefined ? `<span class="chip"><i class="sw" style="background:${anomColor(t.chip)}"></i>${t.chipT(t.chip)}</span>` : ""}
+    </div>`).join("");
+  }
+
+  function renderWxCharts() {
+    const c = WXC[S.country] || {};
+    const w = c.wind, wcol = col("wind");
+    if (w && w.dates.length) {
+      const n = w.dates.length, sp = w.split;
+      const hasEns = w.p50.some(isNum), hasDet = w.det.some(isNum);
+      // połączenie linii prognozy z ostatnim dniem rzeczywistym
+      const det = w.det.slice(), p50 = w.p50.slice();
+      if (sp > 0 && sp < n) { if (isNum(det[sp])) det[sp - 1] = w.act[sp - 1]; if (isNum(p50[sp])) p50[sp - 1] = w.act[sp - 1]; }
+      const items = [{ line: 1, color: css("--ink-2"), label: "rzeczywista" }];
+      if (hasDet) items.push({ line: 1, color: wcol, label: "model 7-dniowy (przerywana)" });
+      if (hasEns) { items.push({ line: 1, color: css("--s-total"), label: "mediana ensemble (kropki)" }); items.push({ band: 1, label: "80% wariantów ensemble" }); }
+      items.push({ line: 1, color: css("--muted"), label: "norma " + DATA.meta.years5 });
+      legend($("x-wind-legend"), items);
+      lineChart($("x-wind"), {
+        n, unit: "GWh", split: sp < n ? sp : null, H: 250,
+        lines: [{ values: w.avg, color: css("--muted"), width: 1.5 }, { values: w.act, color: css("--ink-2"), width: 2.5 },
+          { values: p50, color: css("--s-total"), width: 2, dash: "1 4" }, { values: det, color: wcol, width: 2.5, dash: true }],
+        band: hasEns ? { lo: w.p10, hi: w.p90 } : null,
+        xlab: (j) => dayLab(w.dates[j]), tlab: (j) => dayLong(w.dates[j]) + (j >= sp ? " · prognoza" : ""),
+        rows: (j) => (j < sp ? [["rzeczywista", fmtU(w.act[j], "GWh"), css("--ink-2")]] : [])
+          .concat(j >= sp && isNum(w.det[j]) ? [["model 7-dniowy", fmtU(w.det[j], "GWh"), wcol]] : [])
+          .concat(j >= sp && isNum(w.p50[j]) ? [["mediana ensemble", fmtU(w.p50[j], "GWh"), css("--s-total")], ["80% wariantów", fmtU(w.p10[j], "GWh") + " – " + fmtU(w.p90[j], "GWh")]] : [])
+          .concat([["norma", fmtU(w.avg[j], "GWh"), css("--muted")]]),
+      });
+      const f = w.fit || {};
+      let note = "";
+      if (hasEns) note = `Pasmo i mediana: 51 wariantów ECMWF ensemble do ${fdate(w.dates[n - 1])}. Prędkość wiatru na 100 m przeliczona na produkcję zależnością dopasowaną do ${f.n} ostatnich dni (R² ${isNum(f.r2) ? String(f.r2).replace(".", ",") : "–"}, średni błąd ±${fmt0.format(f.mae_pct)}% przy znanej pogodzie; dopasowanie poprawia się z każdym dniem historii).`;
+      else if (f.why && f.why !== "brak historii") note = `Bez pasma ensemble: ${f.why} – przelicznik prędkości wiatru na produkcję jest jeszcze niewiarygodny dla tego kraju.`;
+      else note = "Brak prognoz ensemble dla tego kraju (wspólna baza pogodowa obejmuje kraje UE).";
+      if (hasDet) note += " Model 7-dniowy: prognoza z zakładki „Prognozy wiatru”.";
+      $("x-wind-note").textContent = note;
+    } else {
+      $("x-wind").innerHTML = '<p class="empty">Brak danych o wietrze dla tego kraju.</p>';
+      $("x-wind-legend").innerHTML = ""; $("x-wind-note").textContent = "";
+    }
+    const t = c.temp, tcol = tempCol();
+    if (t && t.dates.length) {
+      const n = t.dates.length, sp = t.split;
+      const det = t.det.slice();
+      if (sp > 0 && sp < n && isNum(det[sp])) det[sp - 1] = t.act[sp - 1];
+      const hasEns = t.p10.some(isNum);
+      legend($("x-temp-legend"), [{ line: 1, color: css("--ink-2"), label: "rzeczywista" }, { line: 1, color: tcol, label: "prognoza ECMWF (przerywana)" }]
+        .concat(hasEns ? [{ band: 1, label: "80% wariantów ensemble" }] : []).concat([{ line: 1, color: css("--muted"), label: "norma " + (t.norm_years || "") }]));
+      lineChart($("x-temp"), {
+        n, unit: "°C", split: sp < n ? sp : null, H: 250, zero: false,
+        lines: [{ values: t.norm, color: css("--muted"), width: 1.5 }, { values: t.act, color: css("--ink-2"), width: 2.5 }, { values: det, color: tcol, width: 2.5, dash: true }],
+        band: hasEns ? { lo: t.p10, hi: t.p90 } : null,
+        xlab: (j) => dayLab(t.dates[j]), tlab: (j) => dayLong(t.dates[j]) + (j >= sp ? " · prognoza" : ""),
+        rows: (j) => {
+          const v = j < sp ? t.act[j] : t.det[j];
+          const r = [[j < sp ? "rzeczywista" : "prognoza", isNum(v) ? fmt1.format(v) + "°C" : "–", j < sp ? css("--ink-2") : tcol]];
+          if (j >= sp && isNum(t.p10[j])) r.push(["80% wariantów", fmt1.format(t.p10[j]) + " … " + fmt1.format(t.p90[j]) + "°C"]);
+          r.push(["norma", isNum(t.norm[j]) ? fmt1.format(t.norm[j]) + "°C" : "–", css("--muted")]);
+          if (isNum(v) && isNum(t.norm[j])) r.push(["vs norma", degS(v - t.norm[j])]);
+          return r;
+        },
+      });
+      const lastEns = t.dates.filter((d, i) => isNum(t.p10[i])).pop();
+      $("x-temp-note").textContent = `Średnia z ${t.points} ${t.points === 1 ? "punktu" : "punktów"}` + (S.country === "EU" ? " sieci gazowej UE (więcej punktów w krajach o większym zużyciu gazu)" : "") +
+        `. Prognoza deterministyczna ECMWF IFS do ${fdate(t.dates[n - 1])}` + (lastEns ? `, pasmo 51 wariantów ensemble do ${fdate(lastEns)}` : "") +
+        `. Norma: średnia ${t.norm_years || "–"} (ERA5) wygładzona ±15 dni.`;
+    } else {
+      $("x-temp").innerHTML = '<p class="empty">Brak prognozy temperatury dla tego kraju (wspólna baza pogodowa obejmuje kraje UE).</p>';
+      $("x-temp-legend").innerHTML = ""; $("x-temp-note").textContent = "";
+    }
+    renderWxSeas(c.seas);
+  }
+
+  function renderWxSeas(s) {
+    const el = $("x-seas");
+    const M = (s || {}).months || [];
+    if (!M.length) {
+      el.innerHTML = '<p class="empty">Brak prognozy sezonowej dla tego kraju.</p>';
+      $("x-seas-legend").innerHTML = ""; $("x-seas-note").textContent = ""; return;
+    }
+    const tcol = tempCol(), ccol = css("--dv2");
+    legend($("x-seas-legend"), [{ color: css("--band"), label: "80% wariantów" }, { color: css("--ink"), label: "mediana (cieplej – czerwona, chłodniej – niebieska)" }]);
+    const H = el.clientWidth < 520 ? 200 : 220;
+    const { svg, tip, W } = frame(el, H);
+    const L = 46, R = W - 12, T = 24, B = H - 24;
+    const all = [0, ...M.map((x) => x.p10), ...M.map((x) => x.p90)].filter(isNum);
+    let lo = Math.min(...all), hi = Math.max(...all);
+    const pad = (hi - lo) * 0.1 || 1;
+    const ticks = niceTicks(lo - pad, hi + pad, 4);
+    const y0 = ticks[0], y1 = ticks[ticks.length - 1];
+    const y = (v) => B - ((v - y0) / (y1 - y0)) * (B - T);
+    yAxis(svg, ticks, y, L, R, "°C");
+    const bw = (R - L) / M.length, x = (i) => L + bw * (i + 0.5);
+    const barW = Math.min(28, bw * 0.5);
+    M.forEach((m, i) => {
+      if (isNum(m.p10) && isNum(m.p90)) mk("rect", { x: x(i) - barW / 2, y: y(m.p90), width: barW, height: Math.max(2, y(m.p10) - y(m.p90)), rx: 4, fill: css("--band"), stroke: css("--axis"), "stroke-width": 1 }, svg);
+      if (isNum(m.p50)) mk("circle", { cx: x(i), cy: y(m.p50), r: 6, fill: m.p50 > 0 ? tcol : ccol, stroke: css("--surface"), "stroke-width": 2 }, svg);
+      const tx = mk("text", { x: x(i), y: H - 6, "text-anchor": "middle" }, svg); tx.textContent = monL(m.m);
+    });
+    M.forEach((m, i) => {
+      const hit = mk("rect", { x: x(i) - bw / 2, y: T, width: bw, height: B - T, fill: "transparent" }, svg);
+      const show = (evt) => {
+        const r = svg.getBoundingClientRect();
+        const h = `<b>${monL(m.m)}</b><div class="r"><span>mediana</span><span>${degS(m.p50)}</span></div>` +
+          `<div class="r"><span>80% wariantów</span><span>${degS(m.p10)} … ${degS(m.p90)}</span></div>` +
+          `<div class="r"><span>norma miesiąca</span><span>${isNum(m.norm) ? fmt1.format(m.norm) + "°C" : "–"}</span></div>` +
+          `<div class="r"><span>prognoza ≈</span><span>${isNum(m.norm) && isNum(m.p50) ? fmt1.format(m.norm + m.p50) + "°C" : "–"}</span></div>` +
+          `<div class="r"><span>cieplej niż norma</span><span>${fmt0.format(m.warm)}% wariantów</span></div>`;
+        placeTip(tip, el, (x(i) / W) * r.width, 10, h);
+      };
+      hit.addEventListener("pointermove", show); hit.addEventListener("pointerdown", show);
+      hit.addEventListener("pointerleave", () => { tip.hidden = true; });
+    });
+    $("x-seas-note").textContent = `Kropka: mediana z ${M[0].n} wariantów ECMWF SEAS5; słupek: zakres, w którym mieści się 80% wariantów. Norma miesięczna ${s.norm_years} z tych samych punktów (ERA5)` +
+      (S.country === "EU" ? ", punkty ważone liczbą punktów sieci gazowej kraju" : "") +
+      `. Surowy model bez korekty błędu systematycznego – traktuj go jako kierunek, nie dokładną wartość. Dane SEAS5 odświeżane co tydzień (ostatnio ${WX.issued && WX.issued.seasonal ? fdate(WX.issued.seasonal) : "–"}).`;
+  }
+
+  function renderWxTable() {
+    const rows = Object.entries(WXC).filter(([, c]) => c.temp || c.seas || [wxWindAgg(c.wind, 0, 7), wxWindAgg(c.wind, 7, 16)].some((a) => a && isNum(a.pct)));
+    const months = [];
+    rows.forEach(([, c]) => ((c.seas || {}).months || []).forEach((m) => { if (!months.includes(m.m)) months.push(m.m); }));
+    months.sort();
+    rows.sort((a, b) => (a[0] === "EU" ? -1 : b[0] === "EU" ? 1 : cname(a[0]).localeCompare(cname(b[0]), "pl")));
+    const cell = (v, k, txt) => {
+      const bg = k === null ? "transparent" : anomColor(k);
+      return `<td class="h" style="background:${bg};color:${k === null ? css("--ink") : inkFor(bg)}">${txt}</td>`;
+    };
+    let h = `<thead><tr><th></th><th class="grp" colspan="2">Wiatr, % normy</th><th class="grp" colspan="2">Temperatura, °C vs norma</th>` +
+      (months.length ? `<th class="grp" colspan="${months.length}">SEAS5, mediana °C vs norma</th>` : "") + `</tr>` +
+      `<tr><th>Kraj</th><th style="text-align:center">dni 1–7</th><th style="text-align:center">dni 8–12</th><th style="text-align:center">dni 1–7</th><th style="text-align:center">dni 8–14</th>` +
+      months.map((m) => `<th style="text-align:center">${monL(m)}</th>`).join("") + "</tr></thead><tbody>";
+    rows.forEach(([code, c]) => {
+      const w7 = wxWindAgg(c.wind, 0, 7), w8 = wxWindAgg(c.wind, 7, 16);
+      const t7 = wxTempAgg(c.temp, 0, 7), t8 = wxTempAgg(c.temp, 7, 14);
+      const sm = Object.fromEntries(((c.seas || {}).months || []).map((m) => [m.m, m]));
+      h += `<tr data-c="${code}" tabindex="0" class="${code === S.country ? "sel" : ""}"><td>${esc(cname(code))}</td>`;
+      [w7, w8].forEach((a) => { h += a && isNum(a.pct) ? cell(a.pct, anomBin(a.pct), sgn(a.pct) + "%") : cell(null, null, "–"); });
+      [t7, t8].forEach((a) => { h += a ? cell(a.anom, tempBin(a.anom), degS(a.anom).replace("°C", "")) : cell(null, null, "–"); });
+      months.forEach((m) => { const x = sm[m]; h += x && isNum(x.p50) ? cell(x.p50, tempBin(x.p50), degS(x.p50).replace("°C", "")) : cell(null, null, "–"); });
+      h += "</tr>";
+    });
+    const tb = $("x-table"); tb.innerHTML = h + "</tbody>";
+    tb.querySelectorAll("tbody tr").forEach((tr) => {
+      tr.addEventListener("click", () => setCountry(tr.dataset.c));
+      tr.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCountry(tr.dataset.c); } });
+    });
+  }
+
+  function renderWx() {
+    if (!WX.countries || !Object.keys(WXC).length) {
+      $("tab-wx").innerHTML = '<div class="panel"><p class="muted">Prognozy pogody pojawią się po następnym przebiegu automatu (wymagają wspólnej bazy pogodowej w data/shared_weather).</p></div>';
+      return;
+    }
+    const I = WX.issued || {};
+    $("x-issued").textContent = `${cname(S.country)} · prognoza ECMWF IFS z ${I.forecast ? fdate(I.forecast) : "–"}, ensemble z ${I.ensemble ? fdate(I.ensemble) : "–"}, SEAS5 z ${I.seasonal ? fdate(I.seasonal) : "–"}`;
+    renderWxKPIs(); renderWxCharts(); renderWxTable();
+  }
+
   // ---------- zakładka: weryfikacja prognoz ----------
   const VER = DATA.verify || {};
   const VBT = VER.backtest || {}, VOP = VER.operational || {};
@@ -1721,18 +1991,21 @@ const DATA = /*__DATA__*/null;
   document.querySelectorAll("#v-kind button").forEach((b) => b.addEventListener("click", () => { VS.k = b.dataset.k; store.set("vkind", VS.k); renderVer(); }));
 
   // ---------- zakładki ----------
-  let TAB = ["mix", "wind", "ver"].includes(store.get("tab", "mix")) ? store.get("tab", "mix") : "mix";
+  let TAB = ["mix", "wind", "wx", "ver"].includes(store.get("tab", "mix")) ? store.get("tab", "mix") : "mix";
   if (hash === "WIATR") TAB = "wind";
   if (hash === "WERYFIKACJA") TAB = "ver";
+  if (hash === "POGODA") TAB = "wx";
   function setTab(t) {
     TAB = t; store.set("tab", t);
     document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === t)));
     $("tab-mix").hidden = t !== "mix";
     $("tab-wind").hidden = t !== "wind";
+    $("tab-wx").hidden = t !== "wx";
     $("tab-ver").hidden = t !== "ver";
     $("period").hidden = t !== "mix";
     $("period-label").hidden = t !== "mix";
     if (t === "wind") renderWind();
+    if (t === "wx") renderWx();
     if (t === "ver") renderVer();
   }
   document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => setTab(b.dataset.tab)));
@@ -1982,10 +2255,10 @@ const DATA = /*__DATA__*/null;
   renderCountry(); renderTable(); renderMap(); renderMovers(); renderControl();
   setTab(TAB);
   let rt;
-  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (DATA.summary[S.country]) { renderTrend(); renderPrices(); renderForecast(); renderDaily(); renderMonthly(); } if (TAB === "wind") renderWindCharts(); if (TAB === "ver") renderVerCharts(); renderEurostat(); renderStorage(); }, 150); });
+  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (DATA.summary[S.country]) { renderTrend(); renderPrices(); renderForecast(); renderDaily(); renderMonthly(); } if (TAB === "wind") renderWindCharts(); if (TAB === "wx") renderWxCharts(); if (TAB === "ver") renderVerCharts(); renderEurostat(); renderStorage(); }, 150); });
   try {
-    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { renderCountry(); renderTable(); renderMap(); renderMovers(); if (TAB === "wind") renderWind(); if (TAB === "ver") renderVer(); });
-    new MutationObserver(() => { renderCountry(); renderTable(); renderMap(); renderMovers(); if (TAB === "wind") renderWind(); if (TAB === "ver") renderVer(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { renderCountry(); renderTable(); renderMap(); renderMovers(); if (TAB === "wind") renderWind(); if (TAB === "wx") renderWx(); if (TAB === "ver") renderVer(); });
+    new MutationObserver(() => { renderCountry(); renderTable(); renderMap(); renderMovers(); if (TAB === "wind") renderWind(); if (TAB === "wx") renderWx(); if (TAB === "ver") renderVer(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   } catch (e) { /* starsze przeglądarki */ }
 })();
 </script>
