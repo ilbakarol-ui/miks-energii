@@ -1,7 +1,7 @@
 {
  "source": "Open-Meteo (CC BY 4.0): ERA5, ECMWF IFS (prognozy bieżące, dawne, ensemble), ECMWF SEAS5",
  "errors": [
-  "prev: 1 paczek punktów bez danych po 3 próbach, np. EU_PL_2,EU_PL_3,EU_PL_4,EU_AT_1,EU_AT_2 2026-10-24..2026-10-28: RuntimeError"
+  "prev: 1 paczek punktów bez danych po 3 próbach, np. EU_HU_1,EU_CZ_1,EU_CZ_2,EU_SK_1,EU_SK_2 2026-10-25..2026-10-29: RuntimeError"
  ],
  "pending": {
   "prev": 5
@@ -9,7 +9,7 @@
  "steps": {
   "recent": {
    "status": "OK",
-   "seconds": 6,
+   "seconds": 3,
    "requests": 7,
    "weighted": 135.0,
    "http429": 0,
@@ -17,7 +17,7 @@
   },
   "hist": {
    "status": "OK",
-   "seconds": 5,
+   "seconds": 4,
    "requests": 7,
    "weighted": 63.0,
    "http429": 0,
@@ -25,35 +25,35 @@
   },
   "prev": {
    "status": "OK",
-   "seconds": 191,
-   "requests": 15,
+   "seconds": 352,
+   "requests": 18,
    "weighted": 63.0,
    "http429": 0,
    "last_error": "previous-runs-api.open-meteo.com: ReadTimeout"
   }
  },
- "forecast_issued": "2026-10-29",
- "updated": "2026-10-29T01:14Z",
+ "forecast_issued": "2026-10-30",
+ "updated": "2026-10-30T01:19Z",
  "coverage": {
   "hist": {
    "points": 63,
    "points_to_end": 63,
    "from": "2019-01-01",
-   "to": "2026-10-23",
-   "rows": 179739
+   "to": "2026-10-24",
+   "rows": 179802
   },
   "prev": {
    "points": 63,
    "points_to_end": 58,
    "from": "2024-01-01",
-   "to": "2026-10-28",
-   "rows": 65011
+   "to": "2026-10-29",
+   "rows": 65074
   },
   "recent": {
    "points": 63,
    "points_to_end": 47,
-   "from": "2026-10-15",
-   "to": "2026-11-12",
+   "from": "2026-10-16",
+   "to": "2026-11-13",
    "rows": 1811
   }
  },
