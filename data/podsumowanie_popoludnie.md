@@ -1,6 +1,6 @@
 ## Ceny day-ahead – przebieg popołudniowy
 
-Ceny na 2026-10-31: 12 z 15 stref
+Ceny na 2026-10-31: 15 z 15 stref (w tym przebiegu uzupełniono: HU, IT-North, NL)
 
 | strefa | dzień | śr. €/MWh | min | maks |
 |---|---|---|---|---|
@@ -12,15 +12,13 @@ Ceny na 2026-10-31: 12 z 15 stref
 | DK1 | 2026-10-31 | 251,1 | 216,1 | 304,6 |
 | DK2 | 2026-10-31 | 251,2 | 216,9 | 304,8 |
 | FR | 2026-10-31 | 238,0 | 113,9 | 303,1 |
-| HU | 2026-10-30 (brak jutra) | 306,1 | 224,2 | 408,2 |
-| IT-North | 2026-10-30 (brak jutra) | 277,9 | 230,3 | 351,8 |
-| NL | 2026-10-30 (brak jutra) | 265,7 | 211,5 | 340,3 |
+| HU | 2026-10-31 | 289,7 | 232,3 | 431,8 |
+| IT-North | 2026-10-31 | 258,4 | 224,4 | 315,6 |
+| NL | 2026-10-31 | 249,7 | 211,1 | 302,1 |
 | NO2 | 2026-10-31 | 187,4 | 182,9 | 190,0 |
 | PL | 2026-10-31 | 210,4 | 130,5 | 305,3 |
 | SE4 | 2026-10-31 | 247,7 | 210,2 | 301,9 |
 | SI | 2026-10-31 | 262,7 | 231,2 | 326,9 |
 
-Dane produkcji do 2026-10-29; zapytania do Energy-Charts: 18; czas: 18 min
-- ceny: ponowienie bez zmian dla HU, IT-North, NL – koniec ponowień
-- BRAK cen day-ahead na jutro: HU, IT-North, NL (3 z 15 stref; mapa pokaże dla nich ostatni dzień z ceną)
-- szczegóły braków: HU: 0 h na 31.10 (krok 15 min); IT-North: 0 h na 31.10 (krok 15 min); NL: 0 h na 31.10 (krok 15 min)
+Dane produkcji do 2026-10-29; zapytania do Energy-Charts: 3; czas: 1 min
+- ceny: uzupełnienie stref bez ceny na jutro: HU, IT-North, NL
