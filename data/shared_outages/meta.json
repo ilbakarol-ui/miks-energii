@@ -1,33 +1,41 @@
 {
  "zones": {
   "FR": {
-   "note": "limit czasu"
+   "note": null,
+   "current_ok": true,
+   "history_ok": true,
+   "last_ok": "2026-10-30T02:03:00+00:00"
   },
   "BE": {
-   "note": "limit czasu"
+   "note": null,
+   "current_ok": true,
+   "history_ok": true,
+   "last_ok": "2026-10-30T02:03:00+00:00"
   },
   "ES": {
-   "note": "limit czasu"
+   "note": null,
+   "current_ok": true,
+   "history_ok": true,
+   "last_ok": "2026-10-30T02:03:00+00:00"
   },
   "NL": {
-   "note": "limit czasu"
-  },
-  "DE": {
-   "note": "limit czasu"
+   "note": null,
+   "current_ok": true,
+   "history_ok": true,
+   "last_ok": "2026-10-30T02:03:00+00:00"
   }
  },
- "updated_at": "2026-10-29T17:14:00+00:00",
- "requests": 55,
+ "updated_at": "2026-10-30T02:03:00+00:00",
+ "requests": 109,
  "window": [
-  "2025-09-24",
-  "2027-04-27"
+  "2025-09-25",
+  "2027-09-24"
  ],
- "events": 4252,
+ "events": 15135,
  "zones_conf": {
   "FR": "10YFR-RTE------C",
   "BE": "10YBE----------2",
   "ES": "10YES-REE------0",
-  "NL": "10YNL----------L",
-  "DE": "10Y1001A1001A82H"
+  "NL": "10YNL----------L"
  }
 }
