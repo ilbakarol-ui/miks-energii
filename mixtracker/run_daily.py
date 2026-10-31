@@ -157,6 +157,10 @@ def main(argv=None):
                                             "log": run.get("log", [])[:30],
                                             "kind": "popołudniowy" if args.afternoon else "poranny"})
     out = build.render(payload)
+    from . import model as _model   # B-20261031-1: model zużycia bez świąt (brak biblioteki holidays albo błąd kraju)
+    if _model.HOLIDAY_ERRORS:
+        run.setdefault("log", []).insert(0, "BŁĄD: model zużycia bez świąt – " +
+                                         "; ".join(f"{k}: {v}" for k, v in sorted(_model.HOLIDAY_ERRORS.items())))
     md = summary_md(payload, run)
     # przebieg popołudniowy (tylko ceny) nie nadpisuje diagnostyki nocnego
     name = "podsumowanie_popoludnie.md" if args.afternoon else "podsumowanie.md"

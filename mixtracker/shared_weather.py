@@ -95,11 +95,16 @@ class DailyLimit(RuntimeError):
     pass
 
 
+# B-20261031-3: w 12 z 12 przebiegów 23–31.10 krok ensemble miał 1 × HTTP 429 (61 s) i 1 × ReadTimeout (90 s)
+ENSEMBLE_PAUSE_S = 4.0
+LAST_ENS = [0.0]
+
+
 def _timeout(url: str, params: dict) -> float:
     """B-20261028-3: dawne prognozy w dużych paczkach (do 60 dni) potrzebują 150 s; dzienny przyrost (< 10 dni)
     serwer zwraca w kilka sekund – zawieszone zapytanie lepiej szybko ponowić niż czekać 150 s."""
     if "previous-runs" not in url:
-        return 90
+        return 45 if "ensemble-api" in url else 90      # B-20261031-3: odpowiedź ensemble zwykle < 10 s
     try:
         days = (dt.date.fromisoformat(params["end_date"]) - dt.date.fromisoformat(params["start_date"])).days + 1
     except (KeyError, TypeError, ValueError):
@@ -112,6 +117,8 @@ def http_get(url: str, params: dict, tries: int = 3) -> list[dict]:
     for k in range(tries):
         if time.time() > DEADLINE[0]:
             raise Deadline("limit czasu przebiegu")
+        if "ensemble-api" in url and LAST_ENS[0]:   # B-20261031-3: odstęp między ciężkimi zapytaniami (limit minutowy)
+            time.sleep(max(0.0, ENSEMBLE_PAUSE_S - (time.time() - LAST_ENS[0])))
         t0 = time.time()
         STATS["requests"] += 1
         try:
@@ -142,6 +149,8 @@ def http_get(url: str, params: dict, tries: int = 3) -> list[dict]:
             STATS["failed"] += 1; STATS["last_error"] = f"{url.split('/')[2]}: {last} ({len(r.content)} B)"
             time.sleep(10 * (k + 1))
             continue
+        if "ensemble-api" in url:
+            LAST_ENS[0] = time.time()
         return js if isinstance(js, list) else [js]
     raise RuntimeError(last or "błąd Open-Meteo")
 

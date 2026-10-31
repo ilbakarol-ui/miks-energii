@@ -30,6 +30,9 @@ class Budget:
         return time.monotonic() + self.per_request < self.end
 
 
+
+REPAIR_MAX_TRIES = 3   # B-20261031-2: po 3 próbach naprawy, gdy zakres nadal jest luką – trwała luka źródła (wznowienie: usuń z repair_gave_up)
+
 def _today(tz: str) -> dt.date:
     return dt.datetime.now(ZoneInfo(tz)).date()
 
@@ -274,7 +277,8 @@ def update_all(settings: dict, budget_minutes: float | None = None, only: list[s
         pending = nxt
 
     # 3) naprawa luk w historii: dni bez danych lub z niepełnym pokryciem (np. po
-    #    zmianie rozdzielczości w źródle) - każdy zakres próbowany najwyżej raz na 7 dni
+    #    zmianie rozdzielczości w źródle) - każdy zakres próbowany najwyżej raz na 7 dni,
+    #    a po REPAIR_MAX_TRIES próbach, gdy nadal jest luką, uznany za trwałą lukę źródła (B-20261031-2)
     today = dt.date.today()
     repaired = 0
     for c in countries:
@@ -285,10 +289,18 @@ def update_all(settings: dict, budget_minutes: float | None = None, only: list[s
         zones = zones_by_country.get(code, [])
         tried = {k: v for k, v in st.get("repair", {}).items()
                  if (today - dt.date.fromisoformat(v)).days < 30}
+        tries = dict(st.get("repair_tries", {}))
+        gave_up = set(st.get("repair_gave_up", []))
         until = _today(c["tz"]) - dt.timedelta(days=settings["refetch_days"] + 1)
         for a, b in bad_ranges(data[code], zones, st, target, until, settings):
             key = f"{a}_{b}"
+            if key in gave_up:
+                continue
             if key in tried and (today - dt.date.fromisoformat(tried[key])).days < 7:
+                continue
+            if tries.get(key, 0) >= REPAIR_MAX_TRIES:   # po 3 próbach zakres nadal jest luką (wraca do bad_ranges)
+                gave_up.add(key)
+                log.append(f"{code}: luka {a}..{b} nadal niepełna po {tries[key]} próbach naprawy – uznana za trwałą lukę źródła")
                 continue
             if not budget.can_request():
                 break
@@ -296,9 +308,14 @@ def update_all(settings: dict, budget_minutes: float | None = None, only: list[s
             if ok:
                 tried[key] = today.isoformat()
                 repaired += 1
+                tries[key] = tries.get(key, 0) + 1
             if not new.empty:
                 save(c, new, names, zd)
         st["repair"] = tried
+        if tries:
+            st["repair_tries"] = tries
+        if gave_up:
+            st["repair_gave_up"] = sorted(gave_up)
         store.write_state(state)
 
     done = {}

@@ -39,6 +39,8 @@ NEED = {"wind": ["cf"], "solar": ["ghi"], "load": ["hdd", "cdd"]}
 
 # kody krajów trackera -> (kraj, region) w bibliotece holidays
 HOLIDAY_CODES = {"UK": ("GB", "NIR"), "GB": ("GB", "ENG")}
+# B-20261031-1: kraje bez kalendarza świąt w tym przebiegu ("*" = brak biblioteki) – trafia do podsumowania
+HOLIDAY_ERRORS: dict[str, str] = {}
 
 
 # ---------- kalendarz ----------
@@ -47,12 +49,14 @@ HOLIDAY_CODES = {"UK": ("GB", "NIR"), "GB": ("GB", "ENG")}
 def _holiday_set(code: str, y0: int, y1: int) -> frozenset:
     try:
         import holidays
-    except ImportError:          # bez biblioteki model działa jak wcześniej (bez świąt)
+    except ImportError:          # bez biblioteki model działa jak wcześniej (bez świąt) – ale widać to w podsumowaniu
+        HOLIDAY_ERRORS["*"] = "brak biblioteki holidays"
         return frozenset()
     c, sub = HOLIDAY_CODES.get(code, (code, None))
     try:
         h = holidays.country_holidays(c, subdiv=sub, years=range(y0, y1 + 1))
-    except Exception:
+    except Exception as e:
+        HOLIDAY_ERRORS[code] = f"{type(e).__name__}: {e}"[:120]
         return frozenset()
     return frozenset(pd.Timestamp(d) for d in h.keys())
 
