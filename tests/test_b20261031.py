@@ -32,7 +32,8 @@ def test_every_country_has_holidays():
     for c in store.load_countries():
         if c["code"] == "EU":
             continue
-        assert len(model._holiday_set(c["code"], 2026, 2026)) >= 5, c["code"]
+        # Szwajcaria ma w bibliotece holidays tylko 4 święta ogólnokrajowe (reszta kantonalna)
+        assert len(model._holiday_set(c["code"], 2026, 2026)) >= (4 if c["code"] == "CH" else 5), c["code"]
 
 
 def test_repair_gives_up_after_three_tries(tmp_store, monkeypatch):
