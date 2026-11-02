@@ -1,27 +1,27 @@
-## Miks energii UE - dane do 2026-10-31
+## Miks energii UE - dane do 2026-11-01
 
-**tydz. 43/2026 (19.10–25.10)** (UE-27)
+**tydz. 44/2026 (26.10–01.11)** (UE-27)
 
 | | bieżący | poprz. tydz. | rok temu | śr. 5 lat |
 |---|---|---|---|---|
-| Zużycie, GWh | 47 694 | 45 964 | 47 214 | 46 457 |
-| Produkcja, GWh | 48 704 | 45 968 | 49 052 | 47 275 |
-| Udział OZE | 49,9% | 43,7% | 50,8% | 41,3% |
-| Emisyjność, g/kWh | 178 | 213 | 150 | 217 |
+| Zużycie, GWh | 47 717 | 47 690 | 46 850 | 46 190 |
+| Produkcja, GWh | 47 556 | 48 691 | 47 715 | 47 336 |
+| Udział OZE | 39,3% | 49,9% | 47,6% | 42,8% |
+| Emisyjność, g/kWh | 229 | 178 | 158 | 203 |
 
 **Największe zmiany**
 
-- Słowenia: Jądrowa 49,8% (+49,8 p.p. r/r, tydz. 43)
-- Austria: emisyjność 115 g/kWh (+99,3% r/r, tydz. 43)
-- Łotwa: emisyjność 41 g/kWh (-72,7% r/r, tydz. 43)
-- Słowenia: emisyjność 107 g/kWh (-71,4% r/r, paź 2026)
-- Litwa: emisyjność 43 g/kWh (-62,2% r/r, tydz. 43)
-- Łotwa: Gaz 10,4% (-30,6 p.p. r/r, paź 2026)
-- Czechy: emisyjność 496 g/kWh (+52,3% r/r, tydz. 43)
-- Bułgaria: Jądrowa 19,2% (-23,9 p.p. r/r, tydz. 43)
+- Belgia: emisyjność 207 g/kWh (+161,2% r/r, tydz. 44)
+- Austria: emisyjność 132 g/kWh (+108,3% r/r, tydz. 44)
+- Niemcy: emisyjność 398 g/kWh (+100,4% r/r, tydz. 44)
+- Słowenia: Jądrowa 51,1% (+47,4 p.p. r/r, paź 2026)
+- Słowacja: emisyjność 91 g/kWh (+84,6% r/r, tydz. 44)
+- Wielka Brytania: emisyjność 158 g/kWh (+72,3% r/r, tydz. 44)
+- Łotwa: emisyjność 55 g/kWh (-66,4% r/r, paź 2026)
+- Słowenia: emisyjność 132 g/kWh (-56,1% r/r, tydz. 44)
 
-Zapytania do Energy-Charts: 48 (public_power: 31, price: 17); czas: 27 min
+Zapytania do Energy-Charts: 46 (public_power: 30, price: 16); czas: 22 min
 Prognozy pobrane dla: AT, BE, BG, CH, CY, CZ, DE, DK, EE, ES, EU, FI, FR, GB, GR, HR, HU, IE, IT, LT, LU, LV, NL, NO, PL, PT, RO, SE, SI, SK, UK
 - UK: ENTSO-E od 2025-10-24 – zużycie 0 dób, produkcja 0 dób
-- NL: ENTSO-E od 2026-09-01 – zużycie 61 dób, produkcja 61 dób; wobec Energy-Charts (14 dób): load -0%, solar +0%, misc -0%
-- Niedostępność elektrowni (ENTSO-E, dla Gaz UE): bieżące FR,BE,ES,NL; historia FR,BE,ES,NL; 8 zapytań; atom dziś niedostępny: FR 19.7 GW, BE 1.5 GW, ES 1.0 GW, NL 0.0 GW
+- NL: ENTSO-E od 2026-09-01 – zużycie 62 dób, produkcja 62 dób; wobec Energy-Charts (14 dób): load -0%, solar +0%, misc -0%
+- Niedostępność elektrowni (ENTSO-E, dla Gaz UE): bieżące FR,BE,ES,NL; historia FR,BE,ES,NL; 12 zapytań; atom dziś niedostępny: FR 20.2 GW, BE 1.0 GW, ES 1.0 GW, NL 0.0 GW
