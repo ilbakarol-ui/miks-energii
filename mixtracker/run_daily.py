@@ -84,9 +84,25 @@ def summary_md(payload: dict, run: dict) -> str:
     missing = [k for k, v in hc.items() if not v]
     if missing:
         lines.append(f"Historia 5 lat jeszcze niekompletna dla: {', '.join(missing)} (uzupełni się w kolejnych przebiegach)")
+    lines += _partial_lines(payload)
     for msg in (run.get("log") or [])[:15]:
         lines.append(f"- {msg}")
     return "\n".join(lines) + "\n"
+
+
+def _partial_lines(payload: dict, min_days: int = 7) -> list[str]:
+    """B-20261103-3: kraje, w których co najmniej połowa z 14 ostatnich dób ma niepełne godziny ze źródła."""
+    ctl = payload.get("control") or {}
+    bad = sorted(((k, v.get("partial14") or 0, v.get("below14") or 0) for k, v in ctl.items()
+                  if (v.get("partial14") or 0) >= min_days), key=lambda x: -x[1])
+    if not bad:
+        return []
+    return ["Niepełne doby w 14 dniach (brakujące godziny uzupełnione proporcjonalnie; poniżej 80% – luka): "
+            + ", ".join(f"{k} {n}" + (f" (w tym {b} {_luk(b)})" if b else "") for k, n, b in bad)]
+
+
+def _luk(n: int) -> str:
+    return "luka" if n == 1 else ("luki" if n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14) else "luk")
 
 
 def main(argv=None):
@@ -98,6 +114,8 @@ def main(argv=None):
     ap.add_argument("--skip-weather", action="store_true")
     ap.add_argument("--afternoon", action="store_true",
                     help="przebieg popołudniowy: tylko ceny day-ahead na jutro (bez produkcji, pogody, prognoz i Eurostatu)")
+    ap.add_argument("--no-retry", action="store_true",
+                    help="z --afternoon: bez ponowień brakujących stref (przebieg 12:37 UTC; braki uzupełnia przebieg 14:07, B-20261103-2)")
     ap.add_argument("--only-missing", action="store_true",
                     help="z --afternoon: tylko strefy bez ceny na jutro (drugi przebieg popołudniowy, B-20261027-1)")
     args = ap.parse_args(argv)
@@ -108,7 +126,8 @@ def main(argv=None):
     run = {"requests": 0, "log": []}
     only = [x.strip().upper() for x in args.only.split(",") if x.strip()] or None
     if args.afternoon:
-        run = update.update_prices_ahead(settings, args.budget, only_missing=args.only_missing)
+        kw = {"retries": 0} if args.no_retry else {}
+        run = update.update_prices_ahead(settings, args.budget, only_missing=args.only_missing, **kw)
     elif not args.skip_fetch:
         run = update.update_all(settings, args.budget, only)
     # B-20261027-1: przy komplecie cen drugi przebieg nie nadpisuje podsumowania z 12:37 (strona i tak jest budowana – Pages)

@@ -78,10 +78,12 @@ jobs:
           ONLY: ${{ github.event.inputs.only || '' }}
           AFTERNOON: ${{ github.event.schedule == '37 12 * * *' || github.event.schedule == '7 14 * * *' || github.event.inputs.afternoon == 'true' }}
           ONLY_MISSING: ${{ github.event.schedule == '7 14 * * *' }}
+          FIRST_AFTERNOON: ${{ github.event.schedule == '37 12 * * *' }}   # B-20261103-2: bez ponowień – braki uzupełnia przebieg 14:07
           ENTSOE_TOKEN: ${{ secrets.ENTSOE_TOKEN }}   # U-20261027: zużycie UK/NI i dane NL z ENTSO-E (bez sekretu – pominięte)
         run: |
           if [ "$AFTERNOON" = "true" ]; then
             extra=""; [ "$ONLY_MISSING" = "true" ] && extra="--only-missing"
+            [ "$FIRST_AFTERNOON" = "true" ] && extra="--no-retry"
             python -m mixtracker.run_daily --budget 40 --afternoon $extra   # B-20261025-1: zapas na 2 ponowienia brakujących cen co 10 min
           else
             python -m mixtracker.run_daily --budget "$BUDGET" --only "$ONLY"

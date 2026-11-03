@@ -217,6 +217,10 @@ def to_daily(mw: pd.DataFrame, tz: str, min_cov: float = 0.8) -> pd.DataFrame:
         scaled = np.where(cov >= min_cov, e / cov.replace(0, np.nan), e)
         res = pd.Series(scaled, index=e.index)
         res[h == 0] = np.nan
+        if c == "load":
+            # B-20261103-1: zużycie z doby z pokryciem < min_cov to tylko część doby (np. IE 23.10.2026: 77,9 GWh
+            # = 0,77 normy) – luka, nie fakt; wcześniej trafiało do modelu i weryfikacji prognoz
+            res[(cov < min_cov).to_numpy()] = np.nan
         out[c] = res
     daily = pd.DataFrame(out)
     if gen_cols:

@@ -260,6 +260,9 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
             "last": good.max().strftime("%Y-%m-%d") if len(good) else None,
             "first": good.min().strftime("%Y-%m-%d") if len(good) else None,
             "days30": int((last30 >= min_cov).sum()),
+            # B-20261103-3: ile z 14 ostatnich dób ma niepełne godziny (część uzupełniona proporcjonalnie) i ile to luki
+            "partial14": int((df["cov"].loc[:pd.Timestamp(ref)].tail(14) < 0.999).sum()),
+            "below14": int((df["cov"].loc[:pd.Timestamp(ref)].tail(14) < min_cov).sum()),
             "load": _load_status(df, est, ref),
             "unknown": st.get("unknown", []),
             "error": st.get("last_error"),

@@ -94,7 +94,8 @@ def main(out: Path):
         brief["wiatr_prognoza_wydana"] = wt.get("issued")
     gb = payload.get("control", {}).get("GB", {})
     brief["kontrola"] = {k: v for k, v in payload.get("control", {}).items() if v.get("error") or v.get("break") or v.get("partial_last")
-                         or str(v.get("load", "")).startswith("BRAK")}
+                         or str(v.get("load", "")).startswith("BRAK")
+                         or (v.get("partial14") or 0) >= 7}   # B-20261103-3: stale niepełne doby (np. IE, UK)
     brief["GB_ostatni_dzien"] = gb.get("last")
     sw = {}
     for name in ("meta.json", "meta_extra.json"):
