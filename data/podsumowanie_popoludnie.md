@@ -1,26 +1,25 @@
 ## Ceny day-ahead – przebieg popołudniowy
 
-Ceny na 2026-11-04: 14 z 15 stref (w tym przebiegu uzupełniono: CH, IT-North)
+Ceny na 2026-11-05: 14 z 15 stref
 
 | strefa | dzień | śr. €/MWh | min | maks |
 |---|---|---|---|---|
-| AT | 2026-11-04 | 298,1 | 236,5 | 360,6 |
-| BE | 2026-11-04 | 240,3 | 177,8 | 314,0 |
-| CH | 2026-11-03 (brak jutra) | 290,5 | 236,8 | 330,0 |
-| CZ | 2026-11-04 | 282,1 | 215,8 | 349,1 |
-| DE-LU | 2026-11-04 | 249,0 | 199,0 | 321,4 |
-| DK1 | 2026-11-04 | 251,2 | 195,2 | 325,4 |
-| DK2 | 2026-11-04 | 283,9 | 203,7 | 388,1 |
-| FR | 2026-11-04 | 247,7 | 194,0 | 316,1 |
-| HU | 2026-11-04 | 302,3 | 241,7 | 372,0 |
-| IT-North | 2026-11-04 | 284,2 | 232,4 | 343,0 |
-| NL | 2026-11-04 | 236,5 | 160,8 | 313,4 |
-| NO2 | 2026-11-04 | 209,8 | 186,8 | 223,6 |
-| PL | 2026-11-04 | 309,9 | 214,3 | 478,1 |
-| SE4 | 2026-11-04 | 287,1 | 206,3 | 383,5 |
-| SI | 2026-11-04 | 293,9 | 236,5 | 350,4 |
+| AT | 2026-11-05 | 307,7 | 222,3 | 380,1 |
+| BE | 2026-11-05 | 257,7 | 191,4 | 353,0 |
+| CH | 2026-11-05 | 279,4 | 192,5 | 348,8 |
+| CZ | 2026-11-05 | 275,4 | 206,3 | 378,5 |
+| DE-LU | 2026-11-05 | 257,4 | 192,1 | 352,5 |
+| DK1 | 2026-11-05 | 258,1 | 192,1 | 352,7 |
+| DK2 | 2026-11-05 | 269,1 | 195,7 | 387,9 |
+| FR | 2026-11-05 | 261,4 | 197,4 | 353,4 |
+| HU | 2026-11-05 | 307,1 | 217,3 | 393,6 |
+| IT-North | 2026-11-04 (brak jutra) | 284,2 | 232,4 | 343,0 |
+| NL | 2026-11-05 | 255,1 | 180,0 | 352,8 |
+| NO2 | 2026-11-05 | 212,5 | 185,9 | 255,6 |
+| PL | 2026-11-05 | 239,0 | 89,5 | 486,9 |
+| SE4 | 2026-11-05 | 242,9 | 171,0 | 361,5 |
+| SI | 2026-11-05 | 302,3 | 225,0 | 375,6 |
 
-Dane produkcji do 2026-11-02; zapytania do Energy-Charts: 2; czas: 1 min
-- ceny: uzupełnienie stref bez ceny na jutro: CH, IT-North
-- BRAK cen day-ahead na jutro: CH (1 z 2 stref; mapa pokaże dla nich ostatni dzień z ceną)
-- szczegóły braków: CH: 0 h na 04.11 (krok 60 min)
+Dane produkcji do 2026-11-03; zapytania do Energy-Charts: 15; czas: 7 min
+- BRAK cen day-ahead na jutro: IT-North (1 z 15 stref; mapa pokaże dla nich ostatni dzień z ceną)
+- szczegóły braków: IT-North: 0 h na 05.11 (krok 15 min)
