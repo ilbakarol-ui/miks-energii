@@ -1,28 +1,32 @@
 {
  "source": "Open-Meteo (CC BY 4.0): ERA5, ECMWF IFS (prognozy bieżące, dawne, ensemble), ECMWF SEAS5",
- "errors": [],
- "pending": {},
+ "errors": [
+  "ensemble: limit czasu przebiegu (12 min) – zebrane dane zapisane, reszta jutro"
+ ],
+ "pending": {
+  "ensemble": 0
+ },
  "steps": {
   "recent": {
    "status": "OK",
-   "seconds": 2,
+   "seconds": 5,
    "requests": 7,
    "weighted": 135.0,
    "http429": 0,
    "last_error": null
   },
   "ensemble": {
-   "status": "OK",
-   "seconds": 470,
-   "requests": 22,
-   "weighted": 93.5,
+   "status": "limit czasu",
+   "seconds": 777,
+   "requests": 24,
+   "weighted": 82.6,
    "http429": 0,
    "last_error": "ensemble-api.open-meteo.com: ReadTimeout"
   }
  },
- "forecast_issued": "2026-11-04",
- "updated": "2026-11-04T18:38Z",
- "weighted_calls": 228.5,
+ "forecast_issued": "2026-11-05",
+ "updated": "2026-11-05T18:35Z",
+ "weighted_calls": 217.6,
  "ensemble_issued": "2026-11-04",
  "ensemble_kind": "ensemble"
 }
