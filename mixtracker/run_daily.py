@@ -93,12 +93,19 @@ def summary_md(payload: dict, run: dict) -> str:
 def _partial_lines(payload: dict, min_days: int = 7) -> list[str]:
     """B-20261103-3: kraje, w których co najmniej połowa z 14 ostatnich dób ma niepełne godziny ze źródła."""
     ctl = payload.get("control") or {}
+    out = []
     bad = sorted(((k, v.get("partial14") or 0, v.get("below14") or 0) for k, v in ctl.items()
                   if (v.get("partial14") or 0) >= min_days), key=lambda x: -x[1])
-    if not bad:
-        return []
-    return ["Niepełne doby w 14 dniach (brakujące godziny uzupełnione proporcjonalnie; poniżej 80% – luka): "
-            + ", ".join(f"{k} {n}" + (f" (w tym {b} {_luk(b)})" if b else "") for k, n, b in bad)]
+    if bad:
+        out.append("Niepełne doby w 14 dniach (brakujące godziny uzupełnione proporcjonalnie; poniżej 80% – luka): "
+                   + ", ".join(f"{k} {n}" + (f" (w tym {b} {_luk(b)})" if b else "") for k, n, b in bad))
+    # B-20261105-2: luki samego zużycia (produkcja pełna); 14 z 14 (np. UK, GB) ma już linię „BRAK od …”
+    lg = sorted(((k, v.get("load_gaps14") or 0) for k, v in ctl.items() if 0 < (v.get("load_gaps14") or 0) < 14),
+                key=lambda x: -x[1])
+    if lg:
+        out.append("Zużycie bez danych w 14 dniach (źródło podało < 80% godzin – luka do uzupełnienia): "
+                   + ", ".join(f"{k} {n}" for k, n in lg))
+    return out
 
 
 def _luk(n: int) -> str:

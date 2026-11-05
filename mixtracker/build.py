@@ -263,6 +263,9 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
             # B-20261103-3: ile z 14 ostatnich dób ma niepełne godziny (część uzupełniona proporcjonalnie) i ile to luki
             "partial14": int((df["cov"].loc[:pd.Timestamp(ref)].tail(14) < 0.999).sum()),
             "below14": int((df["cov"].loc[:pd.Timestamp(ref)].tail(14) < min_cov).sum()),
+            # B-20261105-2: doby bez zużycia przy produkcji (pokrycie godzin obciążenia < 0,8 → luka od 477882a)
+            "load_gaps14": int((df["load"].isna() & df["cov"].notna()).loc[:pd.Timestamp(ref)].tail(14).sum())
+            if "load" in df else 0,
             "load": _load_status(df, est, ref),
             "unknown": st.get("unknown", []),
             "error": st.get("last_error"),

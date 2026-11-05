@@ -114,11 +114,22 @@ def ratios(x) -> dict:
     return out
 
 
+LOAD_COLS = ["load", "net_import"]   # B-20261105-1: serie z własnymi lukami (zużycie), skalowane po własnej liczbie dób
+
+
 def _scaled_sum(block: pd.DataFrame, n_days: int, min_frac: float = 0.85) -> pd.Series | None:
     valid = block["gen_total"].notna().sum()
     if n_days == 0 or valid < math.ceil(min_frac * n_days):
         return None
-    return block.sum(min_count=1) * (n_days / valid)
+    s = block.sum(min_count=1) * (n_days / valid)
+    # B-20261105-1: zużycie (i saldo z niego liczone) ma od 477882a własne luki – doba z < 80% godzin obciążenia → NaN
+    # przy pełnej produkcji. Skalujemy je po własnej liczbie dób; przy < min_frac dób wartość okresu jest nieznana
+    # (DK tydz. 44: 4 z 7 dób → „zużycie −40,9% r/r”).
+    for c in LOAD_COLS:
+        if c in block:
+            nl = int(block[c].notna().sum())
+            s[c] = block[c].sum() * n_days / nl if nl >= math.ceil(min_frac * n_days) else np.nan
+    return s
 
 
 def period_values(e: pd.DataFrame, start: dt.date, end: dt.date, strict: bool = False) -> dict | None:
@@ -234,8 +245,11 @@ def weekly_profile(e: pd.DataFrame, year: int, n_years: int, min_years: int, las
     g["_y"], g["_w"] = iso["year"].to_numpy(), iso["week"].to_numpy()
     cnt = g.groupby(["_y", "_w"])["gen_total"].count()
     sums = g.groupby(["_y", "_w"]).sum(min_count=1)
+    lraw = {c: (sums[c].copy(), g.groupby(["_y", "_w"])[c].count()) for c in LOAD_COLS if c in sums}   # B-20261105-1
     ok = cnt >= 6
     sums = sums[ok].mul(7 / cnt[ok], axis=0)
+    for c, (ls, lc) in lraw.items():
+        sums[c] = (ls * 7 / lc.where(lc > 0)).where(lc >= 6).reindex(sums.index)
     for k in ["renewable", "fossil"]:
         sums["share_" + k] = 100 * sums[k] / sums["gen_total"]
     if "price_n" in sums:

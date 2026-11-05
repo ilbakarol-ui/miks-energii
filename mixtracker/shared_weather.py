@@ -104,6 +104,8 @@ def _timeout(url: str, params: dict) -> float:
     """B-20261028-3: dawne prognozy w dużych paczkach (do 60 dni) potrzebują 150 s; dzienny przyrost (< 10 dni)
     serwer zwraca w kilka sekund – zawieszone zapytanie lepiej szybko ponowić niż czekać 150 s."""
     if "previous-runs" not in url:
+        if "seasonal-api" in url:
+            return 180      # B-20261105-3: odpowiedź SEAS5 (4 punkty × 51 wariantów × 183 dni) bywa dłuższa niż 90 s
         return 45 if "ensemble-api" in url else 90      # B-20261031-3: odpowiedź ensemble zwykle < 10 s
     try:
         days = (dt.date.fromisoformat(params["end_date"]) - dt.date.fromisoformat(params["start_date"])).days + 1
