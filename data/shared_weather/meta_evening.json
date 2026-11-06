@@ -9,7 +9,7 @@
  "steps": {
   "recent": {
    "status": "OK",
-   "seconds": 5,
+   "seconds": 4,
    "requests": 7,
    "weighted": 135.0,
    "http429": 0,
@@ -17,16 +17,16 @@
   },
   "ensemble": {
    "status": "limit czasu",
-   "seconds": 777,
-   "requests": 24,
-   "weighted": 82.6,
+   "seconds": 779,
+   "requests": 26,
+   "weighted": 93.5,
    "http429": 0,
    "last_error": "ensemble-api.open-meteo.com: ReadTimeout"
   }
  },
- "forecast_issued": "2026-11-05",
- "updated": "2026-11-05T18:35Z",
- "weighted_calls": 217.6,
+ "forecast_issued": "2026-11-06",
+ "updated": "2026-11-06T18:42Z",
+ "weighted_calls": 228.5,
  "ensemble_issued": "2026-11-04",
  "ensemble_kind": "ensemble"
 }
