@@ -127,7 +127,7 @@ Osobny przebieg (`.github/workflows/shared_weather.yml`, „Wspólna pogoda dla 
   - `seasonal.csv.gz` – prognoza sezonowa ECMWF SEAS5 (51 wariantów, 183 dni) dla punktów z `uses` = seas, odświeżana co 7 dni,
   - `meta_extra.json` – jak `meta.json`.
 
-- **evening** (17:47 UTC, czyli 18:47 zimą i 19:47 latem w Polsce; limit 12 min) – tylko świeża prognoza temperatury (`temp_recent.csv`) i ensemble do energetyki (`ensemble_power.csv.gz`) z nowszych przebiegów modeli, przed wieczornym raportem Gaz UE (20:41). Stan w `meta_evening.json` (forecast_issued, ensemble_issued, statusy kroków); `meta.json` i `meta_extra.json` zostają z nocy. Ręcznie: Actions → „Wspólna pogoda dla dashboardów” → Run workflow z zaznaczonym „Lekki przebieg wieczorny”.
+- **evening** (17:47 UTC, czyli 18:47 zimą i 19:47 latem w Polsce; limit 25 min, zwykle 4–8 min) – tylko świeża prognoza temperatury (`temp_recent.csv`) i ensemble do energetyki (`ensemble_power.csv.gz`) z nowszych przebiegów modeli, przed wieczornym raportem Gaz UE (20:41). Stan w `meta_evening.json` (forecast_issued, ensemble_issued, statusy kroków); `meta.json` i `meta_extra.json` zostają z nocy. Ręcznie: Actions → „Wspólna pogoda dla dashboardów” → Run workflow z zaznaczonym „Lekki przebieg wieczorny”.
 
 Każdy krok ma limit czasu (35 min na zadanie) i zapisuje to, co zdążył zebrać; brakującą historię dociąga partiami w kolejnych dniach. Przebieg nie zmienia danych ani działania Miksu energii. Kod: `mixtracker/shared_weather.py`, testy: `tests/test_shared_weather.py`.
 

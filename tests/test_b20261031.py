@@ -64,7 +64,7 @@ def test_repair_gives_up_after_three_tries(tmp_store, monkeypatch):
 
 def test_ensemble_timeout_and_pause(monkeypatch):
     """B-20261031-3: krótszy limit dla ensemble i odstęp między zapytaniami ensemble."""
-    assert sw._timeout("https://ensemble-api.open-meteo.com/v1/ensemble", {}) == 45
+    assert sw._timeout("https://ensemble-api.open-meteo.com/v1/ensemble", {}) == 120   # 6.11.2026: 45 s za mało
     assert sw._timeout("https://api.open-meteo.com/v1/forecast", {}) == 90
     sleeps = []
 

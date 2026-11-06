@@ -106,7 +106,9 @@ def _timeout(url: str, params: dict) -> float:
     if "previous-runs" not in url:
         if "seasonal-api" in url:
             return 180      # B-20261105-3: odpowiedź SEAS5 (4 punkty × 51 wariantów × 183 dni) bywa dłuższa niż 90 s
-        return 45 if "ensemble-api" in url else 90      # B-20261031-3: odpowiedź ensemble zwykle < 10 s
+        # ensemble: w listopadzie 2026 odpowiedzi (8 punktów × 51 wariantów × 17 dni) często trwają 45–90 s – limit 45 s
+        # (B-20261031-3) dawał 4–10 ReadTimeout na przebieg i przekroczenie 12 min wieczorem 5–6.11; 120 s jak dla dużych paczek
+        return 120 if "ensemble-api" in url else 90
     try:
         days = (dt.date.fromisoformat(params["end_date"]) - dt.date.fromisoformat(params["start_date"])).days + 1
     except (KeyError, TypeError, ValueError):
