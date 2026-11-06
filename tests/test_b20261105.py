@@ -61,7 +61,7 @@ def test_partial_lines_load_gaps():
 
 
 def test_seasonal_timeout():
-    """B-20261105-3: dłuższy limit dla SEAS5, ensemble 45 s, reszta 90 s."""
+    """B-20261105-3: dłuższy limit dla SEAS5, ensemble 120 s (od 6.11), reszta 90 s."""
     assert sw._timeout(sw.SEASONAL_URL, {}) == 180
-    assert sw._timeout("https://ensemble-api.open-meteo.com/v1/ensemble", {}) == 45
+    assert sw._timeout("https://ensemble-api.open-meteo.com/v1/ensemble", {}) == 120
     assert sw._timeout("https://api.open-meteo.com/v1/forecast", {}) == 90
