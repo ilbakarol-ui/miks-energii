@@ -61,7 +61,7 @@
 "nominal_mw": 1310,
 "unavail_mw": 1310,
 "start": "2026-11-07T00:00:00+00:00",
-"end": "2026-11-09T06:00:00+00:00",
+"end": "2026-11-10T03:30:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -138,7 +138,7 @@
 "nominal_mw": 915,
 "unavail_mw": 915,
 "start": "2026-11-07T00:30:00+00:00",
-"end": "2026-11-08T13:00:00+00:00",
+"end": "2026-11-08T20:00:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -226,7 +226,7 @@
 "nominal_mw": 1330,
 "unavail_mw": 800,
 "start": "2026-11-05T22:00:00+00:00",
-"end": "2026-11-08T20:00:00+00:00",
+"end": "2026-11-08T21:00:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -320,6 +320,17 @@
 },
 {
 "zone": "FR",
+"unit": "MARTIGUES PONTEAU 6",
+"psr": "gas",
+"nominal_mw": 465,
+"unavail_mw": 465,
+"start": "2026-11-08T09:00:00+00:00",
+"end": "2026-11-08T15:00:00+00:00",
+"now": false,
+"kind": "planowe"
+},
+{
+"zone": "FR",
 "unit": "BOUCHAIN 7",
 "psr": "gas",
 "nominal_mw": 585,
@@ -331,23 +342,12 @@
 },
 {
 "zone": "FR",
-"unit": "CHINON 4",
+"unit": "ST LAURENT 2",
 "psr": "nuclear",
-"nominal_mw": 905,
-"unavail_mw": 107,
-"start": "2026-11-07T17:00:00+00:00",
-"end": "2026-11-07T18:30:00+00:00",
-"now": false,
-"kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "GRAVELINES 2",
-"psr": "nuclear",
-"nominal_mw": 910,
-"unavail_mw": 101,
-"start": "2026-11-07T02:30:00+00:00",
-"end": "2026-11-07T05:00:00+00:00",
+"nominal_mw": 915,
+"unavail_mw": 115,
+"start": "2026-11-08T07:00:00+00:00",
+"end": "2026-11-08T09:00:00+00:00",
 "now": false,
 "kind": "planowe"
 },

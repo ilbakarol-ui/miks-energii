@@ -1,11 +1,11 @@
-## Miks energii UE - dane do 2026-11-06
+## Miks energii UE - dane do 2026-11-07
 
 **tydz. 44/2026 (26.10–01.11)** (UE-27)
 
 | | bieżący | poprz. tydz. | rok temu | śr. 5 lat |
 |---|---|---|---|---|
-| Zużycie, GWh | 47 818 | 47 689 | 46 850 | 46 190 |
-| Produkcja, GWh | 47 644 | 48 688 | 47 715 | 47 336 |
+| Zużycie, GWh | 47 842 | 47 689 | 46 850 | 46 190 |
+| Produkcja, GWh | 47 638 | 48 688 | 47 715 | 47 336 |
 | Udział OZE | 39,4% | 49,9% | 47,6% | 42,8% |
 | Emisyjność, g/kWh | 229 | 178 | 158 | 203 |
 
@@ -20,10 +20,10 @@
 - Łotwa: emisyjność 55 g/kWh (-66,4% r/r, paź 2026)
 - Słowenia: emisyjność 132 g/kWh (-56,1% r/r, tydz. 44)
 
-Zapytania do Energy-Charts: 76 (public_power: 59, price: 17); czas: 34 min
+Zapytania do Energy-Charts: 48 (public_power: 31, price: 17); czas: 22 min
 Prognozy pobrane dla: AT, BE, BG, CH, CY, CZ, DE, DK, EE, ES, EU, FI, FR, GB, GR, HR, HU, IE, IT, LT, LU, LV, NL, NO, PL, PT, RO, SE, SI, SK, UK
-Niepełne doby w 14 dniach (brakujące godziny uzupełnione proporcjonalnie; poniżej 80% – luka): UK 10, IE 9
-Zużycie bez danych w 14 dniach (źródło podało < 80% godzin – luka do uzupełnienia): DK 4, BG 2, CY 1
+Niepełne doby w 14 dniach (brakujące godziny uzupełnione proporcjonalnie; poniżej 80% – luka): UK 9, IE 8
+Zużycie bez danych w 14 dniach (źródło podało < 80% godzin – luka do uzupełnienia): DK 3, BG 2, CY 1
 - UK: ENTSO-E od 2025-10-24 – zużycie 0 dób, produkcja 0 dób
-- NL: ENTSO-E od 2026-09-01 – zużycie 67 dób, produkcja 67 dób; wobec Energy-Charts (14 dób): load +0%, solar +0%, misc -0%
-- Niedostępność elektrowni (ENTSO-E, dla Gaz UE): bieżące FR,BE,ES,NL; historia FR,BE,ES,NL; 8 zapytań; atom dziś niedostępny: FR 23.6 GW, BE 0.4 GW, ES 1.0 GW, NL 0.0 GW
+- NL: ENTSO-E od 2026-09-01 – zużycie 68 dób, produkcja 68 dób; wobec Energy-Charts (14 dób): load +0%, solar +0%, misc -0%
+- Niedostępność elektrowni (ENTSO-E, dla Gaz UE): bieżące FR,BE,ES,NL; historia FR,BE,ES,NL; 8 zapytań; atom dziś niedostępny: FR 23.2 GW, BE 0.4 GW, ES 1.0 GW, NL 0.0 GW
