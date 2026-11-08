@@ -13,16 +13,16 @@
   },
   "ensemble": {
    "status": "OK",
-   "seconds": 978,
+   "seconds": 977,
    "requests": 22,
    "weighted": 93.5,
    "http429": 0,
    "last_error": "ensemble-api.open-meteo.com: ReadTimeout"
   }
  },
- "forecast_issued": "2026-11-07",
- "updated": "2026-11-07T18:29Z",
+ "forecast_issued": "2026-11-08",
+ "updated": "2026-11-08T18:28Z",
  "weighted_calls": 228.5,
- "ensemble_issued": "2026-11-07",
+ "ensemble_issued": "2026-11-08",
  "ensemble_kind": "ensemble"
 }
