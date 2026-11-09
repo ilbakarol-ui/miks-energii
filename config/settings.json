@@ -38,6 +38,12 @@
       "from": "2026-09-01",
       "load": true,
       "generation": true
+    },
+    "DK": {
+      "domain": "10Y1001A1001A65H",
+      "from": "2026-10-25",
+      "load": true,
+      "generation": true
     }
   },
   "outages": {

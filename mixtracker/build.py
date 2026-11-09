@@ -190,6 +190,21 @@ def apply_known_breaks(frames: dict, known: list[dict], window: int = 28, replac
     return out
 
 
+
+def window14(df: pd.DataFrame, ref, min_cov: float) -> dict:
+    """Kontrola 14 ostatnich dób KALENDARZOWYCH do ref (B-20261108-1 / B-20261109-1). Brak wiersza = doba bez danych
+    (missing14); wcześniej tail(14) istniejących wierszy cofał okno razem z danymi (DK bez dób od 5.11: „DK 4 → 3 → 1”).
+    partial14 / below14 – doby z niepełnymi godzinami / poniżej min_cov (B-20261103-3), load_gaps14 – doby bez
+    zużycia przy produkcji (B-20261105-2)."""
+    win = pd.date_range(pd.Timestamp(ref) - pd.Timedelta(days=13), pd.Timestamp(ref))
+    cov = df["cov"].reindex(win)
+    return {
+        "partial14": int((cov.notna() & (cov < 0.999)).sum()),
+        "below14": int((cov.notna() & (cov < min_cov)).sum()),
+        "missing14": int(cov.isna().sum()),
+        "load_gaps14": int((df["load"].reindex(win).isna() & cov.notna()).sum()) if "load" in df else 0,
+    }
+
 def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dict | None = None,
           folder: Path | None = None, today: dt.date | None = None, forecasts: dict | None = None) -> dict:
     countries = store.load_countries()
@@ -253,6 +268,7 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
         fst = state.get("forecast", {}).get(code, {})
         good = df.index[df["cov"] >= min_cov]
         last30 = df.loc[pd.Timestamp(ref) - pd.Timedelta(days=29):pd.Timestamp(ref), "cov"]
+        w14 = window14(df, ref, min_cov)
         control[code] = {
             "source": store.SOURCE_LABEL.get(c.get("source", ""), c.get("source", ""))
             + (f" + ENTSO-E od {st['entsoe']['from']}" if (st.get("entsoe") or {}).get("load_days")
@@ -261,11 +277,7 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
             "first": good.min().strftime("%Y-%m-%d") if len(good) else None,
             "days30": int((last30 >= min_cov).sum()),
             # B-20261103-3: ile z 14 ostatnich dób ma niepełne godziny (część uzupełniona proporcjonalnie) i ile to luki
-            "partial14": int((df["cov"].loc[:pd.Timestamp(ref)].tail(14) < 0.999).sum()),
-            "below14": int((df["cov"].loc[:pd.Timestamp(ref)].tail(14) < min_cov).sum()),
-            # B-20261105-2: doby bez zużycia przy produkcji (pokrycie godzin obciążenia < 0,8 → luka od 477882a)
-            "load_gaps14": int((df["load"].isna() & df["cov"].notna()).loc[:pd.Timestamp(ref)].tail(14).sum())
-            if "load" in df else 0,
+            **w14,
             "load": _load_status(df, est, ref),
             "unknown": st.get("unknown", []),
             "error": st.get("last_error"),

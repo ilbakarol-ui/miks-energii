@@ -94,6 +94,12 @@ def _partial_lines(payload: dict, min_days: int = 7) -> list[str]:
     """B-20261103-3: kraje, w których co najmniej połowa z 14 ostatnich dób ma niepełne godziny ze źródła."""
     ctl = payload.get("control") or {}
     out = []
+    # B-20261109-1: kraje, którym źródło nie dosłało dób (brak wierszy) – np. DK bez danych od 5.11.2026
+    miss = sorted(((k, v.get("missing14") or 0, v.get("last")) for k, v in ctl.items() if (v.get("missing14") or 0) >= 2),
+                  key=lambda x: -x[1])
+    if miss:
+        out.append("Brak dób w 14 dniach (źródło nie dosłało danych): "
+                   + ", ".join(f"{k} {n} (ostatnia pełna doba {d})" for k, n, d in miss))
     bad = sorted(((k, v.get("partial14") or 0, v.get("below14") or 0) for k, v in ctl.items()
                   if (v.get("partial14") or 0) >= min_days), key=lambda x: -x[1])
     if bad:

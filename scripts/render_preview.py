@@ -97,6 +97,9 @@ def main(out: Path):
                          or str(v.get("load", "")).startswith("BRAK")
                          or (v.get("partial14") or 0) >= 7   # B-20261103-3: stale niepełne doby (np. IE, UK)
                          or 0 < (v.get("load_gaps14") or 0) < 14}   # B-20261105-2: luki samego zużycia (np. DK)
+    # B-20261109-1: kraje bez dób w 14 dniach – do porannej wiadomości (zadanie 5:40, punkt (e))
+    brief["brak_dob"] = {k: {"dni": v["missing14"], "ostatnia_pelna": v.get("last")}
+                         for k, v in payload.get("control", {}).items() if (v.get("missing14") or 0) >= 2}
     brief["GB_ostatni_dzien"] = gb.get("last")
     sw = {}
     for name in ("meta.json", "meta_extra.json"):
