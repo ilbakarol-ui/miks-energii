@@ -12,17 +12,6 @@
 },
 {
 "zone": "FR",
-"unit": "CHOOZ 2",
-"psr": "nuclear",
-"nominal_mw": 1500,
-"unavail_mw": 1500,
-"start": "2026-10-31T18:01:00+00:00",
-"end": "2026-11-09T06:00:00+00:00",
-"now": true,
-"kind": "awaryjne"
-},
-{
-"zone": "FR",
 "unit": "FLAMANVILLE 1",
 "psr": "nuclear",
 "nominal_mw": 1330,
@@ -51,17 +40,6 @@
 "unavail_mw": 1310,
 "start": "2026-08-07T22:00:00+00:00",
 "end": "2026-11-22T23:00:00+00:00",
-"now": true,
-"kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "GOLFECH 2",
-"psr": "nuclear",
-"nominal_mw": 1310,
-"unavail_mw": 1310,
-"start": "2026-11-07T00:00:00+00:00",
-"end": "2026-11-10T03:30:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -106,6 +84,17 @@
 "unavail_mw": 1300,
 "start": "2026-01-30T23:00:00+00:00",
 "end": "2026-11-12T22:00:00+00:00",
+"now": true,
+"kind": "planowe"
+},
+{
+"zone": "FR",
+"unit": "GOLFECH 2",
+"psr": "nuclear",
+"nominal_mw": 1310,
+"unavail_mw": 1145,
+"start": "2026-11-10T01:00:00+00:00",
+"end": "2026-11-10T11:30:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -232,17 +221,6 @@
 },
 {
 "zone": "FR",
-"unit": "PALUEL 4",
-"psr": "nuclear",
-"nominal_mw": 1330,
-"unavail_mw": 285,
-"start": "2026-11-05T22:00:00+00:00",
-"end": "2026-11-09T07:30:00+00:00",
-"now": true,
-"kind": "planowe"
-},
-{
-"zone": "FR",
 "unit": "PALUEL 1",
 "psr": "nuclear",
 "nominal_mw": 1330,
@@ -279,7 +257,7 @@
 "unit": "NOGENT 2",
 "psr": "nuclear",
 "nominal_mw": 1310,
-"unavail_mw": 930,
+"unavail_mw": 1010,
 "start": "2026-11-11T11:00:00+00:00",
 "end": "2026-11-11T16:00:00+00:00",
 "now": false,
@@ -309,23 +287,34 @@
 },
 {
 "zone": "FR",
-"unit": "ST LAURENT 1",
+"unit": "ST ALBAN 2",
 "psr": "nuclear",
-"nominal_mw": 915,
-"unavail_mw": 470,
-"start": "2026-11-10T17:30:00+00:00",
-"end": "2026-11-10T18:00:00+00:00",
+"nominal_mw": 1335,
+"unavail_mw": 615,
+"start": "2026-11-29T04:00:00+00:00",
+"end": "2026-11-29T20:00:00+00:00",
 "now": false,
 "kind": "planowe"
 },
 {
 "zone": "FR",
-"unit": "ST LAURENT 2",
+"unit": "BLAYAIS 2",
+"psr": "nuclear",
+"nominal_mw": 910,
+"unavail_mw": 532,
+"start": "2026-11-11T02:30:00+00:00",
+"end": "2026-11-11T03:00:00+00:00",
+"now": false,
+"kind": "planowe"
+},
+{
+"zone": "FR",
+"unit": "ST LAURENT 1",
 "psr": "nuclear",
 "nominal_mw": 915,
 "unavail_mw": 470,
-"start": "2026-11-09T16:30:00+00:00",
-"end": "2026-11-09T17:00:00+00:00",
+"start": "2026-11-10T18:30:00+00:00",
+"end": "2026-11-10T19:00:00+00:00",
 "now": false,
 "kind": "planowe"
 },
