@@ -1,6 +1,6 @@
 ## Ceny day-ahead – przebieg popołudniowy
 
-Ceny na 2026-11-11: 14 z 15 stref
+Ceny na 2026-11-11: 15 z 15 stref (w tym przebiegu uzupełniono: IT-North)
 
 | strefa | dzień | śr. €/MWh | min | maks |
 |---|---|---|---|---|
@@ -13,13 +13,12 @@ Ceny na 2026-11-11: 14 z 15 stref
 | DK2 | 2026-11-11 | 318,4 | 199,3 | 465,5 |
 | FR | 2026-11-11 | 252,2 | 171,6 | 342,0 |
 | HU | 2026-11-11 | 354,4 | 234,5 | 472,2 |
-| IT-North | 2026-11-10 (brak jutra) | 310,2 | 205,3 | 405,9 |
+| IT-North | 2026-11-11 | 285,2 | 195,4 | 369,3 |
 | NL | 2026-11-11 | 309,3 | 193,4 | 452,6 |
 | NO2 | 2026-11-11 | 267,1 | 169,9 | 393,3 |
 | PL | 2026-11-11 | 293,3 | 125,0 | 427,7 |
 | SE4 | 2026-11-11 | 323,7 | 205,9 | 473,7 |
 | SI | 2026-11-11 | 342,1 | 220,0 | 436,9 |
 
-Dane produkcji do 2026-11-09; zapytania do Energy-Charts: 15; czas: 7 min
-- BRAK cen day-ahead na jutro: IT-North (1 z 15 stref; mapa pokaże dla nich ostatni dzień z ceną)
-- szczegóły braków: IT-North: 0 h na 11.11 (krok 15 min)
+Dane produkcji do 2026-11-09; zapytania do Energy-Charts: 1; czas: 0 min
+- ceny: uzupełnienie stref bez ceny na jutro: IT-North
