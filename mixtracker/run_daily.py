@@ -105,6 +105,11 @@ def _partial_lines(payload: dict, min_days: int = 7) -> list[str]:
     if bad:
         out.append("Niepełne doby w 14 dniach (brakujące godziny uzupełnione proporcjonalnie; poniżej 80% – luka): "
                    + ", ".join(f"{k} {n}" + (f" (w tym {b} {_luk(b)})" if b else "") for k, n, b in bad))
+    # B-20261111-1: ostatnie doby z pełnym pokryciem godzin, ale wyraźnie zaniżonymi seriami (dosyłane później)
+    ser = [(k, d, cols) for k, v in sorted(ctl.items()) for d, cols in sorted(((v.get("partial_last") or {}).get("series") or {}).items())]
+    if ser:
+        out.append("Ostatnie doby niepełne mimo pokrycia (do ponownego pobrania): "
+                   + ", ".join(f"{k} {d[8:10]}.{d[5:7]} ({', '.join(cols)})" for k, d, cols in ser))
     # B-20261105-2: luki samego zużycia (produkcja pełna); 14 z 14 (np. UK, GB) ma już linię „BRAK od …”
     lg = sorted(((k, v.get("load_gaps14") or 0) for k, v in ctl.items() if 0 < (v.get("load_gaps14") or 0) < 14),
                 key=lambda x: -x[1])

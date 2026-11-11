@@ -44,6 +44,51 @@ def _flag_partial_last(df: pd.DataFrame, min_cov: float, ratio: float = 0.6, day
     return df, {"date": d.strftime("%Y-%m-%d"), "ratio": r, "days": [x.strftime("%Y-%m-%d") for x, _ in found]}
 
 
+def _flag_partial_tail(frames: dict, countries: list[dict], min_cov: float, days: int = 3,
+                       tol: float = 0.05, solar_ratio: float = 0.15, solar_min: float = 20000.0) -> dict:
+    """B-20261111-1: doby z ostatnich `days` dni niepełne mimo cov >= min_cov (Energy-Charts dosyła godziny później):
+    (a) kraj UE: słońce < solar_ratio × mediany 7 poprzednich dób (mediana >= solar_min MWh) – DE 10.11.2026: 5,4 vs 72 GWh;
+        próg 15%: przy 25% w czerwcu–listopadzie 2026 5 fałszywych alarmów w pochmurne dni (BE, DK, BG, GR), przy 15% – 0;
+    (b) agregat EU: gaz albo słońce niższe o > tol od sumy krajów UE z pełną dobą (brak najwyżej 3 krajów)
+        – EU 10.11.2026: gaz −15%, słońce −26%; w zwykłe dni różnica <= 1%.
+    Taka doba dostaje cov = min_cov / 2 (luka do następnego pobrania). Zmienia `frames`; zwraca {kod: [(doba, [serie])]}."""
+    out: dict = {}
+    members = [c["code"] for c in countries if c.get("group") == "UE" and c["code"] in frames]
+    # najpierw agregat – na pierwotnych dobach krajów (oznaczenie słońca kraju nie może usunąć jego gazu z sumy)
+    eu = frames.get("EU")
+    if eu is not None and len(eu):
+        names = {"gas": "gaz", "solar": "słońce"}
+        for day in eu.index[-days:]:
+            if eu.at[day, "cov"] < min_cov:
+                continue
+            ok = [frames[c] for c in members if day in frames[c].index and frames[c].at[day, "cov"] >= min_cov]
+            if len(ok) < len(members) - 3:
+                continue
+            low = []
+            for col in ("gas", "solar"):
+                if col not in eu:
+                    continue
+                tot = sum(float(f.at[day, col]) for f in ok if col in f and pd.notna(f.at[day, col]))
+                if tot > 0 and pd.notna(eu.at[day, col]) and eu.at[day, col] < (1 - tol) * tot:
+                    low.append(names[col])
+            if low:
+                frames["EU"] = eu = eu.copy()
+                eu.at[day, "cov"] = min_cov / 2
+                out.setdefault("EU", []).append((day, low))
+    for code in members:
+        df = frames[code]
+        if df is None or "solar" not in df or len(df) < 8:
+            continue
+        for day in df.index[-days:]:
+            med = df.loc[:day - pd.Timedelta(days=1), "solar"].tail(7).median()
+            v = df.at[day, "solar"]
+            if df.at[day, "cov"] >= min_cov and pd.notna(v) and pd.notna(med) and med >= solar_min and v < solar_ratio * med:
+                frames[code] = df = df.copy()
+                df.at[day, "cov"] = min_cov / 2
+                out.setdefault(code, []).append((day, ["słońce"]))
+    return out
+
+
 def _ref_date(frames: dict, min_cov: float) -> dt.date | None:
     lasts = {}
     for code, df in frames.items():
@@ -216,6 +261,11 @@ def build(settings: dict, eurostat_df: pd.DataFrame | None = None, run_info: dic
         frames[k], p = _flag_partial_last(frames[k], min_cov, days=settings.get("refetch_days", 10))
         if p:
             partial[k] = p
+    for k, found in _flag_partial_tail(frames, countries, min_cov).items():   # B-20261111-1
+        p = partial.setdefault(k, {"date": None, "ratio": None, "days": []})
+        p["days"] = sorted(set(p["days"]) | {d.strftime("%Y-%m-%d") for d, _ in found})
+        p["date"] = p["days"][-1]
+        p["series"] = {d.strftime("%Y-%m-%d"): cols for d, cols in found}
     ref = _ref_date(frames, min_cov) or (today or dt.date.today()) - dt.timedelta(days=1)
     state = store.read_state()
     # U-20261027: kraje z serią z ENTSO-E – skok Energy-Charts ich nie dotyczy (korekta tylko agregatu UE)

@@ -91,6 +91,7 @@ Z tym samym tokenem przebieg nocny pobiera też **niedostępność elektrowni** 
   - **Saldo wymiany** = zużycie − (produkcja − pompowanie). Dodatnie: import netto, ujemne: eksport netto.
   - **Udział OZE** = wiatr, słońce, woda (bez elektrowni szczytowo-pompowych), biomasa, geotermia, inne OZE.
   - Dni z pokryciem danych poniżej 80% są pomijane. Drobne luki w pojedynczej serii są uzupełniane proporcjonalnie.
+  - Ostatnie 3 doby z pełnym pokryciem godzin, ale wyraźnie zaniżonymi seriami (Energy-Charts dosyła je później), też są pomijane do następnego pobrania: agregat UE z gazem albo słońcem o ponad 5% niższym od sumy krajów oraz kraj ze słońcem poniżej 15% mediany z 7 dni (np. 10.11.2026: UE gaz −15%, Niemcy słońce 5,4 GWh przy 72). W podsumowaniu jest wtedy linia „Ostatnie doby niepełne mimo pokrycia …” (B-20261111-1).
   - Dane są poprawiane przez operatorów, dlatego tracker przy każdym przebiegu pobiera ponownie ostatnie 10 dni, a w poniedziałki ostatnie 45.
 - **Wielka Brytania**: [Elexon BMRS](https://bmrs.elexon.co.uk), Insights Solution API: FUELHH (produkcja wg paliwa i interkonektory, co 30 min) oraz AGPT (B1620, tylko słońce i podział wiatru). Zbiory AGPT i ATL nie są podstawą, bo mają długie luki (całe typy znikają na tygodnie), a ATL zmienił definicję w 2026 r. Contains BMRS data © Elexon Limited copyright and database right. Zapis w `data/daily/GB.csv`.
 - **Ceny**: rynek dnia następnego (day-ahead) z Energy-Charts /price.

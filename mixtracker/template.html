@@ -2221,7 +2221,9 @@ const DATA = /*__DATA__*/null;
       if (k.break) notes.push(`skok zużycia w źródle od ${fdate(k.break.date)} (${k.break.change > 0 ? "+" : ""}${fmt1.format(k.break.change)}%)`);
       if (k.partial_last) {
         const pd = k.partial_last.days || [k.partial_last.date];
-        notes.push(`${pd.length > 1 ? "doby" : "doba"} ${pd.map(fdate).join(", ")} ${pd.length > 1 ? "niepełne" : "niepełna"} w źródle (zużycie ${fmt0.format(100 * k.partial_last.ratio)}% typowego${pd.length > 1 ? " w ostatniej z nich" : ""}) - ${pd.length > 1 ? "pominięte" : "pominięta"} do czasu uzupełnienia`);
+        const why = isNum(k.partial_last.ratio) ? `zużycie ${fmt0.format(100 * k.partial_last.ratio)}% typowego${pd.length > 1 ? " w ostatniej z nich" : ""}`
+          : "zaniżone: " + [...new Set(Object.values(k.partial_last.series || {}).flat())].join(", ");   // B-20261111-1
+        notes.push(`${pd.length > 1 ? "doby" : "doba"} ${pd.map(fdate).join(", ")} ${pd.length > 1 ? "niepełne" : "niepełna"} w źródle (${why}) - ${pd.length > 1 ? "pominięte" : "pominięta"} do czasu uzupełnienia`);
       }
       const GL = { wind: "wiatr", solar: "słońce", load: "zużycie" };
       Object.entries(k.gaps || {}).forEach(([kind, g]) => {
