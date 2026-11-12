@@ -89,17 +89,6 @@
 },
 {
 "zone": "FR",
-"unit": "GOLFECH 2",
-"psr": "nuclear",
-"nominal_mw": 1310,
-"unavail_mw": 1184,
-"start": "2026-11-11T01:40:00+00:00",
-"end": "2026-11-11T19:55:00+00:00",
-"now": true,
-"kind": "planowe"
-},
-{
-"zone": "FR",
 "unit": "CRUAS 1",
 "psr": "nuclear",
 "nominal_mw": 915,
@@ -232,12 +221,12 @@
 },
 {
 "zone": "FR",
-"unit": "CHOOZ 2",
+"unit": "ST ALBAN 2",
 "psr": "nuclear",
-"nominal_mw": 1500,
-"unavail_mw": 120,
-"start": "2026-11-11T00:00:00+00:00",
-"end": "2026-11-11T03:00:00+00:00",
+"nominal_mw": 1335,
+"unavail_mw": 100,
+"start": "2026-11-12T01:00:00+00:00",
+"end": "2026-11-12T15:00:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -260,17 +249,6 @@
 "unavail_mw": 1330,
 "start": "2026-11-22T23:00:00+00:00",
 "end": "2026-12-01T22:00:00+00:00",
-"now": false,
-"kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "NOGENT 2",
-"psr": "nuclear",
-"nominal_mw": 1310,
-"unavail_mw": 1010,
-"start": "2026-11-11T11:00:00+00:00",
-"end": "2026-11-11T16:00:00+00:00",
 "now": false,
 "kind": "planowe"
 },
@@ -320,12 +298,12 @@
 },
 {
 "zone": "FR",
-"unit": "ST ALBAN 2",
+"unit": "CHINON 1",
 "psr": "nuclear",
-"nominal_mw": 1335,
-"unavail_mw": 615,
-"start": "2026-11-29T04:00:00+00:00",
-"end": "2026-11-29T20:00:00+00:00",
+"nominal_mw": 905,
+"unavail_mw": 587,
+"start": "2026-11-13T00:00:00+00:00",
+"end": "2026-11-13T02:00:00+00:00",
 "now": false,
 "kind": "planowe"
 },
@@ -452,12 +430,34 @@
 },
 {
 "zone": "NL",
+"unit": "FLEVO 5",
+"psr": "gas",
+"nominal_mw": 464,
+"unavail_mw": 464,
+"start": "2026-12-12T00:00:00+00:00",
+"end": "2026-12-13T23:00:00+00:00",
+"now": false,
+"kind": "planowe"
+},
+{
+"zone": "NL",
 "unit": "FLEVO 4",
 "psr": "gas",
 "nominal_mw": 443,
 "unavail_mw": 443,
 "start": "2026-11-21T00:00:00+00:00",
 "end": "2026-11-22T23:00:00+00:00",
+"now": false,
+"kind": "planowe"
+},
+{
+"zone": "NL",
+"unit": "Elsta 1",
+"psr": "gas",
+"nominal_mw": 455,
+"unavail_mw": 209,
+"start": "2026-11-16T06:00:00+00:00",
+"end": "2026-11-19T16:00:00+00:00",
 "now": false,
 "kind": "planowe"
 }
