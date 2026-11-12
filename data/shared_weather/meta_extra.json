@@ -5,7 +5,7 @@
  "steps": {
   "ensemble": {
    "status": "OK",
-   "seconds": 978,
+   "seconds": 977,
    "requests": 22,
    "weighted": 93.5,
    "http429": 0,
@@ -13,16 +13,16 @@
   },
   "seasonal": {
    "status": "OK",
-   "seconds": 0,
-   "requests": 0,
-   "weighted": 0.0,
+   "seconds": 64,
+   "requests": 7,
+   "weighted": 313.7,
    "http429": 0,
    "last_error": null
   }
  },
- "ensemble_issued": "2026-11-11",
+ "ensemble_issued": "2026-11-12",
  "ensemble_kind": "ensemble",
- "updated": "2026-11-11T01:35Z",
- "weighted_calls": 93.5,
- "seasonal_refreshed_points": 0
+ "updated": "2026-11-12T01:44Z",
+ "weighted_calls": 407.2,
+ "seasonal_refreshed_points": 24
 }
