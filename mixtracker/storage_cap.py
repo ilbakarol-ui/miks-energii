@@ -32,7 +32,9 @@ OUT = DIR / "installed.csv"
 STATE = DIR / "state.json"
 ES_URL = "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/nrg_inf_bt"
 EC_SERIES = {"Hydro pumped storage": "pumped_gw", "Battery storage (power)": "bat_gw",
-             "Battery storage (capacity)": "bat_gwh"}
+             "Battery storage (capacity)": "bat_gwh",
+             # moc farm wiatrowych – wagi wiatru w zakładce „Pogoda” (weather_tab.py), od 12.11.2026
+             "Wind onshore": "wind_on_gw", "Wind offshore": "wind_off_gw"}
 EC_BATTERY = {"DE"}           # kraje, dla których baterie bierzemy z Energy-Charts (MaStR)
 FIRST_YEAR = 2019
 ES_FROM = 2022              # od tego roku dane Eurostatu o bateriach są kompletne

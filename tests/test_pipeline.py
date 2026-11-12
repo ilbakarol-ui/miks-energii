@@ -788,7 +788,7 @@ def test_storage_capacity(tmp_path, monkeypatch):
         {"name": "Battery storage (capacity)", "data": [3.7, 6.4, 12.5, 18.7, 25.5, 34.2]},
         {"name": "Wind onshore", "data": [1, 2, 3, 4, 5, 6]}]}
     de = sc.parse_ec("DE", js, 2026)
-    assert set(de["series"]) == {"pumped_gw", "bat_gw", "bat_gwh"}
+    assert set(de["series"]) == {"pumped_gw", "bat_gw", "bat_gwh", "wind_on_gw"}   # wiatr od 12.11.2026 (zakładka Pogoda)
     assert 2026 not in de[de.series == "pumped_gw"].year.tolist() and 2026 in de[de.series == "bat_gw"].year.tolist()
     pl = sc.parse_ec("PL", {"time": ["2024"], "production_types": [{"name": "Hydro pumped storage", "data": [1.5]}]}, 2026)
     es = pd.DataFrame([

@@ -201,6 +201,7 @@ td.na, .na { color: var(--muted); }
 .heat td.h.cur { box-shadow: inset 0 0 0 2px var(--ink); }
 @media (max-width: 560px) { #w-kpis { grid-template-columns: 1fr; } }
 .acc td, .acc th { text-align: right; }
+#x-kpis { grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
 @media (max-width: 560px) { #x-kpis { grid-template-columns: 1fr; } }
 #x-table th.grp { text-align: center; color: var(--ink-2); font-weight: 600; border-bottom: 0; padding-bottom: 0; }
 [hidden] { display: none !important; }
@@ -521,6 +522,32 @@ footer a, .notes a { color: var(--accent); }
         <div class="chart" id="x-seas"></div>
         <p class="small muted" id="x-seas-note"></p>
       </div>
+    </section>
+    <section aria-labelledby="h-xi">
+      <div class="head"><h2 id="h-xi">Wpływ temperatury na zużycie gazu i prądu</h2><span class="small muted">odchylenie od zużycia przy normalnej temperaturze</span></div>
+      <div class="grid2">
+        <div class="panel" style="display:grid;gap:10px">
+          <h3>Gaz, GWh/d</h3>
+          <div class="legend" id="x-ig-legend"></div>
+          <div class="chart" id="x-ig"></div>
+        </div>
+        <div class="panel" style="display:grid;gap:10px">
+          <h3>Prąd, GWh/d</h3>
+          <div class="legend" id="x-ip-legend"></div>
+          <div class="chart" id="x-ip"></div>
+        </div>
+      </div>
+      <div class="grid2" style="margin-top:12px">
+        <div class="panel" style="display:grid;gap:10px">
+          <h3>Gaz w kolejnych miesiącach (SEAS5), TWh</h3>
+          <div class="chart" id="x-isg"></div>
+        </div>
+        <div class="panel" style="display:grid;gap:10px">
+          <h3>Prąd w kolejnych miesiącach (SEAS5), TWh</h3>
+          <div class="chart" id="x-isp"></div>
+        </div>
+      </div>
+      <p class="small muted" id="x-imp-note" style="max-width:100ch"></p>
     </section>
     <section aria-labelledby="h-xa">
       <div class="head"><h2 id="h-xa">Wszystkie kraje</h2><span class="small muted">odchylenie od normy · kliknij wiersz, żeby wybrać kraj</span></div>
@@ -1713,6 +1740,8 @@ const DATA = /*__DATA__*/null;
       rows: [["zakres 80% wariantów", nx ? degS(nx.p10) + " … " + degS(nx.p90) : "–"],
         ["zima (gru–lut), mediana", isNum(wAn) ? degS(wAn) : "–"], ["szansa cieplejszego " + (nx ? monL(nx.m) : "miesiąca"), nx ? fmt0.format(nx.warm) + "%" : "–"]],
       chip: nx ? tempBin(nx.p50) : null, chipT: (k) => (k > 0 ? "chłodniej niż zwykle" : k < 0 ? "cieplej niż zwykle" : "blisko normy") });
+    const it = impTile(c);
+    if (it) tiles.push(it);
     $("x-kpis").innerHTML = tiles.map((t) => `<div class="panel kpi">
       <div class="label">${t.label}</div><div class="value">${t.val}</div>
       <dl class="deltas">${t.rows.map(([a, b]) => `<dt>${esc(a)}</dt><dd>${b}</dd>`).join("")}</dl>
@@ -1751,6 +1780,12 @@ const DATA = /*__DATA__*/null;
       else if (f.why && f.why !== "brak historii") note = `Bez pasma ensemble: ${f.why} – przelicznik prędkości wiatru na produkcję jest jeszcze niewiarygodny dla tego kraju.`;
       else note = "Brak prognoz ensemble dla tego kraju (wspólna baza pogodowa obejmuje kraje UE).";
       if (hasDet) note += " Model pogodowy: prognoza z zakładki „Prognozy wiatru” (7 dni) z przedłużeniem do 14 dni.";
+      if (S.country === "EU" && WX.wind_capacity) {   // wagi wiatru UE: moc farm wiatrowych
+        const capv = Object.values(WX.wind_capacity), tot = capv.reduce((a, v) => a + (v.gw || 0), 0);
+        const est = Object.entries(WX.wind_capacity).filter(([, v]) => v.src !== "Energy-Charts").map(([k]) => k);
+        note += ` Prędkość wiatru UE to średnia krajów ważona mocą farm wiatrowych (ląd i morze, Energy-Charts / ENTSO-E, razem ${fmt0.format(tot)} GW)` +
+          (est.length ? `; dla ${est.join(", ")} moc oszacowana z produkcji, bo dane mocy są niepełne.` : ".");
+      }
       $("x-wind-note").textContent = note;
     } else {
       $("x-wind").innerHTML = '<p class="empty">Brak danych o wietrze dla tego kraju.</p>';
@@ -1835,7 +1870,7 @@ const DATA = /*__DATA__*/null;
   }
 
   function renderWxTable() {
-    const rows = Object.entries(WXC).filter(([, c]) => c.temp || c.seas || [wxWindAgg(c.wind, 0, 7), wxWindAgg(c.wind, 7, 14)].some((a) => a && isNum(a.pct)));
+    const rows = Object.entries(WXC).filter(([, c]) => c.temp || c.seas || c.impact || [wxWindAgg(c.wind, 0, 7), wxWindAgg(c.wind, 7, 14)].some((a) => a && isNum(a.pct)));
     const months = [];
     rows.forEach(([, c]) => ((c.seas || {}).months || []).forEach((m) => { if (!months.includes(m.m)) months.push(m.m); }));
     months.sort();
@@ -1844,9 +1879,9 @@ const DATA = /*__DATA__*/null;
       const bg = k === null ? "transparent" : anomColor(k);
       return `<td class="h" style="background:${bg};color:${k === null ? css("--ink") : inkFor(bg)}">${txt}</td>`;
     };
-    let h = `<thead><tr><th></th><th class="grp" colspan="2">Wiatr, % normy</th><th class="grp" colspan="2">Temperatura, °C vs norma</th>` +
+    let h = `<thead><tr><th></th><th class="grp" colspan="2">Wiatr, % normy</th><th class="grp" colspan="2">Temperatura, °C vs norma</th><th class="grp" colspan="2">Wpływ temp., dni 1–7, % normy</th>` +
       (months.length ? `<th class="grp" colspan="${months.length}">SEAS5, mediana °C vs norma</th>` : "") + `</tr>` +
-      `<tr><th>Kraj</th><th style="text-align:center">dni 1–7</th><th style="text-align:center">dni 8–14</th><th style="text-align:center">dni 1–7</th><th style="text-align:center">dni 8–14</th>` +
+      `<tr><th>Kraj</th><th style="text-align:center">dni 1–7</th><th style="text-align:center">dni 8–14</th><th style="text-align:center">dni 1–7</th><th style="text-align:center">dni 8–14</th><th style="text-align:center">gaz</th><th style="text-align:center">prąd</th>` +
       months.map((m) => `<th style="text-align:center">${monL(m)}</th>`).join("") + "</tr></thead><tbody>";
     rows.forEach(([code, c]) => {
       const w7 = wxWindAgg(c.wind, 0, 7), w8 = wxWindAgg(c.wind, 7, 14);
@@ -1855,6 +1890,7 @@ const DATA = /*__DATA__*/null;
       h += `<tr data-c="${code}" tabindex="0" class="${code === S.country ? "sel" : ""}"><td>${esc(cname(code))}</td>`;
       [w7, w8].forEach((a) => { h += a && isNum(a.pct) ? cell(a.pct, anomBin(a.pct), sgn(a.pct) + "%") : cell(null, null, "–"); });
       [t7, t8].forEach((a) => { h += a ? cell(a.anom, tempBin(a.anom), degS(a.anom).replace("°C", "")) : cell(null, null, "–"); });
+      ["gas", "power"].forEach((k) => { const a = impAgg(c.impact, k, 0, 7); h += a && isNum(a.pct) ? cell(a.pct, null, sgn(a.pct, 1) + "%") : cell(null, null, "–"); });
       months.forEach((m) => { const x = sm[m]; h += x && isNum(x.p50) ? cell(x.p50, tempBin(x.p50), degS(x.p50).replace("°C", "")) : cell(null, null, "–"); });
       h += "</tr>";
     });
@@ -1865,6 +1901,107 @@ const DATA = /*__DATA__*/null;
     });
   }
 
+  // ---------- wpływ temperatury na zużycie (wrażliwość gazu i prądu) ----------
+  const WXS = WX.sensitivity || {};
+  const gwhS = (v) => (isNum(v) ? (v > 0 ? "+" : v < 0 ? "−" : "") + fmt0.format(Math.abs(v)) + " GWh/d" : "–");
+  const twhS = (v) => (isNum(v) ? (v > 0 ? "+" : v < 0 ? "−" : "") + fmt1.format(Math.abs(v)) + " TWh" : "–");
+  function impAgg(im, kind, from, to) {   // średnie odchylenie (GWh/d) i % normalnego zużycia w dniach prognozy from..to
+    const x = im && im[kind];
+    if (!x) return null;
+    const idx = [];
+    for (let i = im.split + from; i < Math.min(im.dates.length, im.split + to); i++) if (isNum(x.det[i]) && isNum(x.norm[i])) idx.push(i);
+    if (idx.length < 3) return null;
+    const d = idx.reduce((a, i) => a + x.det[i], 0) / idx.length, n = idx.reduce((a, i) => a + x.norm[i], 0) / idx.length;
+    const tw = im["tw_" + kind] || im.tanom;
+    const t = tw ? idx.reduce((a, i) => a + (tw[i] || 0), 0) / idx.length : null;
+    return { d, n, pct: n > 0 ? (100 * d) / n : null, t, k: idx.length };
+  }
+  function impTile(c) {
+    const im = c.impact;
+    const g7 = impAgg(im, "gas", 0, 7), p7 = impAgg(im, "power", 0, 7), g8 = impAgg(im, "gas", 7, 14);
+    if (!g7 && !p7) return null;
+    const pS = (a) => (a && isNum(a.pct) ? ` (${sgn(a.pct, 1)}%)` : "");
+    return { label: "Wpływ temperatury · 7 dni", val: g7 ? `${gwhS(g7.d).replace(" GWh/d", "")}<small>GWh/d gazu</small>` : `${gwhS(p7.d).replace(" GWh/d", "")}<small>GWh/d prądu</small>`,
+      rows: [["gaz vs normalna temp.", g7 ? gwhS(g7.d) + pS(g7) : "–"], ["prąd vs normalna temp.", p7 ? gwhS(p7.d) + pS(p7) : "–"],
+        ["gaz, dni 8–" + (g8 ? 7 + g8.k : 14), g8 ? gwhS(g8.d) + pS(g8) : "brak"],
+        [S.country === "EU" ? "temp. ważona wrażl. gazu / prądu" : "temperatura vs norma",
+          S.country === "EU" ? `${degS(g7 && g7.t)} / ${degS(p7 && p7.t)}` : degS((g7 || p7).t)]],
+      chip: g7 && isNum(g7.t) ? tempBin(g7.t) : null, chipT: (k) => (k > 0 ? "więcej gazu na ogrzewanie" : k < 0 ? "mniej gazu na ogrzewanie" : "blisko normy") };
+  }
+  function renderImpChart(elId, legId, im, kind) {
+    const el = $(elId), x = im && im[kind];
+    if (!x) { el.innerHTML = '<p class="empty">Brak wrażliwości dla tego kraju.</p>'; $(legId).innerHTML = ""; return; }
+    const n = im.dates.length, sp = im.split, colr = kind === "gas" ? css("--s-gas") : css("--s-total");
+    const det = x.det.slice();
+    if (sp > 0 && sp < n && isNum(det[sp])) det[sp - 1] = x.act[sp - 1];
+    const hasEns = x.p10.some(isNum);
+    legend($(legId), [{ line: 1, color: css("--ink-2"), label: "rzeczywista temperatura" }, { line: 1, dash: 1, color: colr, label: "prognoza ECMWF" }]
+      .concat(hasEns ? [{ band: 1, label: "80% wariantów ensemble" }] : []).concat([{ line: 1, color: css("--muted"), label: "0 = normalna temperatura" }]));
+    lineChart(el, {
+      n, unit: "GWh", split: sp < n ? sp : null, H: 220, zero: false,
+      lines: [{ values: im.dates.map(() => 0), color: css("--muted"), width: 1 }, { values: x.act, color: css("--ink-2"), width: 2.5 }, { values: det, color: colr, width: 2.5, dash: true }],
+      band: hasEns ? { lo: x.p10, hi: x.p90 } : null,
+      xlab: (j) => dayLab(im.dates[j]), tlab: (j) => dayLong(im.dates[j]) + (j >= sp ? " · prognoza" : ""),
+      rows: (j) => {
+        const v = j < sp ? x.act[j] : x.det[j];
+        const r = [["vs normalna temperatura", gwhS(v), j < sp ? css("--ink-2") : colr]];
+        if (isNum(v) && isNum(x.norm[j]) && x.norm[j] > 0) r.push(["% normalnego zużycia", sgn((100 * v) / x.norm[j], 1) + "%"]);
+        if (j >= sp && isNum(x.p10[j])) r.push(["80% wariantów", gwhS(x.p10[j]) + " … " + gwhS(x.p90[j])]);
+        if (isNum(x.norm[j])) r.push(["zużycie przy normie", fmtU(x.norm[j], "GWh")]);
+        const tw = im["tw_" + kind] || im.tanom;
+        if (tw && isNum(tw[j])) r.push([S.country === "EU" ? "temp. ważona wrażliwością" : "temperatura vs norma", degS(tw[j])]);
+        return r;
+      },
+    });
+  }
+  function renderImpSeas(elId, rows, kind) {
+    const el = $(elId);
+    const M = (rows || []).filter((r) => r[kind]);
+    if (!M.length) { el.innerHTML = '<p class="empty">Brak prognozy sezonowej.</p>'; return; }
+    const H = 190, { svg, tip, W } = frame(el, H);
+    const L = 46, R = W - 12, T = 16, B = H - 24;
+    const all = [0, ...M.map((x) => x[kind].p10), ...M.map((x) => x[kind].p90)].filter(isNum);
+    const lo = Math.min(...all), hi = Math.max(...all), pad = (hi - lo) * 0.1 || 1;
+    const ticks = niceTicks(lo - pad, hi + pad, 4), y0 = ticks[0], y1 = ticks[ticks.length - 1];
+    const y = (v) => B - ((v - y0) / (y1 - y0)) * (B - T);
+    yAxis(svg, ticks, y, L, R, "TWh");
+    const bw = (R - L) / M.length, x = (i) => L + bw * (i + 0.5), barW = Math.min(26, bw * 0.5);
+    M.forEach((m, i) => {
+      const v = m[kind];
+      mk("rect", { x: x(i) - barW / 2, y: y(v.p90), width: barW, height: Math.max(2, y(v.p10) - y(v.p90)), rx: 4, fill: css("--band"), stroke: css("--axis"), "stroke-width": 1 }, svg);
+      if (isNum(v.p50)) mk("circle", { cx: x(i), cy: y(v.p50), r: 5.5, fill: v.p50 > 0 ? css("--dv2") : tempCol(), stroke: css("--surface"), "stroke-width": 2 }, svg);
+      const tx = mk("text", { x: x(i), y: H - 6, "text-anchor": "middle" }, svg); tx.textContent = monL(m.m);
+      const hit = mk("rect", { x: x(i) - bw / 2, y: T, width: bw, height: B - T, fill: "transparent" }, svg);
+      const show = () => {
+        const r = svg.getBoundingClientRect();
+        placeTip(tip, el, (x(i) / W) * r.width, 10, `<b>${monL(m.m)}</b><div class="r"><span>mediana</span><span>${twhS(v.p50)}</span></div>` +
+          `<div class="r"><span>80% wariantów</span><span>${twhS(v.p10)} … ${twhS(v.p90)}</span></div>` +
+          (isNum(v.norm) ? `<div class="r"><span>zużycie przy normie</span><span>${fmt1.format(v.norm)} TWh</span></div><div class="r"><span>mediana, % normy</span><span>${sgn((100 * v.p50) / v.norm, 1)}%</span></div>` : ""));
+      };
+      hit.addEventListener("pointermove", show); hit.addEventListener("pointerdown", show);
+      hit.addEventListener("pointerleave", () => { tip.hidden = true; });
+    });
+  }
+  function renderWxImpact() {
+    const c = WXC[S.country] || {}, im = c.impact;
+    renderImpChart("x-ig", "x-ig-legend", im, "gas");
+    renderImpChart("x-ip", "x-ip-legend", im, "power");
+    renderImpSeas("x-isg", c.impact_seas, "gas");
+    renderImpSeas("x-isp", c.impact_seas, "power");
+    const s = WXS[S.country] || {}, gs = WX.gas_source || {};
+    let note;
+    if (S.country === "EU") {
+      const tg = Object.values(WXS).reduce((a, v) => a + ((v.gas || {}).b || 0), 0), tp = Object.values(WXS).reduce((a, v) => a + ((v.power || {}).bh || 0), 0);
+      note = `UE = suma ${im ? im.countries : "–"} krajów, każdy z własną wrażliwością na ciepło: 1°C chłodniej (poniżej 15,5°C) w całej UE to ok. +${fmt0.format(tg)} GWh/d gazu i +${fmt0.format(tp)} GWh/d prądu. ` +
+        "Temperatura UE w kafelku jest ważona tymi wrażliwościami (Francja, Niemcy i Włochy ważą najwięcej), a nie liczbą punktów.";
+    } else if (s.gas || s.power) {
+      note = `${cname(S.country)}: 1°C chłodniej (poniżej 15,5°C) = ` + [s.gas ? `+${fmt1.format(s.gas.b)} GWh/d gazu (R² ${String(s.gas.r2).replace(".", ",")}, ${s.gas.n} mies.)` : null,
+        s.power ? `+${fmt1.format(s.power.bh)} GWh/d prądu (R² ${String(s.power.r2).replace(".", ",")})` + (s.power.bc ? `, a 1°C cieplej powyżej 22°C +${fmt1.format(s.power.bc)} GWh/d prądu` : "") : null].filter(Boolean).join(", ") + ".";
+    } else note = "Brak wrażliwości dla tego kraju (brak punktów temperatury albo danych o zużyciu).";
+    $("x-imp-note").textContent = note + ` Wrażliwość gazu: regresja miesięcznego zużycia z Eurostatu (nrg_cb_gasm, ${gs.since || "2023-01"}–${gs.last_month || "–"}; te same dane, do których kalibruje się raport Gaz UE) na stopniodniach grzania; prądu: zużycie dzienne z 730 dni na stopniodniach grzania i chłodzenia oraz dniu tygodnia. ` +
+      "Odchylenie = wrażliwość × (stopniodni z prognozy − stopniodni przy normie 2019–2025). Pokazuje tylko efekt temperatury – wiatr, ceny i przemysł zmieniają zużycie niezależnie. SEAS5: surowy model, bez korekty błędu systematycznego.";
+  }
+
   function renderWx() {
     if (!WX.countries || !Object.keys(WXC).length) {
       $("tab-wx").innerHTML = '<div class="panel"><p class="muted">Prognozy pogody pojawią się po następnym przebiegu automatu (wymagają wspólnej bazy pogodowej w data/shared_weather).</p></div>';
@@ -1872,7 +2009,7 @@ const DATA = /*__DATA__*/null;
     }
     const I = WX.issued || {};
     $("x-issued").textContent = `${cname(S.country)} · prognoza ECMWF IFS z ${I.forecast ? fdate(I.forecast) : "–"}, ensemble z ${I.ensemble ? fdate(I.ensemble) : "–"}, SEAS5 z ${I.seasonal ? fdate(I.seasonal) : "–"}`;
-    renderWxKPIs(); renderWxCharts(); renderWxTable();
+    renderWxKPIs(); renderWxCharts(); renderWxImpact(); renderWxTable();
   }
 
   // ---------- zakładka: weryfikacja prognoz ----------
@@ -2267,7 +2404,7 @@ const DATA = /*__DATA__*/null;
   renderCountry(); renderTable(); renderMap(); renderMovers(); renderControl();
   setTab(TAB);
   let rt;
-  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (DATA.summary[S.country]) { renderTrend(); renderPrices(); renderForecast(); renderDaily(); renderMonthly(); } if (TAB === "wind") renderWindCharts(); if (TAB === "wx") renderWxCharts(); if (TAB === "ver") renderVerCharts(); renderEurostat(); renderStorage(); }, 150); });
+  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (DATA.summary[S.country]) { renderTrend(); renderPrices(); renderForecast(); renderDaily(); renderMonthly(); } if (TAB === "wind") renderWindCharts(); if (TAB === "wx") { renderWxCharts(); renderWxImpact(); } if (TAB === "ver") renderVerCharts(); renderEurostat(); renderStorage(); }, 150); });
   try {
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { renderCountry(); renderTable(); renderMap(); renderMovers(); if (TAB === "wind") renderWind(); if (TAB === "wx") renderWx(); if (TAB === "ver") renderVer(); });
     new MutationObserver(() => { renderCountry(); renderTable(); renderMap(); renderMovers(); if (TAB === "wind") renderWind(); if (TAB === "wx") renderWx(); if (TAB === "ver") renderVer(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });

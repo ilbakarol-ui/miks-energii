@@ -9,7 +9,7 @@ import os
 import sys
 import time
 
-from . import build, elexon, entsoe, eurostat, shared_outages, storage_cap, store, trends, update, weather
+from . import build, elexon, entsoe, eurostat, sensitivity, shared_outages, storage_cap, store, trends, update, weather
 
 
 def _pl(v, nd: int = 1, sign: bool = False) -> str:
@@ -182,6 +182,10 @@ def main(argv=None):
             storage_cap.update(settings, run.setdefault("log", []))
         except Exception as e:
             run.setdefault("log", []).append(f"Magazyny: {type(e).__name__}: {e}")
+        try:   # wrażliwość na temperaturę: zużycie gazu z Eurostatu (nrg_cb_gasm) co 30 dni – zakładka „Pogoda”
+            sensitivity.update(run.setdefault("log", []))
+        except Exception as e:
+            run.setdefault("log", []).append(f"Wrażliwość na temperaturę: {type(e).__name__}: {e}")
     es_df, es_err = (None, None) if args.skip_eurostat else eurostat.update(settings["history_years"])
     if args.skip_eurostat:
         import pandas as pd
