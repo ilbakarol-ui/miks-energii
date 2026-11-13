@@ -4,7 +4,7 @@
 
 | | bieżący | poprz. tydz. | rok temu | śr. 5 lat |
 |---|---|---|---|---|
-| Zużycie, GWh | 51 071 | 47 867 | 47 739 | 48 405 |
+| Zużycie, GWh | 51 126 | 47 867 | 47 739 | 48 405 |
 | Produkcja, GWh | 50 409 | 47 643 | 48 397 | 48 726 |
 | Udział OZE | 34,5% | 39,3% | 39,6% | 36,4% |
 | Emisyjność, g/kWh | 255 | 229 | 209 | 244 |
@@ -20,13 +20,14 @@
 - Irlandia: emisyjność 377 g/kWh (+58,2% r/r, tydz. 45)
 - Litwa: emisyjność 53 g/kWh (-55,3% r/r, paź 2026)
 
-Zapytania do Energy-Charts: 46 (public_power: 30, price: 16); czas: 18 min
-Prognozy pobrane dla: AT, BE, BG, CH, CY, CZ, DE, DK, EE, ES, EU, FI, FR, GB, GR, HR, HU, IE, IT, LT, LU, LV, NL, NO, PL, PT, RO, SE, SI, SK, UK
+Zapytania do Energy-Charts: 46 (public_power: 30, price: 16); czas: 29 min
+Prognozy pobrane dla: żadnego kraju
 Brak dób w 14 dniach (źródło nie dosłało danych): DK 7 (ostatnia pełna doba 2026-11-03)
-Niepełne doby w 14 dniach (brakujące godziny uzupełnione proporcjonalnie; poniżej 80% – luka): IE 8, UK 7 (w tym 1 luka)
-Ostatnie doby niepełne mimo pokrycia (do ponownego pobrania): DE 11.11 (słońce)
-Zużycie bez danych w 14 dniach (źródło podało < 80% godzin – luka do uzupełnienia): CY 4, BG 1, ES 1
+Niepełne doby w 14 dniach (brakujące godziny uzupełnione proporcjonalnie; poniżej 80% – luka): IE 8, UK 7
+Ostatnie doby niepełne mimo pokrycia (do ponownego pobrania): EU 12.11 (słońce)
+Zużycie bez danych w 14 dniach (źródło podało < 80% godzin – luka do uzupełnienia): CY 4
 - UK: ENTSO-E od 2025-10-24 – zużycie 0 dób, produkcja 0 dób
-- NL: ENTSO-E od 2026-09-01 – zużycie 72 dób, produkcja 72 dób; wobec Energy-Charts (14 dób): load +0%, solar +0%, misc -0%
-- DK: ENTSO-E od 2026-10-25 – zużycie 13 dób, produkcja 10 dób; wobec Energy-Charts (14 dób): load +0%, solar -0%
-- Niedostępność elektrowni (ENTSO-E, dla Gaz UE): bieżące FR,BE,ES,NL; historia FR,BE,ES,NL; 8 zapytań; atom dziś niedostępny: FR 19.1 GW, BE 0.4 GW, ES 1.0 GW, NL 0.0 GW
+- NL: ENTSO-E od 2026-09-01 – zużycie 73 dób, produkcja 73 dób; wobec Energy-Charts (14 dób): load +0%, solar -0%, misc -0%
+- DK: ENTSO-E od 2026-10-25 – zużycie 14 dób, produkcja 10 dób; wobec Energy-Charts (14 dób): load +0%, solar -0%
+- Niedostępność elektrowni (ENTSO-E, dla Gaz UE): bieżące FR,BE,ES,NL; historia FR,BE,ES,NL; 8 zapytań; atom dziś niedostępny: FR 17.7 GW, BE 0.4 GW, ES 1.0 GW, NL 0.0 GW
+- Open-Meteo: prognoza niedostępna (ReadTimeout: HTTPSConnectionPool(host='api.open-meteo.com', port=443): Read timed out. (read timeout=120))

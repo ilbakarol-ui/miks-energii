@@ -23,17 +23,6 @@
 },
 {
 "zone": "FR",
-"unit": "FLAMANVILLE 2",
-"psr": "nuclear",
-"nominal_mw": 1330,
-"unavail_mw": 1330,
-"start": "2026-11-06T22:00:00+00:00",
-"end": "2026-11-12T22:00:00+00:00",
-"now": true,
-"kind": "planowe"
-},
-{
-"zone": "FR",
 "unit": "BELLEVILLE 1",
 "psr": "nuclear",
 "nominal_mw": 1310,
@@ -210,28 +199,6 @@
 },
 {
 "zone": "FR",
-"unit": "PALUEL 1",
-"psr": "nuclear",
-"nominal_mw": 1330,
-"unavail_mw": 130,
-"start": "2026-10-15T06:54:00+00:00",
-"end": "2026-11-12T18:30:00+00:00",
-"now": true,
-"kind": "awaryjne"
-},
-{
-"zone": "FR",
-"unit": "ST ALBAN 2",
-"psr": "nuclear",
-"nominal_mw": 1335,
-"unavail_mw": 100,
-"start": "2026-11-12T01:00:00+00:00",
-"end": "2026-11-12T15:00:00+00:00",
-"now": true,
-"kind": "planowe"
-},
-{
-"zone": "FR",
 "unit": "PALUEL 2",
 "psr": "nuclear",
 "nominal_mw": 1330,
@@ -298,12 +265,12 @@
 },
 {
 "zone": "FR",
-"unit": "CHINON 1",
+"unit": "ST ALBAN 2",
 "psr": "nuclear",
-"nominal_mw": 905,
-"unavail_mw": 587,
-"start": "2026-11-13T00:00:00+00:00",
-"end": "2026-11-13T02:00:00+00:00",
+"nominal_mw": 1335,
+"unavail_mw": 555,
+"start": "2026-11-15T03:00:00+00:00",
+"end": "2026-11-15T20:00:00+00:00",
 "now": false,
 "kind": "planowe"
 },
@@ -315,6 +282,28 @@
 "unavail_mw": 400,
 "start": "2026-11-22T19:00:00+00:00",
 "end": "2026-11-22T22:00:00+00:00",
+"now": false,
+"kind": "planowe"
+},
+{
+"zone": "FR",
+"unit": "CATTENOM 2",
+"psr": "nuclear",
+"nominal_mw": 1300,
+"unavail_mw": 173,
+"start": "2026-11-14T02:00:00+00:00",
+"end": "2026-11-14T03:00:00+00:00",
+"now": false,
+"kind": "planowe"
+},
+{
+"zone": "FR",
+"unit": "CHINON 4",
+"psr": "nuclear",
+"nominal_mw": 905,
+"unavail_mw": 107,
+"start": "2026-11-14T17:00:00+00:00",
+"end": "2026-11-14T18:30:00+00:00",
 "now": false,
 "kind": "planowe"
 },
@@ -348,6 +337,17 @@
 "unavail_mw": 992,
 "start": "2026-10-23T22:00:00+00:00",
 "end": "2026-12-16T23:00:00+00:00",
+"now": true,
+"kind": "awaryjne"
+},
+{
+"zone": "ES",
+"unit": "ABOÑO 2",
+"psr": "gas",
+"nominal_mw": 562,
+"unavail_mw": 562,
+"start": "2026-11-12T00:00:00+00:00",
+"end": "2026-11-13T09:00:00+00:00",
 "now": true,
 "kind": "awaryjne"
 },
@@ -426,6 +426,28 @@
 "start": "2026-08-28T08:00:00+00:00",
 "end": "2026-12-11T23:00:00+00:00",
 "now": true,
+"kind": "planowe"
+},
+{
+"zone": "NL",
+"unit": "Moerdijk 2",
+"psr": "gas",
+"nominal_mw": 418,
+"unavail_mw": 418,
+"start": "2026-11-12T18:00:00+00:00",
+"end": "2026-11-16T19:00:00+00:00",
+"now": true,
+"kind": "awaryjne"
+},
+{
+"zone": "NL",
+"unit": "Eemshaven 30",
+"psr": "gas",
+"nominal_mw": 470,
+"unavail_mw": 470,
+"start": "2026-11-13T23:00:00+00:00",
+"end": "2026-11-14T15:00:00+00:00",
+"now": false,
 "kind": "planowe"
 },
 {
