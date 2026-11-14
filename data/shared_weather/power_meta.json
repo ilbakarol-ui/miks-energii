@@ -1,0 +1,18 @@
+{
+ "issued": "2026-11-14T10:59Z",
+ "countries": 30,
+ "points": 173,
+ "missing": [],
+ "past_days": 10,
+ "forecast_days": 16,
+ "hourly_days": 9,
+ "source": "Open-Meteo (CC BY 4.0), prognoza deterministyczna (best match); punkty: config/weather_points.csv",
+ "columns": {
+  "cf": "wskaźnik mocy turbiny (średnia godzin i punktów)",
+  "ws": "wiatr 100 m, m/s",
+  "ghi": "promieniowanie, kWh/m2 na dobę",
+  "temp": "°C",
+  "hdd": "15,5 − temp",
+  "cdd": "temp − 22"
+ }
+}
