@@ -43,6 +43,12 @@ class FakeEDS:
         return out
 
 
+def _hours(day) -> int:
+    """Liczba godzin doby w czasie duńskim (23/24/25)."""
+    a = pd.Timestamp(day).tz_localize(TZ)
+    return int((pd.Timestamp(day + pd.Timedelta(days=1)).tz_localize(TZ) - a) / pd.Timedelta(hours=1))
+
+
 def _ec(days, cov=1.0, load=110000.0):
     df = pd.DataFrame(np.nan, index=pd.DatetimeIndex(days, name="date"), columns=store.COLUMNS)
     df["cov"] = cov
@@ -104,15 +110,17 @@ def test_update_fills_only_missing_days(tmp_store, monkeypatch):
     df = store.read_daily("DK")
     # dobre doby z Energy-Charts bez zmian
     assert df.loc[pd.Timestamp(frm):pd.Timestamp(frm) + pd.Timedelta(days=2), "wind_onshore"].eq(1000).all()
-    # niepełna doba i doby bez produkcji uzupełnione (24 h × 500 MW wiatru na lądzie)
+    # niepełna doba i doby bez produkcji uzupełnione (godziny doby × 500 MW wiatru na lądzie);
+    # doba zmiany czasu ma 23 albo 25 godzin (testy z FAKE_NOW 26.10.2026 i 29.03.2027)
     filled = df.loc[pd.Timestamp(frm) + pd.Timedelta(days=3):pd.Timestamp(y)]
-    assert filled["cov"].eq(1).all() and filled["wind_onshore"].eq(12000).all()
-    assert filled["hard_coal"].eq(2400).all() and filled["xborder"].eq(-4800).all()
-    # zużycie: ENTSO-E zostaje, brakujące z Energinet (5000 MW × 24 h), podejrzana doba odrzucona
+    hours = pd.Series({d: _hours(d) for d in filled.index})
+    assert filled["cov"].eq(1).all() and filled["wind_onshore"].eq(500 * hours).all()
+    assert filled["hard_coal"].eq(100 * hours).all() and filled["xborder"].eq(-200 * hours).all()
+    # zużycie: ENTSO-E zostaje, brakujące z Energinet (5000 MW × godziny doby), podejrzana doba odrzucona
     assert df.at[load_only, "load"] == 110000
     assert df.at[partial, "load"] == 110000                    # doba miała zużycie – bez zmian
     assert pd.isna(df.at[pd.Timestamp(bad_day), "load"])
-    assert df.at[pd.Timestamp(y), "load"] == 120000
+    assert df.at[pd.Timestamp(y), "load"] == 5000 * _hours(pd.Timestamp(y))
     # ceny dzienne ze stref (średnia DK1 i DK2), tylko w pustych miejscach
     assert df.at[pd.Timestamp(y), "price_avg"] == 110 and df.at[partial, "price_avg"] == 90
     assert res["DK"][0] == 10
@@ -125,7 +133,7 @@ def test_update_fills_only_missing_days(tmp_store, monkeypatch):
     c2.records = lambda s, e, a: [dict(r, OnshoreWindPower=r["OnshoreWindPower"] * 2) for r in rec(s, e, a)]
     energinet.update({**settings, "energinet": conf}, [], client=c2)
     df2 = store.read_daily("DK")
-    assert df2.loc[pd.Timestamp(y), "wind_onshore"] == 24000
+    assert df2.loc[pd.Timestamp(y), "wind_onshore"] == 1000 * _hours(pd.Timestamp(y))
     assert df2.loc[pd.Timestamp(frm), "wind_onshore"] == 1000
     assert df2.at[load_only, "load"] == 110000
 
