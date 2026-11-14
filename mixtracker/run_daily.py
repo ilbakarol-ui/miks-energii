@@ -11,7 +11,7 @@ import os
 import sys
 import time
 
-from . import build, elexon, entsoe, eurostat, sensitivity, shared_outages, storage_cap, store, trends, update, weather
+from . import build, elexon, energinet, entsoe, eurostat, sensitivity, shared_outages, storage_cap, store, trends, update, weather
 
 
 def _pl(v, nd: int = 1, sign: bool = False) -> str:
@@ -178,6 +178,13 @@ def main(argv=None):
             entsoe.update({**settings, "entsoe": conf}, run.setdefault("log", []), settings.get("entsoe_budget_minutes", 15))
         except Exception as e:
             run.setdefault("log", []).append(f"ENTSO-E: {type(e).__name__}: {e}")
+    # U-20261114: Dania z Energinet (Energi Data Service) – tylko doby, których brakuje po Energy-Charts i ENTSO-E
+    if not args.skip_fetch and settings.get("energinet"):
+        conf = {k: v for k, v in settings["energinet"].items() if not only or k in only}
+        try:
+            energinet.update({**settings, "energinet": conf}, run.setdefault("log", []))
+        except Exception as e:
+            run.setdefault("log", []).append(f"Energinet: {type(e).__name__}: {e}"[:300])
     # niedostępność elektrowni (ENTSO-E A80) – wspólne dane dla dashboardu „Gaz UE” (data/shared_outages)
     if not args.skip_fetch and not only and settings.get("outages"):
         try:

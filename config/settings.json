@@ -46,6 +46,15 @@
       "generation": true
     }
   },
+  "energinet": {
+    "DK": {
+      "from": "2026-11-01",
+      "areas": ["DK1", "DK2"],
+      "generation": true,
+      "load": true,
+      "load_tolerance": 0.25
+    }
+  },
   "outages": {
     "zones": {
       "FR": "10YFR-RTE------C",
