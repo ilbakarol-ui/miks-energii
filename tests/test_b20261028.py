@@ -21,7 +21,7 @@ def test_only_missing_summary_lists_all_zones(tmp_store):
 def test_prev_timeout_short_for_daily_increment():
     """B-20261028-3: przyrost dzienny dawnych prognoz z krótkim limitem, duże paczki – 150 s."""
     u = sw.PREV_URL
-    assert sw._timeout(u, {"start_date": "2026-10-24", "end_date": "2026-10-28"}) == 40
+    assert sw._timeout(u, {"start_date": "2026-10-24", "end_date": "2026-10-28"}) == 90   # B-20261112-3: 40 s za mało
     assert sw._timeout(u, {"start_date": "2026-08-30", "end_date": "2026-10-28"}) == 150
     assert sw._timeout(u, {}) == 150
     assert sw._timeout("https://api.open-meteo.com/v1/forecast", {"start_date": "2026-10-24", "end_date": "2026-10-28"}) == 90

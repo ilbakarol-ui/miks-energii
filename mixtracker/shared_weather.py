@@ -113,7 +113,9 @@ def _timeout(url: str, params: dict) -> float:
         days = (dt.date.fromisoformat(params["end_date"]) - dt.date.fromisoformat(params["start_date"])).days + 1
     except (KeyError, TypeError, ValueError):
         return 150
-    return 40 if days < 10 else 150
+    # B-20261112-3: dzienny przyrost (5 dni × 5 punktów) w 17 nocach z rzędu kończył się ReadTimeout przy 40 s –
+    # 3 próby × 40 s to za mało przy wolnym serwerze dawnych prognoz
+    return 90 if days < 10 else 150
 
 
 def http_get(url: str, params: dict, tries: int = 3) -> list[dict]:
@@ -206,21 +208,49 @@ def daily_from_hourly(times: list[str], cols: dict[str, list]) -> pd.DataFrame:
 
 # ---------- kroki ----------
 
+_RECENT_FAILED: list[str] = []
+
+
 def step_recent(pts, q: Quota, get=http_get, today: dt.date | None = None) -> pd.DataFrame:
+    """Prognoza temperatury (14 dni wstecz, 16 naprzód). B-20261113-2: nieudana paczka nie przerywa kroku –
+    pozostałe paczki są pytane dalej, nieudane raz jeszcze na końcu, a punkty bez dzisiejszej prognozy
+    zostają z poprzedniego pliku (błąd w meta.json). Gdy prognozy nie ma dla połowy punktów – wyjątek jak dotąd."""
     today = today or dt.date.today()
-    rows = []
-    for tz, g in _batches(pts):
-        w = q.weight(len(g), 30)
-        q.take(w)
-        for pt, js in zip(g.pt, get(FORECAST_URL, {**_coords(g), "daily": "temperature_2m_mean", "timezone": tz,
-                                                    "past_days": 14, "forecast_days": 16})):
+    rows, failed = [], []
+
+    def ask(g, tz):
+        res = get(FORECAST_URL, {**_coords(g), "daily": "temperature_2m_mean", "timezone": tz,
+                                 "past_days": 14, "forecast_days": 16})
+        for pt, js in zip(g.pt, res):
             d = js.get("daily") or {}
             for t, v in zip(d.get("time", []), d.get("temperature_2m_mean", [])):
                 if v is not None:
                     rows.append((pt, t, v, int(t >= today.isoformat())))
+
+    for tz, g in _batches(pts):
+        q.take(q.weight(len(g), 30))
+        try:
+            ask(g, tz)
+        except (Deadline, DailyLimit):
+            raise
+        except RuntimeError as e:
+            failed.append((g, tz, str(e)))
+    again = []
+    for g, tz, err in failed:          # serwer bywa chwilowo przeciążony – jedna ponowna próba na końcu
+        try:
+            ask(g, tz)
+        except (Deadline, DailyLimit):
+            raise
+        except RuntimeError as e:
+            again.append((g, tz, str(e)))
     df = pd.DataFrame(rows, columns=["pt", "date", "temp", "fc"])
-    if df.empty:
-        raise RuntimeError("pusta prognoza")
+    if df.empty or df.pt.nunique() < 0.5 * len(pts):
+        raise RuntimeError("pusta prognoza" if df.empty else f"prognoza tylko dla {df.pt.nunique()} z {len(pts)} punktów")
+    if again:
+        lost = [p_ for g, _, _ in again for p_ in g.pt]
+        old = _read("temp_recent.csv", ["pt", "date", "temp", "fc"])
+        df = pd.concat([df, old[old.pt.isin(lost)]], ignore_index=True)
+        _RECENT_FAILED.append(f"{len(lost)} punktów z poprzedniej prognozy, np. {','.join(lost[:5])}: {again[0][2][:60]}")
     _write(df, "temp_recent.csv")
     return df
 
@@ -281,6 +311,11 @@ _PREV_LEFT = [0]
 _PREV_FAILED: list[str] = []
 
 
+def _get_one(get, url, params):
+    """Pojedynczy punkt po nieudanej paczce: 2 próby zamiast 3 (http_get), inne funkcje pobierania bez zmian."""
+    return get(url, params, tries=2) if get is http_get else get(url, params)
+
+
 def _prev_loop(jobs, q, get, end, hourly, new):
     left = 0
     _PREV_LEFT[0] = len(jobs)
@@ -302,9 +337,26 @@ def _prev_loop(jobs, q, get, end, hourly, new):
                 except (Deadline, DailyLimit):
                     raise
                 except Exception as e:      # jedna paczka punktów nie przerywa całego kroku
-                    _PREV_FAILED.append(f"{','.join(gg.pt)} {a}..{b}: {type(e).__name__}")
-                    left += len(gg)
-                    break
+                    # B-20261104-1 / B-20261112-3: paczka odrzucona 3 razy – ponów pojedynczymi punktami
+                    # (krótsza odpowiedź; jeden wolny punkt nie blokuje pozostałych)
+                    res, bad = [], []
+                    for k in range(len(gg) if len(gg) > 1 else 0):
+                        one = gg.iloc[k:k + 1]
+                        q.take(q.weight(1, (b - a).days + 1, len(hourly)))
+                        try:
+                            res += _get_one(get, PREV_URL, {**_coords(one), "hourly": ",".join(hourly), "timezone": tz,
+                                                            "start_date": a.isoformat(), "end_date": b.isoformat()})
+                        except (Deadline, DailyLimit):
+                            raise
+                        except Exception as e1:
+                            res.append({})
+                            bad.append(f"{one.pt.iloc[0]} {a}..{b}: {type(e1).__name__}")
+                    if not any((r or {}).get("hourly") for r in res):
+                        _PREV_FAILED.append(f"{','.join(gg.pt)} {a}..{b}: {type(e).__name__}")
+                        left += len(gg)
+                        break
+                    _PREV_FAILED.extend(bad)
+                    left += len(bad)
                 for pt, js in zip(gg.pt, res):
                     h = js.get("hourly") or {}
                     if not h.get("time"):
@@ -472,6 +524,9 @@ def run(budget: float = 8000, get=http_get, today: dt.date | None = None, minute
             if name == "prev" and _PREV_FAILED:
                 meta["errors"].append(f"prev: {len(_PREV_FAILED)} paczek punktów bez danych po 3 próbach, np. {_PREV_FAILED[0]}")
                 _PREV_FAILED.clear()
+            if name == "recent" and _RECENT_FAILED:
+                meta["errors"].append(f"recent (częściowo): {_RECENT_FAILED[0]}")
+                _RECENT_FAILED.clear()
         except Deadline:
             status = "limit czasu"
             meta["errors"].append(f"{name}: limit czasu przebiegu ({minutes:.0f} min) – zebrane dane zapisane, reszta jutro")
@@ -503,7 +558,9 @@ def main():
     a = ap.parse_args()
     meta = run(a.budget, minutes=a.minutes, job=a.job)
     # błąd prognozy (temperatury albo ensemble) = błąd zadania; pozostałe kroki mogą poczekać
-    sys.exit(1 if any(e.startswith(("recent", "ensemble")) for e in meta["errors"]) else 0)
+    # B-20261113-2: częściowa prognoza (reszta punktów z poprzedniego pliku) nie oznacza przebiegu jako nieudanego
+    sys.exit(1 if any(e.startswith(("recent", "ensemble")) and not e.startswith("recent (częściowo)")
+                      for e in meta["errors"]) else 0)
 
 
 if __name__ == "__main__":

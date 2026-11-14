@@ -5,6 +5,8 @@ python -m mixtracker.run_daily [--budget 70] [--only PL,DE] [--skip-fetch]
 from __future__ import annotations
 
 import argparse
+import datetime as dt
+import json
 import os
 import sys
 import time
@@ -123,6 +125,15 @@ def _luk(n: int) -> str:
     return "luka" if n == 1 else ("luki" if n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14) else "luk")
 
 
+def _forecast_issued_today(path=None) -> bool:
+    """B-20261113-1: czy dzisiejsze (UTC) prognozy (data/forecast/EU.json) już powstały."""
+    try:
+        js = json.loads((path or store.DATA / "forecast" / "EU.json").read_text(encoding="utf-8"))
+        return str(js.get("issued", ""))[:10] == dt.datetime.now(dt.timezone.utc).date().isoformat()
+    except Exception:
+        return False
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--budget", type=float, default=None, help="limit czasu pobierania (min)")
@@ -131,7 +142,7 @@ def main(argv=None):
     ap.add_argument("--skip-eurostat", action="store_true")
     ap.add_argument("--skip-weather", action="store_true")
     ap.add_argument("--afternoon", action="store_true",
-                    help="przebieg popołudniowy: tylko ceny day-ahead na jutro (bez produkcji, pogody, prognoz i Eurostatu)")
+                    help="przebieg popołudniowy: tylko ceny day-ahead na jutro (bez produkcji i Eurostatu; prognozy tylko, gdy nocny przebieg ich nie policzył – B-20261113-1)")
     ap.add_argument("--no-retry", action="store_true",
                     help="z --afternoon: bez ponowień brakujących stref (przebieg 12:37 UTC; braki uzupełnia przebieg 14:07, B-20261103-2)")
     ap.add_argument("--only-missing", action="store_true",
@@ -139,7 +150,9 @@ def main(argv=None):
     args = ap.parse_args(argv)
     settings = store.load_settings()
     if args.afternoon:
-        args.skip_fetch = args.skip_weather = args.skip_eurostat = True
+        args.skip_fetch = args.skip_eurostat = True
+        # B-20261113-1: gdy nocny przebieg nie policzył prognoz (np. Open-Meteo ReadTimeout 13.11), przelicz je po południu
+        args.skip_weather = args.skip_weather or args.only_missing or _forecast_issued_today()
     t0 = time.time()
     run = {"requests": 0, "log": []}
     only = [x.strip().upper() for x in args.only.split(",") if x.strip()] or None
@@ -177,6 +190,9 @@ def main(argv=None):
         wlog = run.setdefault("log", [])
         fcs = weather.update(settings, frames, trends.derive, countries, wlog)
         run["forecasts"] = sorted(fcs)
+        if args.afternoon:
+            wlog.append(f"Prognozy przeliczone po południu (nocny przebieg ich nie policzył): {len(fcs)} krajów"
+                        if fcs else "Prognozy: po południu nadal niedostępne – zostaje poprzednie wydanie")
     if not args.afternoon and not args.skip_fetch:
         try:   # moc zainstalowana magazynów: Eurostat co 7 dni, Energy-Charts co 30 dni (po 6 krajów na przebieg)
             storage_cap.update(settings, run.setdefault("log", []))
