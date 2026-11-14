@@ -144,3 +144,42 @@ def test_country_error_does_not_break_build(tmp_path, monkeypatch):
     monkeypatch.setattr(wt, "seas_block", boom)
     r = wt.build(_derived(), {}, ["PL", "DE"], REF, 5, 3, folder=tmp_path)
     assert r["countries"]["PL"]["error"] == "ValueError: test"
+
+
+def _add_trial(folder, pt, cc, off, hist_from="2019-01-01"):
+    """Punkt próbny EX_ (grupa eu_gas_x): historia od `hist_from`, bieżące dni i prognoza jak punkty kraju + off."""
+    p = pd.read_csv(folder / "points.csv")
+    p = pd.concat([p, pd.DataFrame([{"pt": pt, "group": "eu_gas_x", "cc": cc, "lat": 49.5, "lon": 22.0,
+                                      "tz": "Europe/Berlin", "uses": "temp"}])])
+    p.to_csv(folder / "points.csv", index=False)
+    h = pd.read_csv(folder / "temp_hist.csv")
+    src = h[(h.pt == "EU_PL_1") & (h.date >= hist_from)].assign(pt=pt)
+    src["temp"] += off
+    pd.concat([h, src]).to_csv(folder / "temp_hist.csv", index=False)
+    r = pd.read_csv(folder / "temp_recent.csv")
+    src = r[r.pt == "EU_PL_1"].assign(pt=pt)
+    src["temp"] += off
+    pd.concat([r, src]).to_csv(folder / "temp_recent.csv", index=False)
+
+
+def test_trial_point_used_for_country_when_complete(tmp_path):
+    """U-20261114: gotowy punkt EX_ wchodzi do średniej kraju (norma i prognoza z tych samych punktów), nie do UE."""
+    _write_base(tmp_path)
+    base = wt.build(_derived(), {}, ["EU", "PL"], REF, 5, 3, folder=tmp_path)["countries"]
+    _add_trial(tmp_path, "EX_PL_1", "PL", -3.0)
+    r = wt.build(_derived(), {}, ["EU", "PL"], REF, 5, 3, folder=tmp_path)
+    assert r["trial_points"] == ["EX_PL_1"]
+    t, t0 = r["countries"]["PL"]["temp"], base["PL"]["temp"]
+    assert t["points"] == 3 and t["trial_points"] == 1
+    assert abs(t["det"][14] - (t0["det"][14] - 1.0)) < 0.05       # (0 + 0 − 3) / 3
+    assert abs(t["norm"][14] - (t0["norm"][14] - 1.0)) < 0.05     # norma z tego samego zestawu punktów
+    assert abs((t["det"][14] - t["norm"][14]) - (t0["det"][14] - t0["norm"][14])) < 0.05   # odchylenie bez skoku
+    eu = r["countries"]["EU"]["temp"]
+    assert eu["points"] == 3 and eu["det"][14] == base["EU"]["temp"]["det"][14]
+
+
+def test_trial_point_skipped_while_history_incomplete(tmp_path):
+    _write_base(tmp_path)
+    _add_trial(tmp_path, "EX_PL_1", "PL", -3.0, hist_from="2024-01-01")   # historia jeszcze się dociąga
+    r = wt.build(_derived(), {}, ["EU", "PL"], REF, 5, 3, folder=tmp_path)
+    assert r["trial_points"] == [] and r["countries"]["PL"]["temp"]["points"] == 2

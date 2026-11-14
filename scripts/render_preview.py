@@ -109,6 +109,13 @@ def main(out: Path):
             prev = (mm.get("coverage") or {}).get("prev") or {}
             sw[name] = {"updated": mm.get("updated"), "errors": mm.get("errors", []), "pending": mm.get("pending", {}),
                         "prev_punkty_do_konca": f'{prev.get("points_to_end")}/{prev.get("points")}' if prev else None}
+            # U-20261114: punkty próbne EX_ osobno – ich zaległości i błędy nie są błędem wspólnej bazy pogody
+            tr = mm.get("trial")
+            if tr:
+                tc = tr.get("coverage") or {}
+                sw[name]["punkty_probne"] = {
+                    "punkty": tr.get("points"), "bledy": tr.get("errors", []), "zaleglosci": tr.get("pending", {}),
+                    **{f"{k}_do_konca": f'{v.get("points_to_end")}/{v.get("points")}' for k, v in tc.items()}}
     brief["pogoda_wspolna"] = sw
     (out / "brief.json").write_text(json.dumps(brief, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps(brief, ensure_ascii=False, indent=1))

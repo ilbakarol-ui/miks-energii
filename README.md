@@ -130,11 +130,13 @@ Ustawienia (odstęp między zapytaniami, limit czasu, liczba dni do ponownego po
 
 Osobny przebieg (`.github/workflows/shared_weather.yml`, „Wspólna pogoda dla dashboardów”, codziennie o 00:17 UTC, także w weekendy; do tego lekki przebieg wieczorny o 17:47 UTC – patrz niżej) pobiera całą pogodę potrzebną raportowi Gaz UE i zapisuje ją w `data/shared_weather/`. Raport nie pobiera pogody sam – czyta te pliki. Dwa zadania idą równolegle na osobnych maszynach (każde ma własny limit Open-Meteo):
 
-- **temp** – temperatura dla punktów z `uses` = temp w `config/shared_weather_points.csv` (49 miast UE i 14 punktów w Azji):
+- **temp** – temperatura dla punktów z `uses` = temp w `config/shared_weather_points.csv` (49 miast UE, 14 punktów w Azji i 15 punktów próbnych `EX_…` w grupie `eu_gas_x` – od 11.2026 dla raportu Gaz UE: test, czy gęstsza siatka miast poprawia prognozę zużycia gazu; tylko `uses` = temp, więc nie zmieniają ensemble ani SEAS5; zakładka „Pogoda” Miksu dolicza je do temperatury kraju – nie UE – dopiero, gdy mają pełną historię ERA5 i prognozę, U-20261114):
   - `temp_hist.csv` – średnia dobowa z archiwum ERA5 od 2019 r.,
   - `temp_recent.csv` – ostatnie 14 dni i 16 dni prognozy (`fc=1`),
   - `temp_prev.csv` – dawne prognozy: `l1` to prognoza na dany dzień wydana dzień wcześniej, `l7` – tydzień wcześniej (`l0` – bieżąca analiza), od 2024 r.; służy do liczenia, jak bardzo myli się prognoza pogody przy różnym wyprzedzeniu,
   - `meta.json` – czas aktualizacji, zakres danych, statystyki kroków (zapytania, odmowy 429, ostatni błąd).
+  - Punkty próbne (`TRIAL_GROUPS` w `mixtracker/shared_weather.py`, dziś `eu_gas_x`): prognoza pobierana razem z resztą, historia ERA5 i dawne prognozy – po punktach podstawowych, najwyżej 10 min na przebieg (`TRIAL_MAX_MINUTES`). Ich błędy, zaległości i zakres danych są w `meta.json` pod kluczem `trial` (`errors`, `pending`, `steps`, `coverage`); pola `errors`, `pending` i `coverage` dotyczą tylko punktów podstawowych, więc dociąganie historii punktów próbnych nie wywołuje alarmów w raporcie Gaz UE ani w porannej wiadomości Miksu (brief: `pogoda_wspolna.meta.json.punkty_probne`).
+  - Historia ERA5: najpierw dzienny przyrost, potem zaległa historia w kawałkach po 365 dni (`HIST_CHUNK_DAYS`; zapytanie 10 punktów waży ok. 260 zamiast ok. 2 050 dla całego okresu od 2019 r.); nieudana paczka nie przerywa kroku (błąd „hist: N paczek punktów bez danych …”).
 - **extra** – energetyka i sezon:
   - `ensemble_power.csv.gz` – ensemble ECMWF IFS (51 wariantów): wiatr na 100 m, promieniowanie i temperatura, średnio po punktach kraju (miasta i rejony farm OZE, `uses` = ens), 5 dni wstecz i 12 dni prognozy; gdy serwer ensemble zawiedzie – deterministyczna prognoza ECMWF,
   - `ensemble_hist.csv` – minione dni z ensemble (średnia wariantów), 400 dni – do kalibracji pogoda → produkcja prądu,

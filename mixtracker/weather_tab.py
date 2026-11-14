@@ -10,7 +10,7 @@ tu nie pobieramy, tylko czytamy pliki z repozytorium.
   (za mało dni albo R² < min_r2) nie dostaje pasma. Dla UE prędkość jest średnią krajów ważoną produkcją
   z wiatru w ostatnich 365 dniach. Norma: średnia z tych samych dni kalendarza w poprzednich 5 latach.
 - Temperatura (°C): średnia punktów kraju (dla UE – punkty sieci gazowej, gęściej tam, gdzie większe
-  zużycie gazu), prognoza deterministyczna ECMWF IFS (ok. 14 dni) i zakres wariantów ensemble.
+  zużycie gazu; dla krajów – od U-20261114 także punkty próbne EX_, gdy mają pełną historię ERA5 i prognozę), prognoza deterministyczna ECMWF IFS (ok. 14 dni) i zakres wariantów ensemble.
   Norma dzienna: średnia z ostatnich pełnych lat (ERA5), wygładzona ±15 dni.
 - SEAS5 (miesięcznie, do 6 miesięcy): odchylenie średniej miesięcznej każdego z 51 wariantów od normy
   miesięcznej tych samych punktów. Surowy model, bez korekty błędu systematycznego.
@@ -58,7 +58,7 @@ def _read_json(path: Path) -> dict:
 
 def load(folder: Path | None = None) -> dict:
     f = folder or FOLDER
-    return {
+    W = {
         "points": _read_csv(f / "points.csv"),
         "recent": _read_csv(f / "temp_recent.csv"),
         "hist": _read_csv(f / "temp_hist.csv"),
@@ -69,6 +69,8 @@ def load(folder: Path | None = None) -> dict:
         "meta_extra": _read_json(f / "meta_extra.json"),
         "meta_evening": _read_json(f / "meta_evening.json"),
     }
+    W["trial_ready"] = trial_ready(W)
+    return W
 
 
 # ---------------- wiatr ----------------
@@ -223,8 +225,52 @@ def wind_block(code: str, e: pd.DataFrame | None, fc: dict | None, ws_m: pd.Data
 
 # ---------------- temperatura ----------------
 
-def _pts_for(points: pd.DataFrame, code: str, use: str) -> pd.DataFrame:
-    p = points[points["group"] == "eu_gas"]
+TRIAL_GROUP = "eu_gas_x"
+
+
+def _complete_dates(df: pd.DataFrame | None, pts) -> set:
+    """Daty, dla których wszystkie punkty `pts` mają wartość temperatury."""
+    if df is None or df.empty or not len(pts):
+        return set()
+    d = df[df["pt"].isin(pts)].dropna(subset=["temp"])
+    n = d.groupby("date")["pt"].nunique()
+    return set(n[n == len(set(pts))].index)
+
+
+def trial_ready(W: dict, min_years: int = 5) -> set:
+    """U-20261114: punkty próbne (grupa eu_gas_x, pt EX_…) gotowe do średniej temperatury kraju – mają ERA5 dla
+    każdego dnia, który mają wszystkie punkty podstawowe kraju (co najmniej `min_years` lat), i bieżące dni oraz
+    prognozę dla tych samych dat. Dopóki historia się dociąga, punkt jest pomijany, więc średnia kraju nie zmienia
+    się w połowie serii (norma, wrażliwość i prognoza liczone z tego samego zestawu punktów)."""
+    pts, hist, rec = W.get("points"), W.get("hist"), W.get("recent")
+    if pts is None or hist is None or rec is None or "group" not in pts:
+        return set()
+    has_temp = pts["uses"].fillna("").str.split(";").apply(lambda u: "temp" in u)
+    core, trial = pts[(pts["group"] == "eu_gas") & has_temp], pts[(pts["group"] == TRIAL_GROUP) & has_temp]
+    ready = set()
+    for cc, g in trial.groupby("cc"):
+        base = list(core.loc[core["cc"] == cc, "pt"])
+        if not base:
+            continue
+        need_h = _complete_dates(hist, base)
+        if len(need_h) < 360 * min_years:
+            continue
+        need_r = {fc: _complete_dates(rec[rec["fc"] == fc], base) for fc in (0, 1)}
+        for pt in g["pt"]:
+            if need_h <= _complete_dates(hist, [pt]) and all(
+                    need_r[fc] <= _complete_dates(rec[rec["fc"] == fc], [pt]) for fc in (0, 1)):
+                ready.add(pt)
+    return ready
+
+
+def _pts_for(points: pd.DataFrame, code: str, use: str, ready: set | None = None) -> pd.DataFrame:
+    """Punkty kraju: sieć gazowa (eu_gas); dla temperatury kraju (nie UE) także gotowe punkty próbne EX_ (U-20261114).
+    Średnia UE zostaje przy punktach eu_gas – punkty próbne zagęszczają tylko część krajów i zmieniłyby wagi krajów."""
+    g = points["group"]
+    m = (g == "eu_gas")
+    if ready and use == "temp" and code != "EU":
+        m = m | ((g == TRIAL_GROUP) & points["pt"].isin(ready))
+    p = points[m]
     p = p[p["uses"].fillna("").str.split(";").apply(lambda u: use in u)]
     return p if code == "EU" else p[p["cc"] == code]
 
@@ -275,7 +321,7 @@ def temp_block(code: str, W: dict, ref: dt.date, conf: dict) -> dict | None:
     pts, rec = W.get("points"), W.get("recent")
     if pts is None or rec is None:
         return None
-    p = _pts_for(pts, code, "temp")
+    p = _pts_for(pts, code, "temp", W.get("trial_ready"))
     if p.empty:
         return None
     s = rec[rec["pt"].isin(p["pt"])]
@@ -313,6 +359,7 @@ def temp_block(code: str, W: dict, ref: dt.date, conf: dict) -> dict | None:
         "norm": [_r(nd[i]) for i in _md_index(dates)] if nd is not None else [None] * len(dates),
         "norm_years": f"{yrs[0]}–{yrs[-1]}" if yrs else None,
         "points": int(p["pt"].nunique()),
+        "trial_points": int((p["group"] == TRIAL_GROUP).sum()),
     }
 
 
@@ -392,7 +439,7 @@ def _q(m: np.ndarray):
 def impact_country(code: str, W: dict, coef: dict, ref: dt.date, conf: dict) -> dict | None:
     """Odchylenie zużycia gazu i prądu od normy (GWh/d) wynikające z temperatury: 14 dni wstecz, prognoza ECMWF,
     pasmo 80% wariantów ensemble (przesuniętych o średnią różnicę z prognozą w dniach 1–3)."""
-    p = _pts_for(W["points"], code, "temp")
+    p = _pts_for(W["points"], code, "temp", W.get("trial_ready"))
     if p.empty or not coef:
         return None
     t_all = country_temp(W, p)
@@ -608,7 +655,7 @@ def build(derived: dict, fcs: dict, codes: list[str], ref: dt.date, n_years: int
         if code == "EU":
             continue
         try:
-            p = _pts_for(W["points"], code, "temp")
+            p = _pts_for(W["points"], code, "temp", W.get("trial_ready"))
             if p.empty:
                 continue
             t = country_temp(W, p)
@@ -662,6 +709,7 @@ def build(derived: dict, fcs: dict, codes: list[str], ref: dt.date, n_years: int
     ens_issued = max([x for x in (mx.get("ensemble_issued"), me.get("ensemble_issued")) if x] or [None]) if (mx or me) else None
     det_issued = max([x for x in (m.get("forecast_issued"), me.get("forecast_issued")) if x] or [None]) if (m or me) else None
     return {"countries": out,
+            "trial_points": sorted(W.get("trial_ready") or []),
             "issued": {"forecast": det_issued, "ensemble": ens_issued, "seasonal": seas_fetched,
                        "updated": max([x for x in (m.get("updated"), mx.get("updated"), me.get("updated")) if x] or [None])},
             "wind_weights": {k: _r(v, 3) for k, v in weights.items()},

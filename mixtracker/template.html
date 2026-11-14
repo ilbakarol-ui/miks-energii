@@ -1815,6 +1815,7 @@ const DATA = /*__DATA__*/null;
       });
       const lastEns = t.dates.filter((d, i) => isNum(t.p10[i])).pop();
       $("x-temp-note").textContent = `Średnia z ${t.points} ${t.points === 1 ? "punktu" : "punktów"}` + (S.country === "EU" ? " sieci gazowej UE (więcej punktów w krajach o większym zużyciu gazu)" : "") +
+        (t.trial_points ? ` (w tym ${t.trial_points} ${t.trial_points === 1 ? "dodatkowy" : "dodatkowe"} z zagęszczonej siatki miast)` : "") +
         `. Prognoza deterministyczna ECMWF IFS do ${fdate(t.dates[n - 1])}` + (lastEns ? `, pasmo 51 wariantów ensemble do ${fdate(lastEns)}` : "") +
         `. Norma: średnia ${t.norm_years || "–"} (ERA5) wygładzona ±15 dni.`;
     } else {

@@ -21,6 +21,8 @@ Punkty: config/shared_weather_points.csv (pt, group, cc, lat, lon, tz). Pliki w 
 
 Kolumna uses w pliku punktów: temp (temperatura: historia, prognoza, dawne prognozy), ens (ensemble do energetyki),
 seas (prognoza sezonowa).
+Grupy z TRIAL_GROUPS (punkty próbne, np. eu_gas_x / EX_…): prognoza razem z resztą, historia i dawne prognozy po
+punktach podstawowych (limit TRIAL_MAX_MINUTES); błędy, zaległości i zakres danych w meta.json["trial"] (U-20261114).
 
 Doba liczona w strefie czasowej punktu (tz). Dane: Open-Meteo (CC BY 4.0), ERA5 (Copernicus), modele numeryczne.
 Każdy krok jest niezależny: błąd jednego nie zatrzymuje pozostałych, a poprzednie pliki zostają.
@@ -57,6 +59,12 @@ ERA5_LAG = 6            # archiwum ERA5 ma ok. 5 dni opóźnienia
 PREV_CHUNK_DAYS = 60    # serwer dawnych prognoz odpowiada wolno; duże zapytania kończyły się po 90 s bez odpowiedzi
 PREV_BATCH = 5
 BATCH = 10              # punktów w jednym zapytaniu
+HIST_CHUNK_DAYS = 365   # U-20261114: zaległa historia ERA5 w kawałkach (waga zapytania ≤ ok. 260)
+# U-20261114: grupy punktów próbnych – pobierane po punktach podstawowych, z osobnym limitem czasu; ich błędy,
+# zaległości i zakres danych są w meta.json pod kluczem "trial", a nie w errors / pending / coverage,
+# które czytają raporty (Gaz UE, poranna wiadomość Miksu)
+TRIAL_GROUPS = ("eu_gas_x",)
+TRIAL_MAX_MINUTES = 10
 PER_MINUTE = 300        # limit minutowy Open-Meteo to 600 zapytań ważonych (adresy GitHub dzielą limit z innymi)
 DEADLINE = [float("inf")]   # po tym czasie (time.time()) nie zaczynamy nowych zapytań
 STATS = {"requests": 0, "failed": 0, "http429": 0, "seconds": 0.0, "last_error": None}
@@ -255,9 +263,17 @@ def step_recent(pts, q: Quota, get=http_get, today: dt.date | None = None) -> pd
     return df
 
 
+_HIST_FAILED: list[str] = []
+
+
 def step_hist(pts, q: Quota, get=http_get, today: dt.date | None = None) -> int:
     """Archiwum ERA5: dla każdego punktu od ostatniej zapisanej daty (albo od HIST_START) do dziś-6.
-    Punkty z tą samą datą początkową pobierane razem; gdy budżet się kończy, reszta czeka do następnego przebiegu."""
+
+    U-20261114 (punkty próbne EX_): najpierw dzienny przyrost (punkty z aktualną historią), potem zaległa historia
+    w kawałkach po HIST_CHUNK_DAYS dni – zapytanie 10 punktów × 365 dni waży ok. 260 (limit minutowy w kodzie 300,
+    Open-Meteo 600), a 10 punktów × 7,9 roku ważyło ok. 2 050. Nieudana paczka nie przerywa kroku (reszta pobierana
+    dalej, błąd w _HIST_FAILED -> meta.json errors); przerwaną historię następny przebieg wznawia od ostatniej daty.
+    Gdy budżet się kończy, reszta czeka do następnego przebiegu."""
     today = today or dt.date.today()
     end = today - dt.timedelta(days=ERA5_LAG)
     old = _read("temp_hist.csv", ["pt", "date", "temp"])
@@ -266,25 +282,39 @@ def step_hist(pts, q: Quota, get=http_get, today: dt.date | None = None) -> int:
     jobs["start"] = [(dt.date.fromisoformat(last[p]) + dt.timedelta(days=1)) if p in last else dt.date.fromisoformat(HIST_START)
                      for p in jobs.pt]
     jobs = jobs[jobs.start <= end]
-    new, done = [], 0
+    new, done = [], set()
     try:
-        for (start, tz), g in jobs.groupby(["start", "tz"], sort=True):
+        # najpierw przyrost (najpóźniejsza data początkowa), potem zaległa historia
+        for (start, tz), g in sorted(jobs.groupby(["start", "tz"]), key=lambda kv: kv[0][0], reverse=True):
             for i in range(0, len(g), BATCH):
                 gg = g.iloc[i:i + BATCH]
-                w = q.weight(len(gg), (end - start).days + 1)
-                if not q.can(w):
-                    continue
-                q.take(w)
-                for pt, js in zip(gg.pt, get(ARCHIVE_URL, {**_coords(gg), "daily": "temperature_2m_mean", "timezone": tz,
-                                                            "start_date": start.isoformat(), "end_date": end.isoformat()})):
-                    d = js.get("daily") or {}
-                    part = pd.DataFrame({"pt": pt, "date": d.get("time", []), "temp": d.get("temperature_2m_mean", [])}).dropna()
-                    new.append(part)
-                    done += 1
+                a = start
+                while a <= end:
+                    b = min(end, a + dt.timedelta(days=HIST_CHUNK_DAYS - 1))
+                    w = q.weight(len(gg), (b - a).days + 1)
+                    if not q.can(w):
+                        break
+                    q.take(w)
+                    try:
+                        res = get(ARCHIVE_URL, {**_coords(gg), "daily": "temperature_2m_mean", "timezone": tz,
+                                                "start_date": a.isoformat(), "end_date": b.isoformat()})
+                    except (Deadline, DailyLimit):
+                        raise
+                    except Exception as e:      # jedna paczka nie przerywa kroku – reszta punktów dalej
+                        _HIST_FAILED.append(f"{','.join(gg.pt)} {a}..{b}: {type(e).__name__}")
+                        break
+                    for pt, js in zip(gg.pt, res):
+                        d = js.get("daily") or {}
+                        part = pd.DataFrame({"pt": pt, "date": d.get("time", []),
+                                             "temp": d.get("temperature_2m_mean", [])}).dropna()
+                        new.append(part)
+                        if b == end:
+                            done.add(pt)
+                    a = b + dt.timedelta(days=1)
     finally:   # to, co zdążyło przyjść, zapisujemy także przy błędzie albo końcu czasu
         if new:
             _write(pd.concat([old] + new, ignore_index=True), "temp_hist.csv")
-    return len(jobs) - done
+    return len(jobs) - len(done)
 
 
 def step_prev(pts, q: Quota, get=http_get, today: dt.date | None = None) -> int:
@@ -465,16 +495,28 @@ def _pending(name: str, pts: pd.DataFrame, today: dt.date) -> int:
     return int(sum(last.get(p, "") < want for p in pts.pt))
 
 
+TRIAL_PTS: set[str] = set()
+
+
 def _save_meta(meta: dict, q: Quota, name: str = "meta.json"):
     cov = {}
     # zakres plików temperatury opisuje tylko meta.json (zadanie "extra" ma w checkoucie starsze kopie tych plików)
     files = (("temp_hist.csv", "hist"), ("temp_prev.csv", "prev"), ("temp_recent.csv", "recent")) if name == "meta.json" else ()
+    trial_cov = {}
     for f, key in files:
         df = _read(f, ["pt", "date"])
+        tr = df[df.pt.isin(TRIAL_PTS)] if len(df) else df
+        df = df[~df.pt.isin(TRIAL_PTS)] if len(df) else df    # U-20261114: zakres tylko punktów podstawowych
         if len(df):
             last = df.groupby("pt").date.max()
             cov[key] = {"points": int(df.pt.nunique()), "points_to_end": int((last == last.max()).sum()),
                         "from": str(df.date.min()), "to": str(df.date.max()), "rows": int(len(df))}
+            if len(tr):
+                lt = tr.groupby("pt").date.max()
+                trial_cov[key] = {"points": int(tr.pt.nunique()), "points_to_end": int((lt >= last.max()).sum()),
+                                  "from": str(tr.date.min()), "to": str(tr.date.max()), "rows": int(len(tr))}
+    if trial_cov and "trial" in meta:
+        meta["trial"]["coverage"] = trial_cov
     meta.update(updated=dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%MZ"), weighted_calls=round(q.used, 1))
     if cov:
         meta["coverage"] = cov
@@ -492,6 +534,46 @@ JOBS = {
 }
 
 
+def _run_trial(meta: dict, trial: pd.DataFrame, q: Quota, get, today: dt.date, meta_name: str):
+    """U-20261114: historia ERA5 i dawne prognozy punktów próbnych – po punktach podstawowych, najwyżej
+    TRIAL_MAX_MINUTES minut. Błędy, zaległości i statusy w meta["trial"]; errors / pending / coverage bez zmian."""
+    tm = meta["trial"]
+    end_all = DEADLINE[0]
+    DEADLINE[0] = min(end_all, time.time() + TRIAL_MAX_MINUTES * 60)
+    try:
+        for name, fn in (("hist", step_hist), ("prev", step_prev)):
+            t0, r0, w0 = time.time(), STATS["requests"], q.used
+            STATS["last_error"] = None
+            status = "OK"
+            p = _sel(trial, "temp")
+            try:
+                res = fn(p, q, get=get, today=today)
+                if res:
+                    tm["pending"][name] = int(res)
+            except Deadline:
+                status = "limit czasu"
+                tm["pending"][name] = _pending(name, p, today)
+            except DailyLimit as e:
+                status = "dzienny limit"
+                tm["errors"].append(f"{name}: dzienny limit Open-Meteo ({e})")
+            except Exception as e:
+                status = f"błąd {type(e).__name__}"
+                tm["errors"].append(f"{name}: {type(e).__name__}: {str(e)[:150]}")
+                tm["pending"][name] = _pending(name, p, today)
+            failed = _HIST_FAILED if name == "hist" else _PREV_FAILED
+            if failed:
+                tm["errors"].append(f"{name}: {len(failed)} paczek punktów bez danych, np. {failed[0]}")
+                failed.clear()
+            tm["steps"][name] = dict(status=status, seconds=round(time.time() - t0), requests=STATS["requests"] - r0,
+                                     weighted=round(q.used - w0, 1), last_error=STATS["last_error"])
+            print(f"  punkty próbne {name}: {status} ({time.time() - t0:.0f} s, zapytań {STATS['requests'] - r0})")
+            _save_meta(meta, q, meta_name)
+            if status in ("limit czasu", "dzienny limit"):
+                break
+    finally:
+        DEADLINE[0] = end_all
+
+
 def run(budget: float = 8000, get=http_get, today: dt.date | None = None, minutes: float = 35, job: str = "temp") -> dict:
     """Zadanie "temp": prognoza (najważniejsza), historia ERA5, dawne prognozy. Zadanie "extra": ensemble do energetyki
     i SEAS5. meta zapisywane po każdym kroku, dane – także przy błędzie albo po upływie `minutes` minut."""
@@ -501,18 +583,29 @@ def run(budget: float = 8000, get=http_get, today: dt.date | None = None, minute
     pts = load_points()
     OUT.mkdir(parents=True, exist_ok=True)
     pts.to_csv(OUT / "points.csv", index=False)
+    is_trial = pts["group"].isin(TRIAL_GROUPS)
+    core, trial = pts[~is_trial].reset_index(drop=True), pts[is_trial].reset_index(drop=True)
+    TRIAL_PTS.clear()
+    TRIAL_PTS.update(trial.pt)
     q = Quota(budget)
     meta_name, steps = JOBS[job]
     meta_p = OUT / meta_name
     meta = json.loads(meta_p.read_text()) if meta_p.exists() else {}
     meta.update(source="Open-Meteo (CC BY 4.0): ERA5, ECMWF IFS (prognozy bieżące, dawne, ensemble), ECMWF SEAS5",
                 errors=[], pending={}, steps={})
+    if job == "temp" and len(trial):
+        meta["trial"] = {"groups": list(TRIAL_GROUPS), "points": int(len(trial)), "errors": [], "pending": {}, "steps": {}}
+    else:
+        meta.pop("trial", None)
+    stopped = False
     for name, fn, use in steps:
+        # U-20261114: prognoza (recent) dla wszystkich punktów, historia i dawne prognozy – najpierw podstawowe
+        step_pts = pts if name == "recent" else core
         t0, r0, w0, h0 = time.time(), STATS["requests"], q.used, STATS["http429"]
         STATS["last_error"] = None       # błąd i liczniki 429 opisują tylko ten krok
         status = "OK"
         try:
-            res = fn(_sel(pts, use), q, get=get, today=today)
+            res = fn(_sel(step_pts, use), q, get=get, today=today)
             if name == "recent":
                 meta["forecast_issued"] = today.isoformat()
             elif name == "ensemble":
@@ -524,27 +617,35 @@ def run(budget: float = 8000, get=http_get, today: dt.date | None = None, minute
             if name == "prev" and _PREV_FAILED:
                 meta["errors"].append(f"prev: {len(_PREV_FAILED)} paczek punktów bez danych po 3 próbach, np. {_PREV_FAILED[0]}")
                 _PREV_FAILED.clear()
+            if name == "hist" and _HIST_FAILED:
+                meta["errors"].append(f"hist: {len(_HIST_FAILED)} paczek punktów bez danych, np. {_HIST_FAILED[0]}")
+                _HIST_FAILED.clear()
             if name == "recent" and _RECENT_FAILED:
                 meta["errors"].append(f"recent (częściowo): {_RECENT_FAILED[0]}")
                 _RECENT_FAILED.clear()
         except Deadline:
             status = "limit czasu"
             meta["errors"].append(f"{name}: limit czasu przebiegu ({minutes:.0f} min) – zebrane dane zapisane, reszta jutro")
-            meta["pending"][name] = _pending(name, _sel(pts, use), today)
+            meta["pending"][name] = _pending(name, _sel(step_pts, use), today)
         except DailyLimit as e:
             status = "dzienny limit"
             meta["errors"].append(f"{name}: dzienny limit Open-Meteo ({e})")
         except Exception as e:
             status = f"błąd {type(e).__name__}"
             meta["errors"].append(f"{name}: {type(e).__name__}: {str(e)[:150]}")
-            meta["pending"][name] = _pending(name, _sel(pts, use), today)
+            meta["pending"][name] = _pending(name, _sel(step_pts, use), today)
         meta["steps"][name] = dict(status=status, seconds=round(time.time() - t0), requests=STATS["requests"] - r0,
                                    weighted=round(q.used - w0, 1), http429=STATS["http429"] - h0, last_error=STATS["last_error"])
         print(f"  {name}: {status} ({time.time() - t0:.0f} s, zapytań {STATS['requests'] - r0}, 429: {STATS['http429'] - h0})"
               + (f"; ostatni błąd: {STATS['last_error']}" if STATS["last_error"] else ""), file=sys.stderr if status != "OK" else sys.stdout)
         _save_meta(meta, q, meta_name)
         if status in ("limit czasu", "dzienny limit"):
+            stopped = True
             break
+    if "trial" in meta and not stopped:
+        _run_trial(meta, trial, q, get, today, meta_name)
+    _HIST_FAILED.clear()
+    _PREV_FAILED.clear()
     _save_meta(meta, q, meta_name)
     print(f"Wspólna pogoda ({job}): zapytania ważone ≈ {q.used:.0f}; błędy: {len(meta['errors'])}")
     return meta

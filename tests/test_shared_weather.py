@@ -272,3 +272,83 @@ def test_evening_job_only_forecast_and_ensemble(tmp_path, monkeypatch):
     assert (out / "meta.json").read_text() == m0 and (out / "meta_extra.json").read_text() == x0
     assert (out / "temp_hist.csv").read_text() == hist0
     assert pd.read_csv(out / "temp_recent.csv").fc.sum() > 0 and (out / "ensemble_power.csv.gz").exists()
+
+
+# ---------- U-20261114: punkty próbne (grupa eu_gas_x) i historia ERA5 w kawałkach ----------
+
+def setup_trial(tmp_path, monkeypatch, n=3):
+    setup(tmp_path, monkeypatch, n)
+    pts = tmp_path / "pts.csv"
+    pts.write_text(pts.read_text() + "EX_FR_1,eu_gas_x,FR,43.30,5.37,Europe/Berlin\n"
+                                     "EX_FR_2,eu_gas_x,FR,47.22,-1.55,Europe/Berlin\n")
+
+
+def test_hist_increment_first_and_backfill_in_chunks(tmp_path, monkeypatch):
+    setup_trial(tmp_path, monkeypatch)
+    sw.run(budget=1e6, get=fake_get_factory([]), today=TODAY)
+    out = tmp_path / "out"
+    # nowy punkt podstawowy z historią od 2023 r. (P9) – zaległość 3,8 roku
+    pts = tmp_path / "pts.csv"
+    pts.write_text(pts.read_text() + "P9,eu_gas,DE,59.0,19.0,Europe/Berlin\n")
+    monkeypatch.setattr(sw, "HIST_START", "2023-01-01")
+    calls = []
+    sw.run(budget=1e6, get=fake_get_factory(calls), today=TODAY + dt.timedelta(days=1))
+    h = [c[1] for c in calls if c[0] == sw.ARCHIVE_URL]
+    assert h[0]["start_date"] == "2026-10-14"                      # najpierw dzienny przyrost
+    p9 = [c for c in h if c["latitude"] == "59.00"]
+    assert len(p9) == 4 and p9[0]["start_date"] == "2023-01-01"
+    for c in h:                                                    # waga zapytania ≤ 10 × 365/14
+        days = (dt.date.fromisoformat(c["end_date"]) - dt.date.fromisoformat(c["start_date"])).days + 1
+        assert days <= sw.HIST_CHUNK_DAYS
+    hist = pd.read_csv(out / "temp_hist.csv")
+    assert hist[hist.pt == "P9"].date.min() == "2023-01-01" and hist[hist.pt == "P9"].date.max() == "2026-10-14"
+
+
+def test_hist_failed_batch_does_not_stop_others(tmp_path, monkeypatch):
+    setup(tmp_path, monkeypatch)
+    good = fake_get_factory([])
+
+    def get(url, params):
+        if url == sw.ARCHIVE_URL and params["timezone"] == "Europe/Berlin":
+            raise RuntimeError("HTTP 429 po 3 próbach")
+        return good(url, params)
+    meta = sw.run(budget=1e6, get=get, today=TODAY)
+    hist = pd.read_csv(tmp_path / "out" / "temp_hist.csv")
+    assert set(hist.pt) == {"A1"}                                  # Azja zapisana mimo błędu paczki europejskiej
+    assert meta["steps"]["hist"]["status"] == "OK" and meta["pending"]["hist"] == 3
+    assert any(e.startswith("hist: 1 paczek") for e in meta["errors"])
+
+
+def test_trial_points_isolated_in_meta(tmp_path, monkeypatch):
+    setup_trial(tmp_path, monkeypatch)
+    calls = []
+    good = fake_get_factory(calls)
+
+    def get(url, params):
+        if url == sw.PREV_URL and "43.30" in params["latitude"]:
+            raise RuntimeError("ReadTimeout")
+        return good(url, params)
+    meta = sw.run(budget=1e6, get=get, today=TODAY)
+    assert meta["errors"] == [] and "prev" not in meta["pending"]     # raporty widzą tylko punkty podstawowe
+    assert meta["coverage"]["prev"]["points"] == 4 and meta["coverage"]["hist"]["points"] == 4
+    tr = meta["trial"]
+    assert tr["points"] == 2 and tr["steps"]["hist"]["status"] == "OK"
+    assert tr["coverage"]["hist"]["points_to_end"] == 2
+    assert tr["errors"] and "EX_FR_1" in tr["errors"][0]
+    assert tr["pending"]["prev"] >= 1
+    rec = pd.read_csv(tmp_path / "out" / "temp_recent.csv")
+    assert {"EX_FR_1", "EX_FR_2"} <= set(rec.pt)                   # prognoza razem z resztą
+    # punkty próbne pobierane po podstawowych
+    prev_calls = [c[1]["latitude"] for c in calls if c[0] in (sw.PREV_URL, sw.ARCHIVE_URL)]
+    first_trial = next(i for i, la in enumerate(prev_calls) if "43.30" in la or "47.22" in la)
+    assert all("43.30" not in la and "47.22" not in la for la in prev_calls[:first_trial])
+    assert first_trial >= 4
+
+
+def test_trial_deadline_does_not_touch_core(tmp_path, monkeypatch):
+    setup_trial(tmp_path, monkeypatch)
+    monkeypatch.setattr(sw, "TRIAL_MAX_MINUTES", 0)
+    meta = sw.run(budget=1e6, get=fake_get_factory([]), today=TODAY)
+    assert meta["errors"] == [] and meta["steps"]["prev"]["status"] == "OK"
+    assert meta["trial"]["steps"]["hist"]["status"] == "limit czasu"
+    assert meta["trial"]["pending"]["hist"] == 2
