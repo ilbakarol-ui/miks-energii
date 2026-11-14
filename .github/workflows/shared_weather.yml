@@ -1,13 +1,15 @@
 name: Wspólna pogoda dla dashboardów
 
 # Cała pogoda dla raportu Gaz UE (i innych dashboardów) pobierana tutaj, do data/shared_weather/:
-# - zadanie "temp": temperatura dla miast UE i Azji – archiwum ERA5, bieżąca prognoza, dawne prognozy (wyprzedzenie 0-7 dni),
+# - zadanie "temp": pogoda do prognoz Miksu energii (wiatr, słońce, temperatura dla punktów z config/weather_points.csv –
+#   pliki power_*; Miks energii nie pyta już Open-Meteo sam) oraz temperatura dla miast UE i Azji – archiwum ERA5,
+#   bieżąca prognoza, dawne prognozy (wyprzedzenie 0-7 dni),
 # - zadanie "extra": ensemble ECMWF (51 wariantów) do prognozy energetyki i prognoza sezonowa SEAS5.
 # Zadania idą równolegle na osobnych maszynach (osobny limit Open-Meteo). Dwa razy dziennie, także w weekendy:
 # - 00:17 UTC – pełny przebieg (zadania temp i extra; start planowany bywa opóźniony nawet o 3 godziny), przed raportem
 #   gazowym o 5:41,
-# - 17:47 UTC – lekki przebieg wieczorny (zadanie evening, limit 25 min): tylko świeża prognoza temperatury i ensemble
-#   do energetyki, zapis w meta_evening.json; przed wieczornym raportem gazowym o 20:41 (czas polski). ERA5, dawne
+# - 17:47 UTC – lekki przebieg wieczorny (zadanie evening, limit 25 min): tylko świeża prognoza temperatury, pogoda do prognoz
+#   Miksu energii (zapas na noc, gdy Open-Meteo nie odpowiada) i ensemble do energetyki, zapis w meta_evening.json; przed wieczornym raportem gazowym o 20:41 (czas polski). ERA5, dawne
 #   prognozy i SEAS5 – tylko w nocy. Repozytorium jest publiczne, więc minuty GitHub Actions nie liczą się do limitu.
 on:
   schedule:

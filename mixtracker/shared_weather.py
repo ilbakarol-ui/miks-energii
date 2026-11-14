@@ -19,6 +19,13 @@ Punkty: config/shared_weather_points.csv (pt, group, cc, lat, lon, tz). Pliki w 
                     (temp_recent.csv) i ensemble do energetyki (ensemble_power.csv.gz); forecast_issued, ensemble_issued
                     i statusy kroków. ERA5, dawne prognozy i SEAS5 tylko w nocy. Czyta go raport Gaz UE (WEATHER EVENING).
 
+- power_daily.csv, power_hourly.csv.gz, power_meta.json – pogoda do prognoz wiatru, słońca i zużycia Miksu energii
+                    (U-20261114-3): deterministyczna prognoza Open-Meteo dla punktów z config/weather_points.csv
+                    (rejony farm wiatrowych i słonecznych, miasta), 10 dni wstecz i 16 dni naprzód, przeliczona na cechy
+                    dzienne krajów (code,date,cf,ws,ghi,temp,hdd,cdd – doba w czasie lokalnym kraju) i godzinowy wiatr
+                    (code,time UTC,cf,ws; 10 dni). Pobierana w zadaniach "temp" (noc) i "evening". Miks energii czyta
+                    te pliki zamiast pytać Open-Meteo sam (mixtracker/weather.py); stan kroku w meta["power"].
+
 Kolumna uses w pliku punktów: temp (temperatura: historia, prognoza, dawne prognozy), ens (ensemble do energetyki),
 seas (prognoza sezonowa).
 Grupy z TRIAL_GROUPS (punkty próbne, np. eu_gas_x / EX_…): prognoza razem z resztą, historia i dawne prognozy po
@@ -65,6 +72,12 @@ HIST_CHUNK_DAYS = 365   # U-20261114: zaległa historia ERA5 w kawałkach (waga 
 # które czytają raporty (Gaz UE, poranna wiadomość Miksu)
 TRIAL_GROUPS = ("eu_gas_x",)
 TRIAL_MAX_MINUTES = 10
+# U-20261114-3: pogoda do prognoz Miksu energii (krok "power") – te same punkty i cechy co mixtracker/weather.py
+POWER_POINTS = store.ROOT / "config" / "weather_points.csv"
+POWER_PAST, POWER_DAYS, POWER_BATCH = 10, 16, 25
+POWER_HOURLY_DAYS = 9       # godzinowy wiatr: od wczoraj do dziś + 9 dni (prognoza godzinowa obejmuje 7 dni)
+POWER_MAX_MINUTES = 5       # krok nie zabiera czasu pozostałym; brakujące kraje Miks energii pobierze sam
+POWER_JOBS = ("temp", "evening")
 PER_MINUTE = 300        # limit minutowy Open-Meteo to 600 zapytań ważonych (adresy GitHub dzielą limit z innymi)
 DEADLINE = [float("inf")]   # po tym czasie (time.time()) nie zaczynamy nowych zapytań
 STATS = {"requests": 0, "failed": 0, "http429": 0, "seconds": 0.0, "last_error": None}
@@ -483,6 +496,117 @@ def step_seasonal(pts, q: Quota, get=http_get, today: dt.date | None = None) -> 
     return len({x for n in new for x in n.pt.unique()})
 
 
+def step_power(q: Quota, get=http_get, today: dt.date | None = None) -> dict:
+    """Pogoda do prognoz Miksu energii: godzinowy wiatr na 100 m, promieniowanie i temperatura dla punktów
+    z config/weather_points.csv, przeliczone tak samo jak w mixtracker/weather.py na cechy dzienne krajów.
+
+    Nieudana paczka punktów jest pytana jeszcze raz na końcu; kraj bez kompletu punktów nie trafia do pliku
+    (Miks energii pobierze go sam). Pliki są zapisywane tylko wtedy, gdy jest co najmniej połowa krajów –
+    inaczej zostają poprzednie. Zwraca opis kroku (do meta["power"])."""
+    from . import weather            # tu, a nie na górze: weather importuje modele (numpy, holidays)
+    today = today or dt.date.today()
+    wp = weather.load_points(POWER_POINTS)
+    tz_of = {c["code"]: c["tz"] for c in store.load_countries()}
+    flat = [(code, p) for code in sorted(wp) if code in tz_of for p in wp[code]]
+    if not flat:
+        raise RuntimeError("brak punktów pogodowych")
+    frames: list = [None] * len(flat)
+
+    def ask(idx):
+        chunk = [flat[i][1] for i in idx]
+        res = get(FORECAST_URL, {"latitude": ",".join(f"{p['lat']:.2f}" for p in chunk),
+                                 "longitude": ",".join(f"{p['lon']:.2f}" for p in chunk),
+                                 "hourly": weather.HOURLY, "wind_speed_unit": "ms", "timezone": "GMT",
+                                 "past_days": POWER_PAST, "forecast_days": POWER_DAYS})
+        if len(res) != len(idx):
+            raise RuntimeError(f"odpowiedź dla {len(res)} z {len(idx)} punktów")
+        for i, js in zip(idx, res):
+            frames[i] = weather.hourly_frame(js)
+
+    batches = [list(range(i, min(i + POWER_BATCH, len(flat)))) for i in range(0, len(flat), POWER_BATCH)]
+    failed, err, stopped = [], None, None
+    for rnd in (batches, failed):                 # druga runda: paczki, które się nie udały
+        for b in list(rnd):
+            try:
+                q.take(q.weight(len(b), POWER_PAST + POWER_DAYS, 3))
+                ask(b)
+            except (Deadline, DailyLimit) as e:
+                stopped = "limit czasu" if isinstance(e, Deadline) else "dzienny limit"
+                break
+            except Exception as e:
+                err = f"{type(e).__name__}: {str(e)[:100]}"
+                if rnd is batches:
+                    failed.append(b)
+        if stopped:
+            break
+    daily, hourly, missing = [], [], []
+    lo = pd.Timestamp(today - dt.timedelta(days=1), tz="UTC")
+    hi = pd.Timestamp(today + dt.timedelta(days=POWER_HOURLY_DAYS), tz="UTC")
+    for code in sorted({c for c, _ in flat}):
+        idx = [i for i, (c, _) in enumerate(flat) if c == code]
+        fr = [frames[i] for i in idx]
+        if any(f is None or f.empty for f in fr):
+            missing.append(code)
+            continue
+        pp = [flat[i][1] for i in idx]
+        d = weather.daily_features(fr, pp, tz_of[code])
+        if d.empty:
+            missing.append(code)
+            continue
+        d = d.reset_index()
+        d.columns = ["date"] + list(d.columns[1:])
+        d["date"] = pd.to_datetime(d["date"]).dt.strftime("%Y-%m-%d")
+        d.insert(0, "code", code)
+        daily.append(d)
+        h = weather.hourly_wind(fr, pp)
+        h = h[(h.index >= lo) & (h.index < hi)].dropna(how="all")
+        if len(h):
+            hourly.append(pd.DataFrame({"code": code, "time": h.index.strftime("%Y-%m-%dT%H:%MZ"),
+                                        "cf": h["cf"].to_numpy(), "ws": h["ws"].to_numpy()}))
+    n_all = len(daily) + len(missing)
+    out = {"countries": len(daily), "points": len(flat), "missing": missing, "last_error": err}
+    if len(daily) < 0.5 * n_all:
+        out["status"] = stopped or "błąd"
+        out["error"] = f"pogoda tylko dla {len(daily)} z {n_all} krajów" + (f" ({err})" if err else "")
+        return out
+    OUT.mkdir(parents=True, exist_ok=True)
+    pd.concat(daily, ignore_index=True).to_csv(OUT / "power_daily.csv", index=False, float_format="%.4f")
+    if hourly:
+        pd.concat(hourly, ignore_index=True).to_csv(OUT / "power_hourly.csv.gz", index=False, float_format="%.3f",
+                                                     compression={"method": "gzip", "mtime": 0})
+    issued = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
+    out.update(status="OK" if not missing else "częściowo", issued=issued)
+    (OUT / "power_meta.json").write_text(json.dumps({
+        "issued": issued, "countries": len(daily), "points": len(flat), "missing": missing,
+        "past_days": POWER_PAST, "forecast_days": POWER_DAYS, "hourly_days": POWER_HOURLY_DAYS,
+        "source": "Open-Meteo (CC BY 4.0), prognoza deterministyczna (best match); punkty: config/weather_points.csv",
+        "columns": {"cf": "wskaźnik mocy turbiny (średnia godzin i punktów)", "ws": "wiatr 100 m, m/s",
+                    "ghi": "promieniowanie, kWh/m2 na dobę", "temp": "°C", "hdd": "15,5 − temp", "cdd": "temp − 22"}},
+        ensure_ascii=False, indent=1), encoding="utf-8")
+    return out
+
+
+def _run_power(meta: dict, q: Quota, get, today: dt.date, meta_name: str):
+    """U-20261114-3: krok "power" przed pozostałymi (krótki, najwyżej POWER_MAX_MINUTES). Stan w meta["power"],
+    a nie w errors / steps, które czytają raporty (Gaz UE) – brak tej pogody nie psuje żadnego raportu:
+    Miks energii pobiera ją wtedy sam."""
+    end_all = DEADLINE[0]
+    DEADLINE[0] = min(end_all, time.time() + POWER_MAX_MINUTES * 60)
+    t0, r0, w0 = time.time(), STATS["requests"], q.used
+    try:
+        res = step_power(q, get=get, today=today)
+    except Exception as e:
+        res = {"status": f"błąd {type(e).__name__}", "error": str(e)[:150]}
+    finally:
+        DEADLINE[0] = end_all
+    res.update(seconds=round(time.time() - t0), requests=STATS["requests"] - r0, weighted=round(q.used - w0, 1))
+    meta["power"] = res
+    print(f"  power: {res['status']} ({res['seconds']} s, zapytań {res['requests']}, krajów {res.get('countries', 0)}"
+          + (f", bez {','.join(res['missing'])}" if res.get("missing") else "") + ")"
+          + (f"; {res['error']}" if res.get("error") else ""), file=sys.stderr if res["status"] != "OK" else sys.stdout)
+    _save_meta(meta, q, meta_name)
+
+
 def _pending(name: str, pts: pd.DataFrame, today: dt.date) -> int:
     """Ile punktów nie ma jeszcze danych do oczekiwanej daty (po przerwanym kroku)."""
     files = {"hist": ("temp_hist.csv", ERA5_LAG), "prev": ("temp_prev.csv", 1)}
@@ -597,6 +721,9 @@ def run(budget: float = 8000, get=http_get, today: dt.date | None = None, minute
         meta["trial"] = {"groups": list(TRIAL_GROUPS), "points": int(len(trial)), "errors": [], "pending": {}, "steps": {}}
     else:
         meta.pop("trial", None)
+    meta.pop("power", None)
+    if job in POWER_JOBS and POWER_POINTS.exists():
+        _run_power(meta, q, get, today, meta_name)
     stopped = False
     for name, fn, use in steps:
         # U-20261114: prognoza (recent) dla wszystkich punktów, historia i dawne prognozy – najpierw podstawowe

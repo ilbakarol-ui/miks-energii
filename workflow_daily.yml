@@ -94,6 +94,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # U-20261114-3: data/shared_weather zapisuje tylko „Wspólna pogoda”; przebieg dzienny bierze stamtąd
+          # świeże pliki do prognoz (run_daily._refresh_shared_weather) i tutaj przywraca stan z checkoutu
+          git reset -q -- data/shared_weather || true
+          git checkout -q -- data/shared_weather || true
+          git clean -qfd data/shared_weather || true
           git add data
           git diff --cached --quiet && exit 0
           git commit -m "Dane z $(date -u +%Y-%m-%d)${SUFFIX}"

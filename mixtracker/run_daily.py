@@ -8,6 +8,7 @@ import argparse
 import datetime as dt
 import json
 import os
+import subprocess
 import sys
 import time
 
@@ -134,6 +135,27 @@ def _forecast_issued_today(path=None) -> bool:
         return False
 
 
+def _refresh_shared_weather(log: list) -> bool:
+    """U-20261114-3: przed prognozami bierze najnowsze data/shared_weather z repozytorium (tylko w GitHub Actions).
+
+    Przebieg dzienny startuje często przed końcem „Wspólnej pogody” (albo równolegle z nią), a pobieranie danych
+    z Energy-Charts trwa kilkanaście minut – w tym czasie wspólna pogoda zwykle jest już zapisana. Pliki trafiają
+    tylko do katalogu roboczego; krok „Zapis danych” w daily.yml przywraca je przed commitem, więc przebieg dzienny
+    nigdy nie zapisuje data/shared_weather (bez kolizji z „Wspólną pogodą”)."""
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        return False
+    try:
+        branch = os.environ.get("GITHUB_REF_NAME") or "main"
+        subprocess.run(["git", "fetch", "--quiet", "--depth=1", "origin", branch], check=True, timeout=180,
+                       capture_output=True)
+        subprocess.run(["git", "checkout", "--quiet", "FETCH_HEAD", "--", "data/shared_weather"], check=True,
+                       timeout=60, capture_output=True)
+        return True
+    except Exception as e:
+        log.append(f"Wspólna pogoda: nie udało się odświeżyć plików z repozytorium ({type(e).__name__}) – używam kopii z początku przebiegu")
+        return False
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--budget", type=float, default=None, help="limit czasu pobierania (min)")
@@ -195,6 +217,7 @@ def main(argv=None):
         countries = [c for c in store.load_countries() if store.has_daily(c)]
         frames = {c["code"]: store.read_daily(c["code"]) for c in countries}
         wlog = run.setdefault("log", [])
+        _refresh_shared_weather(wlog)
         fcs = weather.update(settings, frames, trends.derive, countries, wlog)
         run["forecasts"] = sorted(fcs)
         if args.afternoon:
