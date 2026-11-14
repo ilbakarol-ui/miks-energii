@@ -28,6 +28,14 @@ import requests
 
 from . import model, store
 
+POINTS = store.ROOT / "config" / "weather_points.csv"
+# U-20261114-3: pogodę do prognoz pobiera przebieg „Wspólna pogoda dla dashboardów” (shared_weather.step_power)
+# i zapisuje gotowe cechy krajów w data/shared_weather; tutaj tylko odczyt, a własne zapytanie do Open-Meteo
+# zostaje jako wyjście awaryjne (brak dzisiejszego pliku albo kraju w pliku)
+SHARED = store.DATA / "shared_weather"
+SHARED_DAILY, SHARED_HOURLY, SHARED_META = "power_daily.csv", "power_hourly.csv.gz", "power_meta.json"
+SHARED_MAX_AGE_H = 36    # starszy plik nie jest używany nawet awaryjnie
+PAST_DAYS = 10
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
 HOURLY = "wind_speed_100m,shortwave_radiation,temperature_2m"
@@ -38,9 +46,9 @@ FORECAST_DAYS = 16   # pobierana prognoza pogody (Open-Meteo: do 16 dni)
 EXT_DAYS = 7         # dni 8–14: prognoza rozszerzona (tylko trend tygodniowy, pole "ext"; bez archiwum i weryfikacji)
 
 
-def load_points() -> dict[str, list[dict]]:
+def load_points(path=None) -> dict[str, list[dict]]:
     out: dict[str, list[dict]] = {}
-    with open(store.ROOT / "config" / "weather_points.csv", encoding="utf-8") as f:
+    with open(path or POINTS, encoding="utf-8") as f:
         for r in csv.DictReader(f):
             out.setdefault(r["code"], []).append({"lat": float(r["lat"]), "lon": float(r["lon"]), "kind": r["kind"]})
     return out
@@ -85,15 +93,47 @@ def fetch_points(points: list[dict], url: str, extra: dict) -> list[pd.DataFrame
                   "longitude": ",".join(f"{p['lon']:.2f}" for p in chunk),
                   "hourly": HOURLY, "wind_speed_unit": "ms", "timezone": "GMT", **extra}
         for js in _get(url, params):
-            h = js.get("hourly") or {}
-            if not h.get("time"):
-                out.append(pd.DataFrame())
-                continue
-            df = pd.DataFrame({k: h.get(k) for k in ["wind_speed_100m", "shortwave_radiation", "temperature_2m"]},
-                              index=pd.to_datetime(h["time"], utc=True))
-            out.append(df.astype(float))
+            out.append(hourly_frame(js))
         time.sleep(1)
     return out
+
+
+def hourly_frame(js: dict) -> pd.DataFrame:
+    """Odpowiedź Open-Meteo dla jednego punktu -> godzinowa ramka (UTC); pusta, gdy brak danych."""
+    h = (js or {}).get("hourly") or {}
+    if not h.get("time"):
+        return pd.DataFrame()
+    df = pd.DataFrame({k: h.get(k) for k in ["wind_speed_100m", "shortwave_radiation", "temperature_2m"]},
+                      index=pd.to_datetime(h["time"], utc=True))
+    return df.astype(float)
+
+
+def read_shared(folder=None, now: dt.datetime | None = None) -> dict | None:
+    """Pogoda do prognoz ze wspólnej bazy (data/shared_weather, krok „power” Wspólnej pogody).
+
+    Zwraca {"issued": czas UTC, "age_h": wiek w godzinach, "today": czy wydana dziś (UTC),
+    "daily": {kod: cechy dzienne}, "hourly": {kod: godzinowy cf i ws (UTC)}} albo None (brak plików, błąd odczytu,
+    plik starszy niż SHARED_MAX_AGE_H)."""
+    f = folder or SHARED
+    now = now or dt.datetime.now(dt.timezone.utc)
+    try:
+        meta = json.loads((f / SHARED_META).read_text(encoding="utf-8"))
+        issued = dt.datetime.fromisoformat(str(meta["issued"]).replace("Z", "+00:00"))
+        age_h = (now - issued).total_seconds() / 3600
+        if age_h > SHARED_MAX_AGE_H or age_h < -1:
+            return None
+        d = pd.read_csv(f / SHARED_DAILY, parse_dates=["date"])
+        daily = {code: g.set_index("date")[FEATURES].astype(float).sort_index() for code, g in d.groupby("code")}
+        hourly = {}
+        if (f / SHARED_HOURLY).exists():
+            h = pd.read_csv(f / SHARED_HOURLY)
+            h["time"] = pd.to_datetime(h["time"], utc=True)
+            hourly = {code: g.set_index("time")[["cf", "ws"]].astype(float).sort_index() for code, g in h.groupby("code")}
+    except Exception:
+        return None
+    if not daily:
+        return None
+    return {"issued": issued, "age_h": age_h, "today": issued.date() == now.date(), "daily": daily, "hourly": hourly}
 
 
 def daily_features(frames: list[pd.DataFrame], points: list[dict], tz: str) -> pd.DataFrame:
@@ -250,22 +290,57 @@ def update(settings: dict, frames: dict[str, pd.DataFrame], derive, countries: l
 
     pts = load_points()
     codes = [c for c in countries if c["code"] in pts and c["code"] in frames]
-    flat, owner = [], []
-    for c in codes:
-        for p in pts[c["code"]]:
-            flat.append(p)
-            owner.append(c["code"])
-    if not flat:
+    if not codes:
         return {}
-    # prognoza + ostatnie dni analizy (uzupełnia cache)
-    try:
-        fr = fetch_points(flat, FORECAST_URL, {"forecast_days": FORECAST_DAYS, "past_days": 10})
-    except Exception as e:
-        log.append(f"Open-Meteo: prognoza niedostępna ({e})")
+    # 1) wspólna baza pogodowa (wydana dziś), 2) własne zapytanie dla krajów, których w niej nie ma,
+    # 3) gdy Open-Meteo nie odpowiada - wspólna baza z poprzedniego przebiegu (do SHARED_MAX_AGE_H godzin)
+    recent_by: dict[str, pd.DataFrame] = {}
+    hw_by: dict[str, pd.DataFrame] = {}
+    sh = read_shared()
+
+    def take_shared(only_missing: bool = True) -> list[str]:
+        got = []
+        for c in codes:
+            code = c["code"]
+            if (only_missing and code in recent_by) or code not in sh["daily"]:
+                continue
+            recent_by[code] = sh["daily"][code]
+            hw_by[code] = sh["hourly"].get(code, pd.DataFrame(columns=["cf", "ws"]))
+            got.append(code)
+        return got
+
+    if sh and sh["today"]:
+        got = take_shared()
+        if got:
+            log.append(f"Pogoda do prognoz: wspólna baza (wydanie {sh['issued']:%Y-%m-%d %H:%M} UTC) – {len(got)} krajów")
+    need = [c for c in codes if c["code"] not in recent_by]
+    if need:
+        flat, owner = [], []
+        for c in need:
+            for p in pts[c["code"]]:
+                flat.append(p)
+                owner.append(c["code"])
+        try:
+            # prognoza + ostatnie dni analizy (uzupełnia cache)
+            fr = fetch_points(flat, FORECAST_URL, {"forecast_days": FORECAST_DAYS, "past_days": PAST_DAYS})
+            by_code: dict[str, list[pd.DataFrame]] = {}
+            for code, df in zip(owner, fr):
+                by_code.setdefault(code, []).append(df)
+            for c in need:
+                recent_by[c["code"]] = daily_features(by_code.get(c["code"], []), pts[c["code"]], c["tz"])
+                hw_by[c["code"]] = hourly_wind(by_code.get(c["code"], []), pts[c["code"]])
+            if len(need) < len(codes):
+                log.append("Pogoda do prognoz: bezpośrednio z Open-Meteo (brak we wspólnej bazie) – "
+                           + ", ".join(c["code"] for c in need))
+        except Exception as e:
+            got = take_shared() if sh else []
+            if got:
+                log.append(f"Open-Meteo: prognoza niedostępna ({e}) – {len(got)} krajów ze wspólnej bazy z "
+                           f"{sh['issued']:%Y-%m-%d %H:%M} UTC (sprzed {sh['age_h']:.0f} h)")
+            else:
+                log.append(f"Open-Meteo: prognoza niedostępna ({e})")
+    if not recent_by:
         return {}
-    by_code: dict[str, list[pd.DataFrame]] = {}
-    for code, df in zip(owner, fr):
-        by_code.setdefault(code, []).append(df)
 
     hist_days = settings.get("weather_history_days", 420)
     results = {}
@@ -273,7 +348,9 @@ def update(settings: dict, frames: dict[str, pd.DataFrame], derive, countries: l
     for c in codes:
         code, tz = c["code"], c["tz"]
         today = dt.datetime.now(ZoneInfo(tz)).date()
-        recent = daily_features(by_code.get(code, []), pts[code], tz)
+        if code not in recent_by:
+            continue
+        recent = recent_by[code]
         cache = read_cache(code)
         need_from = pd.Timestamp(today - dt.timedelta(days=hist_days))
         if cache.empty or cache.index.min() > need_from + pd.Timedelta(days=7):
@@ -292,7 +369,7 @@ def update(settings: dict, frames: dict[str, pd.DataFrame], derive, countries: l
         fut = recent[recent.index >= pd.Timestamp(today)]
         e, _ = derive(frames[code], min_cov)
         try:
-            hw = hourly_wind(by_code.get(code, []), pts[code])
+            hw = hw_by.get(code)
             fc = forecast_country(code, cache, fut, e, today, hourly=hw, tz=tz, ext=EXT_DAYS)
         except Exception as ex:
             log.append(f"{code}: błąd modelu prognozy ({type(ex).__name__}: {ex})")

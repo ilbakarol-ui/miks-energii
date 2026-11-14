@@ -117,6 +117,15 @@ def main(out: Path):
                     "punkty": tr.get("points"), "bledy": tr.get("errors", []), "zaleglosci": tr.get("pending", {}),
                     **{f"{k}_do_konca": f'{v.get("points_to_end")}/{v.get("points")}' for k, v in tc.items()}}
     brief["pogoda_wspolna"] = sw
+    # U-20261114-3: pogoda do prognoz Miksu (krok „power” Wspólnej pogody); brak albo stary plik = prognozy
+    # policzone z własnego zapytania do Open-Meteo (wyjście awaryjne), nie błąd
+    pm = store.DATA / "shared_weather" / "power_meta.json"
+    if pm.exists():
+        try:
+            m = json.loads(pm.read_text(encoding="utf-8"))
+            brief["pogoda_do_prognoz"] = {"wydanie": m.get("issued"), "kraje": m.get("countries"), "bez": m.get("missing", [])}
+        except Exception:
+            pass
     (out / "brief.json").write_text(json.dumps(brief, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps(brief, ensure_ascii=False, indent=1))
 
