@@ -13,17 +13,17 @@
   },
   "ensemble": {
    "status": "OK",
-   "seconds": 846,
-   "requests": 21,
+   "seconds": 456,
+   "requests": 18,
    "weighted": 93.5,
    "http429": 0,
    "last_error": "ensemble-api.open-meteo.com: ReadTimeout"
   }
  },
- "forecast_issued": "2026-11-14",
- "updated": "2026-11-14T18:29Z",
+ "forecast_issued": "2026-11-15",
+ "updated": "2026-11-15T18:22Z",
  "weighted_calls": 581.9,
- "ensemble_issued": "2026-11-14",
+ "ensemble_issued": "2026-11-15",
  "ensemble_kind": "ensemble",
  "power": {
   "countries": 30,
@@ -31,7 +31,7 @@
   "missing": [],
   "last_error": null,
   "status": "OK",
-  "issued": "2026-11-14T18:15Z",
+  "issued": "2026-11-15T18:15Z",
   "seconds": 62,
   "requests": 7,
   "weighted": 321.3
