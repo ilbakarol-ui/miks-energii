@@ -1,23 +1,19 @@
 {
  "source": "Open-Meteo (CC BY 4.0): ERA5, ECMWF IFS (prognozy bieżące, dawne, ensemble), ECMWF SEAS5",
- "errors": [
-  "prev: 3 paczek punktów bez danych po 3 próbach, np. EU_PL_2,EU_PL_3,EU_PL_4,EU_AT_1,EU_AT_2 2026-11-09..2026-11-13: RuntimeError"
- ],
- "pending": {
-  "prev": 15
- },
+ "errors": [],
+ "pending": {},
  "steps": {
   "recent": {
    "status": "OK",
    "seconds": 1,
-   "requests": 7,
-   "weighted": 135.0,
+   "requests": 9,
+   "weighted": 167.1,
    "http429": 0,
    "last_error": null
   },
   "hist": {
    "status": "OK",
-   "seconds": 4,
+   "seconds": 3,
    "requests": 7,
    "weighted": 63.0,
    "http429": 0,
@@ -25,37 +21,83 @@
   },
   "prev": {
    "status": "OK",
-   "seconds": 589,
-   "requests": 19,
+   "seconds": 67,
+   "requests": 13,
    "weighted": 63.0,
    "http429": 0,
-   "last_error": "previous-runs-api.open-meteo.com: ReadTimeout"
+   "last_error": null
   }
  },
- "forecast_issued": "2026-11-14",
- "updated": "2026-11-14T01:26Z",
+ "forecast_issued": "2026-11-15",
+ "updated": "2026-11-15T01:35Z",
  "coverage": {
   "hist": {
    "points": 63,
    "points_to_end": 63,
    "from": "2019-01-01",
-   "to": "2026-11-08",
-   "rows": 180747
+   "to": "2026-11-09",
+   "rows": 180810
   },
   "prev": {
    "points": 63,
-   "points_to_end": 48,
+   "points_to_end": 63,
    "from": "2024-01-01",
-   "to": "2026-11-13",
-   "rows": 66009
+   "to": "2026-11-14",
+   "rows": 66087
   },
   "recent": {
    "points": 63,
    "points_to_end": 47,
-   "from": "2026-10-31",
-   "to": "2026-11-28",
+   "from": "2026-11-01",
+   "to": "2026-11-29",
    "rows": 1811
   }
  },
- "weighted_calls": 261.0
+ "weighted_calls": 3576.9,
+ "trial": {
+  "groups": [
+   "eu_gas_x"
+  ],
+  "points": 15,
+  "errors": [],
+  "pending": {
+   "hist": 5
+  },
+  "steps": {
+   "hist": {
+    "status": "limit czasu",
+    "seconds": 660,
+    "requests": 14,
+    "weighted": 2962.5,
+    "last_error": null
+   }
+  },
+  "coverage": {
+   "hist": {
+    "points": 15,
+    "points_to_end": 10,
+    "from": "2019-01-01",
+    "to": "2026-11-09",
+    "rows": 39650
+   },
+   "recent": {
+    "points": 15,
+    "points_to_end": 13,
+    "from": "2026-11-01",
+    "to": "2026-11-29",
+    "rows": 433
+   }
+  }
+ },
+ "power": {
+  "countries": 30,
+  "points": 173,
+  "missing": [],
+  "last_error": null,
+  "status": "OK",
+  "issued": "2026-11-15T01:23Z",
+  "seconds": 62,
+  "requests": 7,
+  "weighted": 321.3
+ }
 }
