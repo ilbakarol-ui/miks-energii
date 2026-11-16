@@ -13,7 +13,7 @@
   },
   "hist": {
    "status": "OK",
-   "seconds": 3,
+   "seconds": 4,
    "requests": 7,
    "weighted": 63.0,
    "http429": 0,
@@ -21,39 +21,39 @@
   },
   "prev": {
    "status": "OK",
-   "seconds": 67,
-   "requests": 13,
+   "seconds": 219,
+   "requests": 15,
    "weighted": 63.0,
    "http429": 0,
-   "last_error": null
+   "last_error": "previous-runs-api.open-meteo.com: ReadTimeout"
   }
  },
- "forecast_issued": "2026-11-15",
- "updated": "2026-11-15T01:35Z",
+ "forecast_issued": "2026-11-16",
+ "updated": "2026-11-16T06:50Z",
  "coverage": {
   "hist": {
    "points": 63,
    "points_to_end": 63,
    "from": "2019-01-01",
-   "to": "2026-11-09",
-   "rows": 180810
+   "to": "2026-11-10",
+   "rows": 180873
   },
   "prev": {
    "points": 63,
    "points_to_end": 63,
    "from": "2024-01-01",
-   "to": "2026-11-14",
-   "rows": 66087
+   "to": "2026-11-15",
+   "rows": 66150
   },
   "recent": {
    "points": 63,
    "points_to_end": 47,
-   "from": "2026-11-01",
-   "to": "2026-11-29",
-   "rows": 1811
+   "from": "2026-11-02",
+   "to": "2026-12-01",
+   "rows": 1858
   }
  },
- "weighted_calls": 3576.9,
+ "weighted_calls": 1124.8,
  "trial": {
   "groups": [
    "eu_gas_x"
@@ -61,31 +61,45 @@
   "points": 15,
   "errors": [],
   "pending": {
-   "hist": 5
+   "prev": 15
   },
   "steps": {
    "hist": {
-    "status": "limit czasu",
-    "seconds": 660,
-    "requests": 14,
-    "weighted": 2962.5,
+    "status": "OK",
+    "seconds": 2,
+    "requests": 3,
+    "weighted": 253.2,
     "last_error": null
+   },
+   "prev": {
+    "status": "limit czasu",
+    "seconds": 739,
+    "requests": 15,
+    "weighted": 257.1,
+    "last_error": "previous-runs-api.open-meteo.com: ReadTimeout"
    }
   },
   "coverage": {
    "hist": {
     "points": 15,
-    "points_to_end": 10,
+    "points_to_end": 15,
     "from": "2019-01-01",
-    "to": "2026-11-09",
-    "rows": 39650
+    "to": "2026-11-10",
+    "rows": 43065
+   },
+   "prev": {
+    "points": 5,
+    "points_to_end": 0,
+    "from": "2024-01-01",
+    "to": "2025-10-21",
+    "rows": 3300
    },
    "recent": {
     "points": 15,
     "points_to_end": 13,
-    "from": "2026-11-01",
-    "to": "2026-11-29",
-    "rows": 433
+    "from": "2026-11-02",
+    "to": "2026-12-01",
+    "rows": 446
    }
   }
  },
@@ -95,8 +109,8 @@
   "missing": [],
   "last_error": null,
   "status": "OK",
-  "issued": "2026-11-15T01:23Z",
-  "seconds": 62,
+  "issued": "2026-11-16T06:34Z",
+  "seconds": 64,
   "requests": 7,
   "weighted": 321.3
  }
