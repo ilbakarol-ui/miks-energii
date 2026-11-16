@@ -15,6 +15,10 @@ on:
   schedule:
     - cron: "17 0 * * *"
     - cron: "47 17 * * *"
+    # B-20261116-1: zapasowe starty (GitHub opóźnia albo pomija zdarzenia harmonogramu – 16.11 noc +6,5 h, wieczór pominięty);
+    # bramka „need” pomija zadanie, gdy jego dzisiejszy commit („Wspólna pogoda <zadanie> <dziś>”) już jest
+    - cron: "41 3 * * *"        # zapas nocny (temp, extra)
+    - cron: "53 18 * * *"       # zapas wieczorny (evening), przed raportem gazowym o 20:41 czasu polskiego
   workflow_dispatch:
     inputs:
       budget:
@@ -43,24 +47,47 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        job: ${{ fromJSON((github.event.schedule == '47 17 * * *' || github.event.inputs.evening == 'true') && '["evening"]' || '["temp","extra"]') }}
+        job: ${{ fromJSON((github.event.schedule == '47 17 * * *' || github.event.schedule == '53 18 * * *' || github.event.inputs.evening == 'true') && '["evening"]' || '["temp","extra"]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 130
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 50   # B-20261116-1: bramka zapasu sprawdza dzisiejsze commity
+
+      # B-20261116-1: start zapasowy (41 3 / 53 18) tylko wtedy, gdy zadanie nie zapisało dziś danych
+      - name: Czy zadanie już było dziś
+        id: need
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+          JOB: ${{ matrix.job }}
+        run: |
+          if [ "$SCHEDULE" = "41 3 * * *" ] || [ "$SCHEDULE" = "53 18 * * *" ]; then
+            if git log -50 --format=%s | grep -qx "Wspólna pogoda $JOB $(date -u +%Y-%m-%d)"; then
+              echo "run=0" >> "$GITHUB_OUTPUT"; echo "Zadanie $JOB już dziś zapisało dane – zapas pominięty."
+            else
+              echo "run=1" >> "$GITHUB_OUTPUT"; echo "Brak commitu „Wspólna pogoda $JOB $(date -u +%Y-%m-%d)” – zapas pobiera pogodę."
+            fi
+          else
+            echo "run=1" >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: actions/setup-python@v5
+        if: steps.need.outputs.run == '1'
         with:
           python-version: "3.12"
           cache: pip
 
       - name: Instalacja
+        if: steps.need.outputs.run == '1'
         run: pip install -r requirements.txt
 
       - name: Test modułu
+        if: steps.need.outputs.run == '1'
         run: python -m pytest -q tests/test_shared_weather.py
 
       - name: Pobranie pogody (${{ matrix.job }})
+        if: steps.need.outputs.run == '1'
         timeout-minutes: 115
         env:
           BUDGET: ${{ github.event.inputs.budget || '8000' }}
@@ -68,7 +95,7 @@ jobs:
         run: python -m mixtracker.shared_weather --job ${{ matrix.job }} --budget "$BUDGET" --minutes "$MINUTES"
 
       - name: Zapis w repozytorium
-        if: always()
+        if: always() && steps.need.outputs.run == '1'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

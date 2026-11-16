@@ -5,6 +5,10 @@ on:
     - cron: "53 0 * * *"        # codziennie 00:53 UTC = 02:53 czasu letniego w Polsce (01:53 zimą); zapas na opóźnienia startów GitHub (do ~3 h) przed odświeżeniem o 5:40
     - cron: "37 12 * * *"       # przebieg popołudniowy (codziennie): 12:37 UTC = 14:37 latem (13:37 zimą) - tylko ceny day-ahead na jutro (ok. 10 min), przed odświeżeniem o 16:40
     - cron: "7 14 * * *"        # B-20261027-1: uzupełnienie cen na jutro dla stref, których nie było przy 12:37 (2–3 min; przy komplecie bez commitu)
+    # B-20261116-1: zapasowe starty – GitHub potrafi opóźnić albo pominąć zdarzenie harmonogramu (16.11: noc +6,5 h,
+    # 12:37 i 14:07 UTC w ogóle nie ruszyły); bramka w kroku „need” kończy je po kilku sekundach, gdy nie są potrzebne
+    - cron: "23 3 * * *"        # zapas nocny: tylko gdy brak commitu „Dane z <dziś>”
+    - cron: "13 15 * * *"       # zapas popołudniowy: jak 14:07 – tylko gdy któraś strefa nie ma ceny na jutro
   workflow_dispatch:
     inputs:
       budget:
@@ -38,6 +42,8 @@ jobs:
       run: ${{ steps.need.outputs.run }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 50   # B-20261116-1: bramka zapasu nocnego sprawdza dzisiejsze commity
 
       # B-20261028-5: przebieg uzupełniający 14:07 UTC tylko wtedy, gdy któraś strefa nie ma jeszcze ceny na jutro
       - name: Czy brakuje cen na jutro
@@ -45,7 +51,14 @@ jobs:
         env:
           SCHEDULE: ${{ github.event.schedule }}
         run: |
-          if [ "$SCHEDULE" = "7 14 * * *" ]; then
+          if [ "$SCHEDULE" = "23 3 * * *" ]; then
+            # B-20261116-1: zapas nocny – pełny przebieg tylko wtedy, gdy nocny jeszcze nie zapisał danych
+            if git log -50 --format=%s | grep -qx "Dane z $(date -u +%Y-%m-%d)"; then
+              echo "run=0" >> "$GITHUB_OUTPUT"; echo "Przebieg nocny już był – zapas pominięty."
+            else
+              echo "run=1" >> "$GITHUB_OUTPUT"; echo "Brak commitu „Dane z $(date -u +%Y-%m-%d)” – zapas nocny liczy dane."
+            fi
+          elif [ "$SCHEDULE" = "7 14 * * *" ] || [ "$SCHEDULE" = "13 15 * * *" ]; then
             t=$(date -u -d tomorrow +%Y-%m-%d); miss=0; brak=""
             for f in data/prices/*.csv; do
               d=$(tail -1 "$f" | cut -d, -f1 | cut -c1-10)
@@ -76,8 +89,8 @@ jobs:
         env:
           BUDGET: ${{ github.event.inputs.budget || '80' }}
           ONLY: ${{ github.event.inputs.only || '' }}
-          AFTERNOON: ${{ github.event.schedule == '37 12 * * *' || github.event.schedule == '7 14 * * *' || github.event.inputs.afternoon == 'true' }}
-          ONLY_MISSING: ${{ github.event.schedule == '7 14 * * *' }}
+          AFTERNOON: ${{ github.event.schedule == '37 12 * * *' || github.event.schedule == '7 14 * * *' || github.event.schedule == '13 15 * * *' || github.event.inputs.afternoon == 'true' }}
+          ONLY_MISSING: ${{ github.event.schedule == '7 14 * * *' || github.event.schedule == '13 15 * * *' }}
           FIRST_AFTERNOON: ${{ github.event.schedule == '37 12 * * *' }}   # B-20261103-2: bez ponowień – braki uzupełnia przebieg 14:07
           ENTSOE_TOKEN: ${{ secrets.ENTSOE_TOKEN }}   # U-20261027: zużycie UK/NI i dane NL z ENTSO-E (bez sekretu – pominięte)
         run: |
@@ -92,7 +105,7 @@ jobs:
       - name: Zapis danych w repozytorium
         if: always() && steps.need.outputs.run == '1'
         env:
-          SUFFIX: ${{ (github.event.schedule == '37 12 * * *' || github.event.schedule == '7 14 * * *' || github.event.inputs.afternoon == 'true') && ' (popołudnie)' || '' }}
+          SUFFIX: ${{ (github.event.schedule == '37 12 * * *' || github.event.schedule == '7 14 * * *' || github.event.schedule == '13 15 * * *' || github.event.inputs.afternoon == 'true') && ' (popołudnie)' || '' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

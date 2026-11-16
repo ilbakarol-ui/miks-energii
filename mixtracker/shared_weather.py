@@ -72,6 +72,8 @@ HIST_CHUNK_DAYS = 365   # U-20261114: zaległa historia ERA5 w kawałkach (waga 
 # które czytają raporty (Gaz UE, poranna wiadomość Miksu)
 TRIAL_GROUPS = ("eu_gas_x",)
 TRIAL_MAX_MINUTES = 10
+TRIAL_REQUEST_MARGIN = 90          # B-20261116-3: s zapasu na zapytanie w toku (limit dawnych prognoz 90 s)
+TRIAL_SKIP_PREV_SECONDS = 120      # B-20261116-3: krok prev punktów podstawowych dłuższy niż to i z ReadTimeout → próbne pominięte
 # U-20261114-3: pogoda do prognoz Miksu energii (krok "power") – te same punkty i cechy co mixtracker/weather.py
 POWER_POINTS = store.ROOT / "config" / "weather_points.csv"
 POWER_PAST, POWER_DAYS, POWER_BATCH = 10, 16, 25
@@ -663,9 +665,20 @@ def _run_trial(meta: dict, trial: pd.DataFrame, q: Quota, get, today: dt.date, m
     TRIAL_MAX_MINUTES minut. Błędy, zaległości i statusy w meta["trial"]; errors / pending / coverage bez zmian."""
     tm = meta["trial"]
     end_all = DEADLINE[0]
-    DEADLINE[0] = min(end_all, time.time() + TRIAL_MAX_MINUTES * 60)
+    # B-20261116-3: zapas 90 s na zapytanie w toku (termin sprawdzany jest tylko między zapytaniami; 16.11: 739 s przy 10 min)
+    DEADLINE[0] = min(end_all, time.time() + TRIAL_MAX_MINUTES * 60 - TRIAL_REQUEST_MARGIN)
     try:
         for name, fn in (("hist", step_hist), ("prev", step_prev)):
+            # B-20261116-3: gdy serwer dawnych prognoz był wolny już dla punktów podstawowych, punkty próbne czekają do jutra
+            core_prev = (meta.get("steps") or {}).get("prev") or {}
+            if (name == "prev" and "ReadTimeout" in str(core_prev.get("last_error") or "")
+                    and (core_prev.get("seconds") or 0) > TRIAL_SKIP_PREV_SECONDS):
+                tm["steps"][name] = dict(status="pominięte – serwer wolny", seconds=0, requests=0, weighted=0.0,
+                                         last_error=None)
+                tm["pending"][name] = _pending(name, _sel(trial, "temp"), today)
+                print("  punkty próbne prev: pominięte – serwer dawnych prognoz wolny dla punktów podstawowych")
+                _save_meta(meta, q, meta_name)
+                continue
             t0, r0, w0 = time.time(), STATS["requests"], q.used
             STATS["last_error"] = None
             status = "OK"

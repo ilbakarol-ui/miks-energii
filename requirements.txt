@@ -4,3 +4,4 @@ requests>=2.31
 pytest>=8
 holidays>=0.50
 time-machine>=2.10
+pyyaml>=6

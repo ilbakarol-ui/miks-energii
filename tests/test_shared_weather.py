@@ -352,3 +352,31 @@ def test_trial_deadline_does_not_touch_core(tmp_path, monkeypatch):
     assert meta["errors"] == [] and meta["steps"]["prev"]["status"] == "OK"
     assert meta["trial"]["steps"]["hist"]["status"] == "limit czasu"
     assert meta["trial"]["pending"]["hist"] == 2
+
+
+def test_trial_prev_skipped_when_core_prev_slow(tmp_path, monkeypatch):
+    """B-20261116-3: krok prev punktów podstawowych wolny (ReadTimeout) → punkty próbne bez dawnych prognoz dziś."""
+    setup_trial(tmp_path, monkeypatch)
+    monkeypatch.setattr(sw, "TRIAL_SKIP_PREV_SECONDS", -1)        # w teście krok trwa ułamek sekundy
+    calls = []
+    good = fake_get_factory(calls)
+
+    def get(url, params):
+        if url == sw.PREV_URL:
+            sw.STATS["last_error"] = "previous-runs-api.open-meteo.com: ReadTimeout"
+        return good(url, params)
+    meta = sw.run(budget=1e6, get=get, today=TODAY)
+    assert meta["steps"]["prev"]["status"] == "OK"
+    tr = meta["trial"]
+    assert tr["steps"]["prev"]["status"] == "pominięte – serwer wolny" and tr["pending"]["prev"] == 2
+    assert tr["steps"]["hist"]["status"] == "OK"
+    trial_prev = [c for c in calls if c[0] == sw.PREV_URL and ("43.30" in c[1]["latitude"] or "47.22" in c[1]["latitude"])]
+    assert trial_prev == []
+    # bez ReadTimeout w kroku podstawowym – punkty próbne pobierane jak dotąd
+    monkeypatch.setattr(sw, "TRIAL_SKIP_PREV_SECONDS", 120)
+    meta = sw.run(budget=1e6, get=good, today=TODAY + dt.timedelta(days=1))
+    assert meta["trial"]["steps"]["prev"]["status"] == "OK"
+
+
+def test_trial_deadline_keeps_margin_for_request_in_flight(monkeypatch):
+    assert sw.TRIAL_REQUEST_MARGIN >= 90 and sw.TRIAL_MAX_MINUTES * 60 - sw.TRIAL_REQUEST_MARGIN > 0
