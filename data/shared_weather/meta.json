@@ -5,15 +5,15 @@
  "steps": {
   "recent": {
    "status": "OK",
-   "seconds": 1,
-   "requests": 9,
+   "seconds": 211,
+   "requests": 11,
    "weighted": 167.1,
    "http429": 0,
-   "last_error": null
+   "last_error": "api.open-meteo.com: ReadTimeout"
   },
   "hist": {
    "status": "OK",
-   "seconds": 4,
+   "seconds": 6,
    "requests": 7,
    "weighted": 63.0,
    "http429": 0,
@@ -21,39 +21,39 @@
   },
   "prev": {
    "status": "OK",
-   "seconds": 219,
-   "requests": 15,
+   "seconds": 16,
+   "requests": 13,
    "weighted": 63.0,
    "http429": 0,
-   "last_error": "previous-runs-api.open-meteo.com: ReadTimeout"
+   "last_error": null
   }
  },
- "forecast_issued": "2026-11-16",
- "updated": "2026-11-16T06:50Z",
+ "forecast_issued": "2026-11-17",
+ "updated": "2026-11-17T06:05Z",
  "coverage": {
   "hist": {
    "points": 63,
    "points_to_end": 63,
    "from": "2019-01-01",
-   "to": "2026-11-10",
-   "rows": 180873
+   "to": "2026-11-11",
+   "rows": 180936
   },
   "prev": {
    "points": 63,
    "points_to_end": 63,
    "from": "2024-01-01",
-   "to": "2026-11-15",
-   "rows": 66150
+   "to": "2026-11-16",
+   "rows": 66213
   },
   "recent": {
    "points": 63,
    "points_to_end": 47,
-   "from": "2026-11-02",
-   "to": "2026-12-01",
+   "from": "2026-11-03",
+   "to": "2026-12-02",
    "rows": 1858
   }
  },
- "weighted_calls": 1124.8,
+ "weighted_calls": 624.2,
  "trial": {
   "groups": [
    "eu_gas_x"
@@ -61,22 +61,22 @@
   "points": 15,
   "errors": [],
   "pending": {
-   "prev": 15
+   "prev": 10
   },
   "steps": {
    "hist": {
     "status": "OK",
     "seconds": 2,
-    "requests": 3,
-    "weighted": 253.2,
+    "requests": 2,
+    "weighted": 15.0,
     "last_error": null
    },
    "prev": {
     "status": "limit czasu",
-    "seconds": 739,
-    "requests": 15,
-    "weighted": 257.1,
-    "last_error": "previous-runs-api.open-meteo.com: ReadTimeout"
+    "seconds": 512,
+    "requests": 13,
+    "weighted": 269.6,
+    "last_error": null
    }
   },
   "coverage": {
@@ -84,34 +84,65 @@
     "points": 15,
     "points_to_end": 15,
     "from": "2019-01-01",
-    "to": "2026-11-10",
-    "rows": 43065
+    "to": "2026-11-11",
+    "rows": 43080
    },
    "prev": {
-    "points": 5,
-    "points_to_end": 0,
+    "points": 10,
+    "points_to_end": 5,
     "from": "2024-01-01",
-    "to": "2025-10-21",
-    "rows": 3300
+    "to": "2026-11-16",
+    "rows": 7055
    },
    "recent": {
     "points": 15,
     "points_to_end": 13,
-    "from": "2026-11-02",
-    "to": "2026-12-01",
+    "from": "2026-11-03",
+    "to": "2026-12-02",
     "rows": 446
    }
   }
  },
  "power": {
-  "countries": 30,
+  "countries": 0,
   "points": 173,
-  "missing": [],
-  "last_error": null,
-  "status": "OK",
-  "issued": "2026-11-16T06:34Z",
-  "seconds": 64,
-  "requests": 7,
-  "weighted": 321.3
+  "missing": [
+   "AT",
+   "BE",
+   "BG",
+   "CH",
+   "CY",
+   "CZ",
+   "DE",
+   "DK",
+   "EE",
+   "ES",
+   "FI",
+   "FR",
+   "GB",
+   "GR",
+   "HR",
+   "HU",
+   "IE",
+   "IT",
+   "LT",
+   "LU",
+   "LV",
+   "NL",
+   "NO",
+   "PL",
+   "PT",
+   "RO",
+   "SE",
+   "SI",
+   "SK",
+   "UK"
+  ],
+  "last_error": "RuntimeError: ReadTimeout",
+  "status": "limit czasu",
+  "error": "pogoda tylko dla 0 z 30 krajów (RuntimeError: ReadTimeout)",
+  "seconds": 330,
+  "requests": 3,
+  "weighted": 46.4
  }
 }
