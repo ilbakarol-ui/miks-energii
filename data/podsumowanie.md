@@ -4,7 +4,7 @@
 
 | | bieżący | poprz. tydz. | rok temu | śr. 5 lat |
 |---|---|---|---|---|
-| Zużycie, GWh | 51 442 | 51 160 | 48 673 | 49 860 |
+| Zużycie, GWh | 51 481 | 51 160 | 48 673 | 49 860 |
 | Produkcja, GWh | 51 238 | 50 388 | 49 254 | 50 295 |
 | Udział OZE | 39,6% | 34,5% | 40,7% | 37,5% |
 | Emisyjność, g/kWh | 227 | 255 | 202 | 242 |
@@ -20,7 +20,7 @@
 - Rumunia: Jądrowa 0,0% – poniżej min. z 5 lat (paź 2026)
 - Cypr: Ropa, odpady, inne 97,5% (+22,9 p.p. r/r, paź 2026)
 
-Zapytania do Energy-Charts: 49 (public_power: 33, price: 16); czas: 20 min
+Zapytania do Energy-Charts: 46 (public_power: 30, price: 16); czas: 19 min
 Prognozy pobrane dla: AT, BE, BG, CH, CY, CZ, DE, DK, EE, ES, EU, FI, FR, GB, GR, HR, HU, IE, IT, LT, LU, LV, NL, NO, PL, PT, RO, SE, SI, SK, UK
 Niepełne doby w 14 dniach (brakujące godziny uzupełnione proporcjonalnie; poniżej 80% – luka): IE 8, UK 7
 Zużycie bez danych w 14 dniach (źródło podało < 80% godzin – luka do uzupełnienia): CY 4
@@ -29,4 +29,4 @@ Zużycie bez danych w 14 dniach (źródło podało < 80% godzin – luka do uzup
 - DK: ENTSO-E od 2026-10-25 – zużycie 21 dób, produkcja 10 dób; wobec Energy-Charts (14 dób): load -0%, solar -14%
 - DK: Energinet (uzupełnienie od 2026-11-01) – produkcja 12 dób (09.11, 10.11, 11.11, 12.11, 13.11, 14.11, 15.11, 16.11), zużycie 2 dób (11.11, 12.11)
 - Niedostępność elektrowni (ENTSO-E, dla Gaz UE): bieżące FR,BE,ES,NL; historia FR,BE,ES,NL; 8 zapytań; atom dziś niedostępny: FR 16.4 GW, BE 0.4 GW, ES 1.0 GW, NL 0.0 GW
-- Pogoda do prognoz: wspólna baza (wydanie 2026-11-17 01:08 UTC) – 30 krajów
+- Pogoda do prognoz: wspólna baza (wydanie 2026-11-17 08:00 UTC) – 30 krajów

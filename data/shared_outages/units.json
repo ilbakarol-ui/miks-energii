@@ -149,7 +149,7 @@
 "nominal_mw": 1300,
 "unavail_mw": 820,
 "start": "2026-11-16T08:00:00+00:00",
-"end": "2026-11-20T02:00:00+00:00",
+"end": "2026-11-20T11:00:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -265,17 +265,6 @@
 },
 {
 "zone": "FR",
-"unit": "PALUEL 4",
-"psr": "nuclear",
-"nominal_mw": 1330,
-"unavail_mw": 701,
-"start": "2026-11-18T18:30:00+00:00",
-"end": "2026-11-18T19:00:00+00:00",
-"now": false,
-"kind": "planowe"
-},
-{
-"zone": "FR",
 "unit": "ST ALBAN 1",
 "psr": "nuclear",
 "nominal_mw": 1335,
@@ -293,17 +282,6 @@
 "unavail_mw": 400,
 "start": "2026-11-22T19:00:00+00:00",
 "end": "2026-11-22T22:00:00+00:00",
-"now": false,
-"kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "GRAVELINES 2",
-"psr": "nuclear",
-"nominal_mw": 910,
-"unavail_mw": 325,
-"start": "2026-11-18T01:30:00+00:00",
-"end": "2026-11-18T18:30:00+00:00",
 "now": false,
 "kind": "planowe"
 },
