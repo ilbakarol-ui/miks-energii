@@ -56,34 +56,12 @@
 },
 {
 "zone": "FR",
-"unit": "CATTENOM 4",
-"psr": "nuclear",
-"nominal_mw": 1300,
-"unavail_mw": 1300,
-"start": "2026-01-30T23:00:00+00:00",
-"end": "2026-11-16T08:00:00+00:00",
-"now": true,
-"kind": "planowe"
-},
-{
-"zone": "FR",
 "unit": "CRUAS 1",
 "psr": "nuclear",
 "nominal_mw": 915,
 "unavail_mw": 915,
 "start": "2026-10-16T20:55:00+00:00",
 "end": "2026-11-25T22:30:00+00:00",
-"now": true,
-"kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "CRUAS 4",
-"psr": "nuclear",
-"nominal_mw": 915,
-"unavail_mw": 915,
-"start": "2026-06-12T22:00:00+00:00",
-"end": "2026-11-16T09:00:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -105,7 +83,7 @@
 "nominal_mw": 910,
 "unavail_mw": 910,
 "start": "2026-08-28T22:00:00+00:00",
-"end": "2026-11-26T23:00:00+00:00",
+"end": "2026-12-01T22:00:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -166,12 +144,34 @@
 },
 {
 "zone": "FR",
+"unit": "CATTENOM 4",
+"psr": "nuclear",
+"nominal_mw": 1300,
+"unavail_mw": 820,
+"start": "2026-11-16T08:00:00+00:00",
+"end": "2026-11-20T02:00:00+00:00",
+"now": true,
+"kind": "planowe"
+},
+{
+"zone": "FR",
 "unit": "BELLEVILLE 1",
 "psr": "nuclear",
 "nominal_mw": 1310,
 "unavail_mw": 769,
 "start": "2026-11-15T20:00:00+00:00",
-"end": "2026-11-18T20:00:00+00:00",
+"end": "2026-11-19T15:00:00+00:00",
+"now": true,
+"kind": "planowe"
+},
+{
+"zone": "FR",
+"unit": "CRUAS 4",
+"psr": "nuclear",
+"nominal_mw": 915,
+"unavail_mw": 548,
+"start": "2026-11-17T01:56:00+00:00",
+"end": "2026-11-20T02:30:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -225,8 +225,8 @@
 "psr": "nuclear",
 "nominal_mw": 915,
 "unavail_mw": 915,
-"start": "2026-11-18T19:30:00+00:00",
-"end": "2026-11-25T01:30:00+00:00",
+"start": "2026-11-25T19:30:00+00:00",
+"end": "2026-12-02T01:30:00+00:00",
 "now": false,
 "kind": "planowe"
 },
@@ -236,8 +236,8 @@
 "psr": "nuclear",
 "nominal_mw": 915,
 "unavail_mw": 915,
-"start": "2026-11-25T19:30:00+00:00",
-"end": "2026-12-02T01:30:00+00:00",
+"start": "2026-11-18T19:30:00+00:00",
+"end": "2026-11-25T01:30:00+00:00",
 "now": false,
 "kind": "planowe"
 },
@@ -260,17 +260,6 @@
 "unavail_mw": 910,
 "start": "2026-11-20T19:00:00+00:00",
 "end": "2027-03-02T23:00:00+00:00",
-"now": false,
-"kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "PALUEL 1",
-"psr": "nuclear",
-"nominal_mw": 1330,
-"unavail_mw": 730,
-"start": "2026-11-16T14:30:00+00:00",
-"end": "2026-11-16T15:00:00+00:00",
 "now": false,
 "kind": "planowe"
 },
@@ -313,8 +302,8 @@
 "psr": "nuclear",
 "nominal_mw": 910,
 "unavail_mw": 325,
-"start": "2026-11-18T01:00:00+00:00",
-"end": "2026-11-18T19:00:00+00:00",
+"start": "2026-11-18T01:30:00+00:00",
+"end": "2026-11-18T18:30:00+00:00",
 "now": false,
 "kind": "planowe"
 },
@@ -424,7 +413,7 @@
 "nominal_mw": 470,
 "unavail_mw": 470,
 "start": "2026-11-13T18:15:00+00:00",
-"end": "2026-11-16T11:00:00+00:00",
+"end": "2026-11-18T17:00:00+00:00",
 "now": true,
 "kind": "planowe"
 },
