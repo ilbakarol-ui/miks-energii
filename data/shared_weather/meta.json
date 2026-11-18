@@ -5,31 +5,31 @@
  "steps": {
   "recent": {
    "status": "OK",
-   "seconds": 1,
-   "requests": 9,
+   "seconds": 103,
+   "requests": 10,
    "weighted": 167.1,
    "http429": 0,
-   "last_error": null
+   "last_error": "api.open-meteo.com: ReadTimeout"
   },
   "hist": {
    "status": "OK",
-   "seconds": 160,
-   "requests": 8,
-   "weighted": 63.0,
+   "seconds": 0,
+   "requests": 0,
+   "weighted": 0.0,
    "http429": 0,
-   "last_error": "archive-api.open-meteo.com: ReadTimeout"
+   "last_error": null
   },
   "prev": {
    "status": "OK",
-   "seconds": 454,
-   "requests": 17,
+   "seconds": 222,
+   "requests": 15,
    "weighted": 63.0,
    "http429": 0,
    "last_error": "previous-runs-api.open-meteo.com: ReadTimeout"
   }
  },
  "forecast_issued": "2026-11-18",
- "updated": "2026-11-18T07:48Z",
+ "updated": "2026-11-18T20:24Z",
  "coverage": {
   "hist": {
    "points": 63,
@@ -50,10 +50,10 @@
    "points_to_end": 47,
    "from": "2026-11-04",
    "to": "2026-12-03",
-   "rows": 1858
+   "rows": 1874
   }
  },
- "weighted_calls": 629.4,
+ "weighted_calls": 508.7,
  "trial": {
   "groups": [
    "eu_gas_x"
@@ -66,10 +66,10 @@
   "steps": {
    "hist": {
     "status": "OK",
-    "seconds": 212,
-    "requests": 4,
-    "weighted": 15.0,
-    "last_error": "archive-api.open-meteo.com: ReadTimeout"
+    "seconds": 0,
+    "requests": 0,
+    "weighted": 0.0,
+    "last_error": null
    },
    "prev": {
     "status": "pominięte – serwer wolny",
@@ -99,19 +99,29 @@
     "points_to_end": 13,
     "from": "2026-11-04",
     "to": "2026-12-03",
-    "rows": 446
+    "rows": 448
    }
   }
  },
  "power": {
-  "countries": 30,
+  "countries": 21,
   "points": 173,
-  "missing": [],
+  "missing": [
+   "NL",
+   "NO",
+   "PL",
+   "PT",
+   "RO",
+   "SE",
+   "SI",
+   "SK",
+   "UK"
+  ],
   "last_error": null,
-  "status": "OK",
-  "issued": "2026-11-18T07:34Z",
-  "seconds": 219,
-  "requests": 9,
-  "weighted": 321.3
+  "status": "częściowo",
+  "issued": "2026-11-18T20:18Z",
+  "seconds": 351,
+  "requests": 8,
+  "weighted": 278.6
  }
 }
