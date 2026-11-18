@@ -215,7 +215,18 @@
 "nominal_mw": 1310,
 "unavail_mw": 350,
 "start": "2026-11-15T20:00:00+00:00",
-"end": "2026-11-19T18:00:00+00:00",
+"end": "2026-11-19T19:50:00+00:00",
+"now": true,
+"kind": "planowe"
+},
+{
+"zone": "FR",
+"unit": "CIVAUX 1",
+"psr": "nuclear",
+"nominal_mw": 1495,
+"unavail_mw": 240,
+"start": "2026-11-18T08:00:00+00:00",
+"end": "2026-11-18T14:00:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -276,6 +287,17 @@
 },
 {
 "zone": "FR",
+"unit": "PALUEL 4",
+"psr": "nuclear",
+"nominal_mw": 1330,
+"unavail_mw": 700,
+"start": "2026-11-20T07:30:00+00:00",
+"end": "2026-11-20T08:00:00+00:00",
+"now": false,
+"kind": "planowe"
+},
+{
+"zone": "FR",
 "unit": "ST ALBAN 1",
 "psr": "nuclear",
 "nominal_mw": 1335,
@@ -293,17 +315,6 @@
 "unavail_mw": 400,
 "start": "2026-11-22T19:00:00+00:00",
 "end": "2026-11-22T22:00:00+00:00",
-"now": false,
-"kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "CIVAUX 1",
-"psr": "nuclear",
-"nominal_mw": 1495,
-"unavail_mw": 240,
-"start": "2026-11-18T08:00:00+00:00",
-"end": "2026-11-18T14:00:00+00:00",
 "now": false,
 "kind": "planowe"
 },
