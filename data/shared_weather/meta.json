@@ -5,7 +5,7 @@
  "steps": {
   "recent": {
    "status": "OK",
-   "seconds": 0,
+   "seconds": 1,
    "requests": 9,
    "weighted": 167.1,
    "http429": 0,
@@ -13,47 +13,47 @@
   },
   "hist": {
    "status": "OK",
-   "seconds": 0,
-   "requests": 0,
-   "weighted": 0.0,
+   "seconds": 160,
+   "requests": 8,
+   "weighted": 63.0,
    "http429": 0,
-   "last_error": null
+   "last_error": "archive-api.open-meteo.com: ReadTimeout"
   },
   "prev": {
    "status": "OK",
-   "seconds": 31,
-   "requests": 13,
+   "seconds": 454,
+   "requests": 17,
    "weighted": 63.0,
    "http429": 0,
-   "last_error": null
+   "last_error": "previous-runs-api.open-meteo.com: ReadTimeout"
   }
  },
- "forecast_issued": "2026-11-17",
- "updated": "2026-11-17T08:10Z",
+ "forecast_issued": "2026-11-18",
+ "updated": "2026-11-18T07:48Z",
  "coverage": {
   "hist": {
    "points": 63,
    "points_to_end": 63,
    "from": "2019-01-01",
-   "to": "2026-11-11",
-   "rows": 180936
+   "to": "2026-11-12",
+   "rows": 180999
   },
   "prev": {
    "points": 63,
    "points_to_end": 63,
    "from": "2024-01-01",
-   "to": "2026-11-16",
-   "rows": 66213
+   "to": "2026-11-17",
+   "rows": 66276
   },
   "recent": {
    "points": 63,
    "points_to_end": 47,
-   "from": "2026-11-03",
-   "to": "2026-12-02",
-   "rows": 1874
+   "from": "2026-11-04",
+   "to": "2026-12-03",
+   "rows": 1858
   }
  },
- "weighted_calls": 847.5,
+ "weighted_calls": 629.4,
  "trial": {
   "groups": [
    "eu_gas_x"
@@ -61,21 +61,21 @@
   "points": 15,
   "errors": [],
   "pending": {
-   "prev": 5
+   "prev": 15
   },
   "steps": {
    "hist": {
     "status": "OK",
+    "seconds": 212,
+    "requests": 4,
+    "weighted": 15.0,
+    "last_error": "archive-api.open-meteo.com: ReadTimeout"
+   },
+   "prev": {
+    "status": "pominięte – serwer wolny",
     "seconds": 0,
     "requests": 0,
     "weighted": 0.0,
-    "last_error": null
-   },
-   "prev": {
-    "status": "limit czasu",
-    "seconds": 537,
-    "requests": 15,
-    "weighted": 296.1,
     "last_error": null
    }
   },
@@ -84,12 +84,12 @@
     "points": 15,
     "points_to_end": 15,
     "from": "2019-01-01",
-    "to": "2026-11-11",
-    "rows": 43080
+    "to": "2026-11-12",
+    "rows": 43095
    },
    "prev": {
     "points": 15,
-    "points_to_end": 10,
+    "points_to_end": 0,
     "from": "2024-01-01",
     "to": "2026-11-16",
     "rows": 11110
@@ -97,9 +97,9 @@
    "recent": {
     "points": 15,
     "points_to_end": 13,
-    "from": "2026-11-03",
-    "to": "2026-12-02",
-    "rows": 448
+    "from": "2026-11-04",
+    "to": "2026-12-03",
+    "rows": 446
    }
   }
  },
@@ -109,9 +109,9 @@
   "missing": [],
   "last_error": null,
   "status": "OK",
-  "issued": "2026-11-17T08:00Z",
-  "seconds": 198,
-  "requests": 7,
+  "issued": "2026-11-18T07:34Z",
+  "seconds": 219,
+  "requests": 9,
   "weighted": 321.3
  }
 }
