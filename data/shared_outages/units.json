@@ -39,7 +39,7 @@
 "nominal_mw": 1300,
 "unavail_mw": 1300,
 "start": "2026-11-06T05:23:00+00:00",
-"end": "2026-11-25T22:00:00+00:00",
+"end": "2026-11-29T22:00:00+00:00",
 "now": true,
 "kind": "awaryjne"
 },
@@ -160,7 +160,7 @@
 "nominal_mw": 1300,
 "unavail_mw": 820,
 "start": "2026-11-16T08:00:00+00:00",
-"end": "2026-11-20T11:00:00+00:00",
+"end": "2026-11-20T18:00:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -171,7 +171,7 @@
 "nominal_mw": 1500,
 "unavail_mw": 700,
 "start": "2026-11-17T21:50:00+00:00",
-"end": "2026-11-18T11:00:00+00:00",
+"end": "2026-11-18T22:00:00+00:00",
 "now": true,
 "kind": "awaryjne"
 },
@@ -221,17 +221,6 @@
 },
 {
 "zone": "FR",
-"unit": "CIVAUX 1",
-"psr": "nuclear",
-"nominal_mw": 1495,
-"unavail_mw": 240,
-"start": "2026-11-18T08:00:00+00:00",
-"end": "2026-11-18T14:00:00+00:00",
-"now": true,
-"kind": "planowe"
-},
-{
-"zone": "FR",
 "unit": "PALUEL 2",
 "psr": "nuclear",
 "nominal_mw": 1330,
@@ -254,23 +243,23 @@
 },
 {
 "zone": "FR",
+"unit": "CIVAUX 2",
+"psr": "nuclear",
+"nominal_mw": 1495,
+"unavail_mw": 1120,
+"start": "2026-11-19T07:00:00+00:00",
+"end": "2026-11-19T16:00:00+00:00",
+"now": false,
+"kind": "planowe"
+},
+{
+"zone": "FR",
 "unit": "CRUAS 2",
 "psr": "nuclear",
 "nominal_mw": 915,
 "unavail_mw": 915,
 "start": "2026-11-25T19:30:00+00:00",
 "end": "2026-12-02T01:30:00+00:00",
-"now": false,
-"kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "CRUAS 3",
-"psr": "nuclear",
-"nominal_mw": 915,
-"unavail_mw": 915,
-"start": "2026-11-18T17:00:00+00:00",
-"end": "2026-11-25T01:30:00+00:00",
 "now": false,
 "kind": "planowe"
 },
@@ -309,6 +298,28 @@
 },
 {
 "zone": "FR",
+"unit": "CYCOFOS PL1",
+"psr": "gas",
+"nominal_mw": 428,
+"unavail_mw": 428,
+"start": "2026-11-19T05:00:00+00:00",
+"end": "2026-11-19T21:00:00+00:00",
+"now": false,
+"kind": "planowe"
+},
+{
+"zone": "FR",
+"unit": "COMBIGOLFE CCG",
+"psr": "gas",
+"nominal_mw": 425,
+"unavail_mw": 425,
+"start": "2026-11-19T05:00:00+00:00",
+"end": "2026-11-19T21:00:00+00:00",
+"now": false,
+"kind": "planowe"
+},
+{
+"zone": "FR",
 "unit": "BOUCHAIN 7",
 "psr": "gas",
 "nominal_mw": 585,
@@ -317,6 +328,28 @@
 "end": "2026-11-22T22:00:00+00:00",
 "now": false,
 "kind": "planowe"
+},
+{
+"zone": "FR",
+"unit": "GRAVELINES 4",
+"psr": "nuclear",
+"nominal_mw": 910,
+"unavail_mw": 260,
+"start": "2026-11-19T08:00:00+00:00",
+"end": "2026-11-19T14:00:00+00:00",
+"now": false,
+"kind": "planowe"
+},
+{
+"zone": "BE",
+"unit": "Flemalle CCGT",
+"psr": "gas",
+"nominal_mw": 890,
+"unavail_mw": 890,
+"start": "2026-11-18T16:30:00+00:00",
+"end": "2026-11-18T21:00:00+00:00",
+"now": true,
+"kind": "awaryjne"
 },
 {
 "zone": "BE",
@@ -424,7 +457,7 @@
 "nominal_mw": 470,
 "unavail_mw": 470,
 "start": "2026-11-13T18:15:00+00:00",
-"end": "2026-11-18T17:00:00+00:00",
+"end": "2026-11-20T17:00:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -441,6 +474,17 @@
 },
 {
 "zone": "NL",
+"unit": "Claus C",
+"psr": "gas",
+"nominal_mw": 1304,
+"unavail_mw": 435,
+"start": "2026-11-18T14:01:00+00:00",
+"end": "2026-11-19T00:00:00+00:00",
+"now": true,
+"kind": "awaryjne"
+},
+{
+"zone": "NL",
 "unit": "Elsta 1",
 "psr": "gas",
 "nominal_mw": 455,
@@ -448,28 +492,6 @@
 "start": "2026-11-16T06:00:00+00:00",
 "end": "2026-11-19T16:00:00+00:00",
 "now": true,
-"kind": "planowe"
-},
-{
-"zone": "NL",
-"unit": "Eemshaven 10",
-"psr": "gas",
-"nominal_mw": 470,
-"unavail_mw": 470,
-"start": "2026-11-20T07:00:00+00:00",
-"end": "2026-11-20T17:00:00+00:00",
-"now": false,
-"kind": "planowe"
-},
-{
-"zone": "NL",
-"unit": "Eemshaven 20",
-"psr": "gas",
-"nominal_mw": 470,
-"unavail_mw": 470,
-"start": "2026-11-19T07:00:00+00:00",
-"end": "2026-11-19T17:00:00+00:00",
-"now": false,
 "kind": "planowe"
 },
 {
