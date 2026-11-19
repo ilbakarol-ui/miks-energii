@@ -51,24 +51,34 @@ jobs:
         env:
           SCHEDULE: ${{ github.event.schedule }}
         run: |
-          if [ "$SCHEDULE" = "23 3 * * *" ]; then
-            # B-20261116-1: zapas nocny – pełny przebieg tylko wtedy, gdy nocny jeszcze nie zapisał danych
-            if git log -50 --format=%s | grep -qx "Dane z $(date -u +%Y-%m-%d)"; then
-              echo "run=0" >> "$GITHUB_OUTPUT"; echo "Przebieg nocny już był – zapas pominięty."
-            else
-              echo "run=1" >> "$GITHUB_OUTPUT"; echo "Brak commitu „Dane z $(date -u +%Y-%m-%d)” – zapas nocny liczy dane."
-            fi
-          elif [ "$SCHEDULE" = "7 14 * * *" ] || [ "$SCHEDULE" = "13 15 * * *" ]; then
-            t=$(date -u -d tomorrow +%Y-%m-%d); miss=0; brak=""
-            for f in data/prices/*.csv; do
-              d=$(tail -1 "$f" | cut -d, -f1 | cut -c1-10)
-              if [[ "$d" < "$t" ]]; then miss=1; brak="$brak $(basename "$f" .csv)"; fi
+          # B-20261117-1 / B-20261119-1: bramka na aktualnym main – spóźnione zdarzenie harmonogramu (GitHub opóźnia
+          # starty nawet o 20 h) ma checkout z chwili utworzenia, więc nie widzi commitów, które powstały w międzyczasie
+          if git fetch -q origin main 2>/dev/null; then REF=origin/main; else REF=HEAD; fi
+          t=$(date -u +%Y-%m-%d); tm=$(date -u -d tomorrow +%Y-%m-%d)
+          has() { git log "$REF" -80 --format=%s | grep -qxF "$1"; }
+          prices_missing() {   # strefy bez ceny na jutro – z plików na $REF, nie z checkoutu
+            brak=""
+            for f in $(git ls-tree --name-only "$REF" data/prices/ | grep '\.csv$'); do
+              d=$(git show "$REF:$f" | tail -1 | cut -d, -f1 | cut -c1-10)
+              if [[ "$d" < "$tm" ]]; then brak="$brak $(basename "$f" .csv)"; fi
             done
-            echo "run=$miss" >> "$GITHUB_OUTPUT"
-            if [ "$miss" = "0" ]; then echo "Wszystkie strefy mają cenę na $t – przebieg uzupełniający pominięty."; else echo "Bez ceny na $t:$brak"; fi
-          else
-            echo "run=1" >> "$GITHUB_OUTPUT"
+            echo "$brak"
+          }
+          run=1
+          if [ "$SCHEDULE" = "53 0 * * *" ] || [ "$SCHEDULE" = "23 3 * * *" ]; then
+            # przebieg nocny i jego zapas: tylko gdy dziś nie ma jeszcze „Dane z <dziś>”
+            if has "Dane z $t"; then run=0; echo "Przebieg nocny już był („Dane z $t”) – $SCHEDULE pominięty."; fi
+          elif [ "$SCHEDULE" = "37 12 * * *" ]; then
+            # popołudnie: pomijany, gdy popołudniowy commit już jest i wszystkie strefy mają cenę na jutro
+            b=$(prices_missing)
+            if has "Dane z $t (popołudnie)" && [ -z "$b" ]; then run=0; echo "Popołudnie już było, ceny na $tm komplet – pominięty."; fi
+          elif [ "$SCHEDULE" = "7 14 * * *" ] || [ "$SCHEDULE" = "13 15 * * *" ]; then
+            b=$(prices_missing)
+            if [ -z "$b" ]; then run=0; echo "Wszystkie strefy mają cenę na $tm – przebieg uzupełniający pominięty."; else echo "Bez ceny na $tm:$b"; fi
           fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          # przebieg liczy na aktualnym stanie gałęzi, nie na checkoucie sprzed opóźnienia (B-20261119-1)
+          if [ "$run" = "1" ] && [ "$REF" = "origin/main" ]; then git reset -q --hard origin/main; fi
 
       - uses: actions/setup-python@v5
         if: steps.need.outputs.run == '1'

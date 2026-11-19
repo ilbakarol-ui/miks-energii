@@ -67,7 +67,10 @@ def test_daily_night_backup_gate(tmp_path):
     assert _gate(script, done, SCHEDULE="23 3 * * *") == "0"
     late = _repo(tmp_path / "b", [f"Dane z {(_today() - dt.timedelta(days=1)).isoformat()}", f"Dane z {t} (popołudnie)"])
     assert _gate(script, late, SCHEDULE="23 3 * * *") == "1"
-    assert _gate(script, done, SCHEDULE="53 0 * * *") == "1"      # zwykłe starty zawsze liczą
+    # B-20261119-1: także główny start nocny pomija się, gdy dzisiejsze dane już są (spóźnione zdarzenie)
+    assert _gate(script, done, SCHEDULE="53 0 * * *") == "0"
+    assert _gate(script, late, SCHEDULE="53 0 * * *") == "1"
+    assert _gate(script, done, SCHEDULE="") == "1"                # start ręczny zawsze liczy
 
 
 def test_daily_afternoon_backup_gate(tmp_path):
@@ -94,5 +97,63 @@ def test_shared_weather_backup_gates(tmp_path):
     repo = _repo(tmp_path, [f"Wspólna pogoda extra {t}", f"Dane z {t}"])
     assert _gate(script, repo, SCHEDULE="41 3 * * *", JOB="extra") == "0"
     assert _gate(script, repo, SCHEDULE="41 3 * * *", JOB="temp") == "1"   # temp dziś nie zapisało
-    assert _gate(script, repo, SCHEDULE="53 18 * * *", JOB="evening") == "1"
+    assert _gate(script, repo, SCHEDULE="53 18 * * *", JOB="evening", GATE_HOUR="18") == "1"
     assert _gate(script, repo, SCHEDULE="17 0 * * *", JOB="temp") == "1"
+    assert _gate(script, repo, SCHEDULE="17 0 * * *", JOB="extra") == "0"   # B-20261119-1: zapas 03:41 był pierwszy
+    # B-20261119-1: wieczorny start po północy jest pomijany; start ręczny – nie
+    assert _gate(script, repo, SCHEDULE="53 18 * * *", JOB="evening", GATE_HOUR="01") == "0"
+    assert _gate(script, repo, SCHEDULE="", JOB="evening", GATE_HOUR="01") == "1"
+
+
+def _git(*a, cwd=None):
+    env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t",
+           "GIT_COMMITTER_EMAIL": "t@t"}
+    subprocess.run(["git", *a], cwd=cwd, check=True, env=env, capture_output=True)
+
+
+def _late_clone(tmp_path, msg):
+    """Klon z chwili zdarzenia, a potem nowy commit w origin – jak spóźnione zdarzenie harmonogramu (B-20261119-1)."""
+    origin = tmp_path / "origin.git"
+    _git("init", "-q", "--bare", "-b", "main", str(origin))
+    seed = _repo(tmp_path / "seed", ["start"])
+    _git("-C", str(seed), "branch", "-M", "main")
+    _git("-C", str(seed), "push", "-q", str(origin), "main")
+    clone = tmp_path / "clone"
+    _git("clone", "-q", str(origin), str(clone))
+    _git("-C", str(seed), "commit", "-q", "--allow-empty", "-m", msg)
+    _git("-C", str(seed), "push", "-q", str(origin), "main")
+    return clone
+
+
+def test_daily_gate_sees_origin_after_delay(tmp_path):
+    wf, _ = _wf("daily.yml")
+    script = _step(wf, "update", "need")["run"]
+    clone = _late_clone(tmp_path, f"Dane z {_today().isoformat()}")
+    for sched in ("53 0 * * *", "23 3 * * *"):
+        assert _gate(script, clone, SCHEDULE=sched) == "0"
+
+
+def test_shared_weather_gate_sees_origin_after_delay(tmp_path):
+    wf, _ = _wf("shared_weather.yml")
+    script = _step(wf, "weather", "need")["run"]
+    clone = _late_clone(tmp_path, f"Wspólna pogoda temp {_today().isoformat()}")
+    assert _gate(script, clone, SCHEDULE="41 3 * * *", JOB="temp") == "0"
+    assert _gate(script, clone, SCHEDULE="17 0 * * *", JOB="temp") == "0"
+    assert _gate(script, clone, SCHEDULE="17 0 * * *", JOB="extra") == "1"
+
+
+def test_daily_afternoon_main_gate(tmp_path):
+    wf, _ = _wf("daily.yml")
+    script = _step(wf, "update", "need")["run"]
+    t, tm = _today().isoformat(), (_today() + dt.timedelta(days=1)).isoformat()
+    full = _repo(tmp_path / "a", [f"Dane z {t} (popołudnie)"], prices={"PL": tm, "NL": tm})
+    part = _repo(tmp_path / "b", [f"Dane z {t} (popołudnie)"], prices={"PL": tm, "NL": t})
+    none_ = _repo(tmp_path / "c", [f"Dane z {t}"], prices={"PL": tm, "NL": tm})
+    assert _gate(script, full, SCHEDULE="37 12 * * *") == "0"
+    assert _gate(script, part, SCHEDULE="37 12 * * *") == "1"
+    assert _gate(script, none_, SCHEDULE="37 12 * * *") == "1"
+
+
+def test_evening_commit_title_from_forecast_issued():
+    text = (WF / "shared_weather.yml").read_text(encoding="utf-8")
+    assert "forecast_issued" in text and 'Wspólna pogoda ${{ matrix.job }} ${D:-$(date -u +%Y-%m-%d)}' in text

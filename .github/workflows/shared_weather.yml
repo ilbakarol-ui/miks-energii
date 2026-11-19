@@ -53,7 +53,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 50   # B-20261116-1: bramka zapasu sprawdza dzisiejsze commity
+          fetch-depth: 50   # B-20261116-1: bramka zapasu sprawdza dzisiejsze commity (od B-20261119-1 na origin/main)
 
       # B-20261116-1: start zapasowy (41 3 / 53 18) tylko wtedy, gdy zadanie nie zapisało dziś danych
       - name: Czy zadanie już było dziś
@@ -62,15 +62,20 @@ jobs:
           SCHEDULE: ${{ github.event.schedule }}
           JOB: ${{ matrix.job }}
         run: |
-          if [ "$SCHEDULE" = "41 3 * * *" ] || [ "$SCHEDULE" = "53 18 * * *" ]; then
-            if git log -50 --format=%s | grep -qx "Wspólna pogoda $JOB $(date -u +%Y-%m-%d)"; then
-              echo "run=0" >> "$GITHUB_OUTPUT"; echo "Zadanie $JOB już dziś zapisało dane – zapas pominięty."
-            else
-              echo "run=1" >> "$GITHUB_OUTPUT"; echo "Brak commitu „Wspólna pogoda $JOB $(date -u +%Y-%m-%d)” – zapas pobiera pogodę."
+          # B-20261117-1 / B-20261119-1: bramka na aktualnym main (spóźnione zdarzenie ma checkout z chwili utworzenia)
+          if git fetch -q origin main 2>/dev/null; then REF=origin/main; else REF=HEAD; fi
+          t=$(date -u +%Y-%m-%d); H=${GATE_HOUR:-$(date -u +%H)}
+          run=1
+          if [ -n "$SCHEDULE" ]; then
+            if [ "$JOB" = "evening" ] && [ "$((10#$H))" -lt 12 ]; then
+              # wieczorny start, który przyszedł po północy – za chwilę jest przebieg nocny, a data byłaby z następnego dnia
+              run=0; echo "Wieczorny przebieg po północy ($H UTC) – pominięty."
+            elif git log "$REF" -80 --format=%s | grep -qxF "Wspólna pogoda $JOB $t"; then
+              run=0; echo "Zadanie $JOB już dziś zapisało dane – $SCHEDULE pominięty."
             fi
-          else
-            echo "run=1" >> "$GITHUB_OUTPUT"
           fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          if [ "$run" = "1" ] && [ "$REF" = "origin/main" ]; then git reset -q --hard origin/main; fi
 
       - uses: actions/setup-python@v5
         if: steps.need.outputs.run == '1'
@@ -101,7 +106,12 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/shared_weather
           git diff --cached --quiet && exit 0
-          git commit -m "Wspólna pogoda ${{ matrix.job }} $(date -u +%Y-%m-%d)"
+          # B-20261119-1: wieczorny commit podpisany datą prognozy (forecast_issued), nie zegarem startu
+          D=""
+          if [ "${{ matrix.job }}" = "evening" ]; then
+            D=$(python3 -c "import json;print(json.load(open('data/shared_weather/meta_evening.json')).get('forecast_issued') or '')" 2>/dev/null || true)
+          fi
+          git commit -m "Wspólna pogoda ${{ matrix.job }} ${D:-$(date -u +%Y-%m-%d)}"
           for i in 1 2 3 4 5; do
             git pull --rebase --autostash && git push && exit 0
             git rebase --abort 2>/dev/null || true
