@@ -136,8 +136,13 @@ def update_country(client: Client, c: dict, state: dict, log: list, can_request)
     return out
 
 
+ARCHIVE_KEEP_FIRST = True   # B-20261119-2: pierwsze wydanie dnia zostaje; spóźnione powtórzenia go nie nadpisują
+
+
 def _archive(code: str, fc: dict, path=None):
-    """Zapis prognozy w archiwum w chwili wydania (domyślnie archive.csv; ta sama data wydania jest zastępowana)."""
+    """Zapis prognozy w archiwum w chwili wydania (domyślnie archive.csv). Gdy archiwum ma już wydanie z tą datą
+    dla tego kraju, zostaje pierwsze (B-20261119-2: 18.11.2026 spóźniony o 20 h przebieg nadpisał poranne wydanie);
+    dopisywane są tylko brakujące wielkości. Zastąpienie – tylko przy ARCHIVE_KEEP_FIRST = False."""
     path = path or ARCHIVE
     rows = []
     for key in ["solar", "wind", "load"]:
@@ -149,7 +154,14 @@ def _archive(code: str, fc: dict, path=None):
     new = pd.DataFrame(rows)
     if path.exists():
         old = pd.read_csv(path, dtype={"issued": str, "date": str})
-        old = old[~((old["issued"] == new["issued"].iloc[0]) & (old["code"] == code))]
+        same = (old["issued"] == new["issued"].iloc[0]) & (old["code"] == code)
+        if ARCHIVE_KEEP_FIRST and same.any():
+            # brakujące wielkości (np. słońce, którego pierwsze wydanie nie miało) dopisujemy, istniejących nie ruszamy
+            new = new[~new["type"].isin(set(old.loc[same, "type"]))]
+            if new.empty:
+                return
+        else:
+            old = old[~same]
         new = pd.concat([old, new])
     # archiwum z ostatnich 400 dni
     cutoff = (dt.date.today() - dt.timedelta(days=400)).isoformat()

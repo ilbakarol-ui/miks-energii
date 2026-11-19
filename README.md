@@ -94,7 +94,7 @@ Z tym samym tokenem przebieg nocny pobiera też **niedostępność elektrowni** 
 - **Dane źródłowe** (możesz je otworzyć w Excelu):
   - `data/daily/<KOD>.csv`: MWh dziennie wg kategorii w czasie lokalnym kraju, ceny dzienne i składniki cen ważonych,
   - `data/prices/<STREFA>.csv`: ceny dzienne strefy (średnia, min, maks, godziny z ceną < 0), łącznie z dniem dzisiejszym i jutrzejszym, jeśli były już opublikowane w chwili przebiegu,
-  - `data/forecast/<KOD>.json`: najnowsza prognoza; `data/forecast/archive.csv`: archiwum prognoz z 400 dni (do oceny trafności),
+  - `data/forecast/<KOD>.json`: najnowsza prognoza; `data/forecast/archive.csv`: archiwum prognoz z 400 dni (do oceny trafności); obowiązuje pierwsze wydanie dnia – późniejsze przebiegi tego samego dnia (spóźnione starty GitHub, ręczne) dopisują tylko brakujące wielkości, a istniejących nie zmieniają (B-20261119-2; `ARCHIVE_KEEP_FIRST` w `mixtracker/forecast.py`),
   - `data/eurostat/monthly.csv`: GWh miesięcznie.
 - **Nierozpoznany typ produkcji** (Kontrola danych): trafia do „Inne”. Dopisz regułę w `mixtracker/categories.py` (funkcja `classify`).
 
