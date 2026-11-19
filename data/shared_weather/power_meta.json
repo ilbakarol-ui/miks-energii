@@ -1,8 +1,18 @@
 {
- "issued": "2026-11-19T07:33Z",
- "countries": 30,
+ "issued": "2026-11-19T17:07Z",
+ "countries": 21,
  "points": 173,
- "missing": [],
+ "missing": [
+  "NL",
+  "NO",
+  "PL",
+  "PT",
+  "RO",
+  "SE",
+  "SI",
+  "SK",
+  "UK"
+ ],
  "past_days": 10,
  "forecast_days": 16,
  "hourly_days": 9,
