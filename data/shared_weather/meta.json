@@ -5,77 +5,75 @@
  "steps": {
   "recent": {
    "status": "OK",
-   "seconds": 103,
-   "requests": 10,
+   "seconds": 12,
+   "requests": 9,
    "weighted": 167.1,
    "http429": 0,
-   "last_error": "api.open-meteo.com: ReadTimeout"
+   "last_error": null
   },
   "hist": {
    "status": "OK",
-   "seconds": 0,
-   "requests": 0,
-   "weighted": 0.0,
+   "seconds": 5,
+   "requests": 7,
+   "weighted": 63.0,
    "http429": 0,
    "last_error": null
   },
   "prev": {
    "status": "OK",
-   "seconds": 222,
-   "requests": 15,
+   "seconds": 10,
+   "requests": 13,
    "weighted": 63.0,
    "http429": 0,
-   "last_error": "previous-runs-api.open-meteo.com: ReadTimeout"
+   "last_error": null
   }
  },
- "forecast_issued": "2026-11-18",
- "updated": "2026-11-18T20:24Z",
+ "forecast_issued": "2026-11-19",
+ "updated": "2026-11-19T07:36Z",
  "coverage": {
   "hist": {
    "points": 63,
    "points_to_end": 63,
    "from": "2019-01-01",
-   "to": "2026-11-12",
-   "rows": 180999
+   "to": "2026-11-13",
+   "rows": 181062
   },
   "prev": {
    "points": 63,
    "points_to_end": 63,
    "from": "2024-01-01",
-   "to": "2026-11-17",
-   "rows": 66276
+   "to": "2026-11-18",
+   "rows": 66339
   },
   "recent": {
    "points": 63,
    "points_to_end": 47,
-   "from": "2026-11-04",
-   "to": "2026-12-03",
+   "from": "2026-11-05",
+   "to": "2026-12-04",
    "rows": 1874
   }
  },
- "weighted_calls": 508.7,
+ "weighted_calls": 974.1,
  "trial": {
   "groups": [
    "eu_gas_x"
   ],
   "points": 15,
   "errors": [],
-  "pending": {
-   "prev": 15
-  },
+  "pending": {},
   "steps": {
    "hist": {
     "status": "OK",
-    "seconds": 0,
-    "requests": 0,
-    "weighted": 0.0,
+    "seconds": 2,
+    "requests": 2,
+    "weighted": 15.0,
     "last_error": null
    },
    "prev": {
-    "status": "pominięte – serwer wolny",
-    "seconds": 0,
-    "requests": 0,
-    "weighted": 0.0,
+    "status": "OK",
+    "seconds": 104,
+    "requests": 18,
+    "weighted": 344.6,
     "last_error": null
    }
   },
@@ -84,44 +82,34 @@
     "points": 15,
     "points_to_end": 15,
     "from": "2019-01-01",
-    "to": "2026-11-12",
-    "rows": 43095
+    "to": "2026-11-13",
+    "rows": 43110
    },
    "prev": {
     "points": 15,
-    "points_to_end": 0,
+    "points_to_end": 15,
     "from": "2024-01-01",
-    "to": "2026-11-16",
-    "rows": 11110
+    "to": "2026-11-18",
+    "rows": 15795
    },
    "recent": {
     "points": 15,
     "points_to_end": 13,
-    "from": "2026-11-04",
-    "to": "2026-12-03",
+    "from": "2026-11-05",
+    "to": "2026-12-04",
     "rows": 448
    }
   }
  },
  "power": {
-  "countries": 21,
+  "countries": 30,
   "points": 173,
-  "missing": [
-   "NL",
-   "NO",
-   "PL",
-   "PT",
-   "RO",
-   "SE",
-   "SI",
-   "SK",
-   "UK"
-  ],
+  "missing": [],
   "last_error": null,
-  "status": "częściowo",
-  "issued": "2026-11-18T20:18Z",
-  "seconds": 351,
-  "requests": 8,
-  "weighted": 278.6
+  "status": "OK",
+  "issued": "2026-11-19T07:33Z",
+  "seconds": 288,
+  "requests": 9,
+  "weighted": 321.3
  }
 }
