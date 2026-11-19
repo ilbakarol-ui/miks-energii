@@ -56,6 +56,17 @@
 },
 {
 "zone": "FR",
+"unit": "ST ALBAN 2",
+"psr": "nuclear",
+"nominal_mw": 1335,
+"unavail_mw": 995,
+"start": "2026-11-18T20:47:00+00:00",
+"end": "2026-11-19T07:00:00+00:00",
+"now": true,
+"kind": "awaryjne"
+},
+{
+"zone": "FR",
 "unit": "CRUAS 1",
 "psr": "nuclear",
 "nominal_mw": 915,
@@ -160,20 +171,9 @@
 "nominal_mw": 1300,
 "unavail_mw": 820,
 "start": "2026-11-16T08:00:00+00:00",
-"end": "2026-11-20T18:00:00+00:00",
+"end": "2026-11-20T20:00:00+00:00",
 "now": true,
 "kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "CHOOZ 1",
-"psr": "nuclear",
-"nominal_mw": 1500,
-"unavail_mw": 700,
-"start": "2026-11-17T21:50:00+00:00",
-"end": "2026-11-18T22:00:00+00:00",
-"now": true,
-"kind": "awaryjne"
 },
 {
 "zone": "FR",
@@ -199,6 +199,17 @@
 },
 {
 "zone": "FR",
+"unit": "CYCOFOS PL1",
+"psr": "gas",
+"nominal_mw": 428,
+"unavail_mw": 428,
+"start": "2026-11-19T05:00:00+00:00",
+"end": "2026-11-19T21:00:00+00:00",
+"now": true,
+"kind": "planowe"
+},
+{
+"zone": "FR",
 "unit": "BLENOD 5",
 "psr": "gas",
 "nominal_mw": 427,
@@ -210,6 +221,17 @@
 },
 {
 "zone": "FR",
+"unit": "COMBIGOLFE CCG",
+"psr": "gas",
+"nominal_mw": 425,
+"unavail_mw": 425,
+"start": "2026-11-19T05:00:00+00:00",
+"end": "2026-11-19T21:00:00+00:00",
+"now": true,
+"kind": "planowe"
+},
+{
+"zone": "FR",
 "unit": "BELLEVILLE 1",
 "psr": "nuclear",
 "nominal_mw": 1310,
@@ -218,6 +240,17 @@
 "end": "2026-11-19T19:50:00+00:00",
 "now": true,
 "kind": "planowe"
+},
+{
+"zone": "FR",
+"unit": "ST ALBAN 1",
+"psr": "nuclear",
+"nominal_mw": 1335,
+"unavail_mw": 335,
+"start": "2026-11-18T20:47:00+00:00",
+"end": "2026-11-20T00:35:00+00:00",
+"now": true,
+"kind": "awaryjne"
 },
 {
 "zone": "FR",
@@ -287,39 +320,6 @@
 },
 {
 "zone": "FR",
-"unit": "ST ALBAN 1",
-"psr": "nuclear",
-"nominal_mw": 1335,
-"unavail_mw": 625,
-"start": "2026-11-22T04:00:00+00:00",
-"end": "2026-11-22T20:00:00+00:00",
-"now": false,
-"kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "CYCOFOS PL1",
-"psr": "gas",
-"nominal_mw": 428,
-"unavail_mw": 428,
-"start": "2026-11-19T05:00:00+00:00",
-"end": "2026-11-19T21:00:00+00:00",
-"now": false,
-"kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "COMBIGOLFE CCG",
-"psr": "gas",
-"nominal_mw": 425,
-"unavail_mw": 425,
-"start": "2026-11-19T05:00:00+00:00",
-"end": "2026-11-19T21:00:00+00:00",
-"now": false,
-"kind": "planowe"
-},
-{
-"zone": "FR",
 "unit": "BOUCHAIN 7",
 "psr": "gas",
 "nominal_mw": 585,
@@ -330,24 +330,13 @@
 "kind": "planowe"
 },
 {
-"zone": "FR",
-"unit": "GRAVELINES 4",
-"psr": "nuclear",
-"nominal_mw": 910,
-"unavail_mw": 260,
-"start": "2026-11-19T08:00:00+00:00",
-"end": "2026-11-19T14:00:00+00:00",
-"now": false,
-"kind": "planowe"
-},
-{
 "zone": "BE",
 "unit": "Flemalle CCGT",
 "psr": "gas",
 "nominal_mw": 890,
 "unavail_mw": 890,
 "start": "2026-11-18T16:30:00+00:00",
-"end": "2026-11-18T21:00:00+00:00",
+"end": "2026-11-19T11:00:00+00:00",
 "now": true,
 "kind": "awaryjne"
 },
@@ -471,17 +460,6 @@
 "end": "2026-12-11T23:00:00+00:00",
 "now": true,
 "kind": "planowe"
-},
-{
-"zone": "NL",
-"unit": "Claus C",
-"psr": "gas",
-"nominal_mw": 1304,
-"unavail_mw": 435,
-"start": "2026-11-18T14:01:00+00:00",
-"end": "2026-11-19T00:00:00+00:00",
-"now": true,
-"kind": "awaryjne"
 },
 {
 "zone": "NL",
