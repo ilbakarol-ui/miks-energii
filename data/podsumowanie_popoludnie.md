@@ -20,7 +20,6 @@ Ceny na 2026-11-21: 12 z 15 stref
 | SE4 | 2026-11-21 | 143,0 | 111,2 | 208,7 |
 | SI | 2026-11-21 | 188,9 | 146,6 | 233,8 |
 
-Dane produkcji do 2026-11-19; zapytania do Energy-Charts: 16; czas: 18 min
-- ceny: ponowienie bez zmian dla FR, HU, NL – koniec ponowień
+Dane produkcji do 2026-11-19; zapytania do Energy-Charts: 13; czas: 7 min
 - BRAK cen day-ahead na jutro: FR, HU, NL (3 z 15 stref; mapa pokaże dla nich ostatni dzień z ceną)
 - szczegóły braków: FR: 0 h na 21.11 (krok 15 min); HU: 0 h na 21.11 (krok – min); NL: 0 h na 21.11 (krok – min)
