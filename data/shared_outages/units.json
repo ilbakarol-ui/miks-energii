@@ -56,28 +56,6 @@
 },
 {
 "zone": "FR",
-"unit": "CIVAUX 2",
-"psr": "nuclear",
-"nominal_mw": 1495,
-"unavail_mw": 1120,
-"start": "2026-11-19T07:00:00+00:00",
-"end": "2026-11-19T16:00:00+00:00",
-"now": true,
-"kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "ST ALBAN 2",
-"psr": "nuclear",
-"nominal_mw": 1335,
-"unavail_mw": 995,
-"start": "2026-11-18T20:47:00+00:00",
-"end": "2026-11-19T14:00:00+00:00",
-"now": true,
-"kind": "awaryjne"
-},
-{
-"zone": "FR",
 "unit": "CRUAS 1",
 "psr": "nuclear",
 "nominal_mw": 915,
@@ -177,45 +155,12 @@
 },
 {
 "zone": "FR",
-"unit": "CATTENOM 4",
-"psr": "nuclear",
-"nominal_mw": 1300,
-"unavail_mw": 820,
-"start": "2026-11-16T08:00:00+00:00",
-"end": "2026-11-20T20:00:00+00:00",
-"now": true,
-"kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "ST LAURENT 2",
-"psr": "nuclear",
-"nominal_mw": 915,
-"unavail_mw": 735,
-"start": "2026-11-19T06:27:00+00:00",
-"end": "2026-11-19T14:00:00+00:00",
-"now": true,
-"kind": "awaryjne"
-},
-{
-"zone": "FR",
 "unit": "SPEM CCG",
 "psr": "gas",
 "nominal_mw": 435,
 "unavail_mw": 435,
 "start": "2026-09-11T22:00:00+00:00",
 "end": "2026-12-31T23:00:00+00:00",
-"now": true,
-"kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "CYCOFOS PL1",
-"psr": "gas",
-"nominal_mw": 428,
-"unavail_mw": 428,
-"start": "2026-11-19T05:00:00+00:00",
-"end": "2026-11-19T21:00:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -232,34 +177,23 @@
 },
 {
 "zone": "FR",
-"unit": "COMBIGOLFE CCG",
-"psr": "gas",
-"nominal_mw": 425,
-"unavail_mw": 425,
-"start": "2026-11-19T05:00:00+00:00",
-"end": "2026-11-19T21:00:00+00:00",
+"unit": "CATTENOM 4",
+"psr": "nuclear",
+"nominal_mw": 1300,
+"unavail_mw": 400,
+"start": "2026-11-16T08:00:00+00:00",
+"end": "2026-11-20T18:30:00+00:00",
 "now": true,
 "kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "BELLEVILLE 1",
-"psr": "nuclear",
-"nominal_mw": 1310,
-"unavail_mw": 422,
-"start": "2026-11-15T20:00:00+00:00",
-"end": "2026-11-20T07:40:00+00:00",
-"now": true,
-"kind": "awaryjne"
 },
 {
 "zone": "FR",
 "unit": "CRUAS 4",
 "psr": "nuclear",
 "nominal_mw": 915,
-"unavail_mw": 320,
+"unavail_mw": 355,
 "start": "2026-11-17T01:56:00+00:00",
-"end": "2026-11-21T09:30:00+00:00",
+"end": "2026-11-23T05:30:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -280,7 +214,7 @@
 "psr": "nuclear",
 "nominal_mw": 1330,
 "unavail_mw": 1330,
-"start": "2026-11-22T23:00:00+00:00",
+"start": "2026-11-22T22:30:00+00:00",
 "end": "2026-12-01T22:00:00+00:00",
 "now": false,
 "kind": "planowe"
@@ -313,8 +247,8 @@
 "psr": "nuclear",
 "nominal_mw": 1330,
 "unavail_mw": 700,
-"start": "2026-11-20T07:30:00+00:00",
-"end": "2026-11-20T08:00:00+00:00",
+"start": "2026-11-20T14:30:00+00:00",
+"end": "2026-11-20T15:00:00+00:00",
 "now": false,
 "kind": "planowe"
 },
@@ -334,9 +268,9 @@
 "unit": "BOUCHAIN 7",
 "psr": "gas",
 "nominal_mw": 585,
-"unavail_mw": 400,
-"start": "2026-11-22T19:00:00+00:00",
-"end": "2026-11-22T22:00:00+00:00",
+"unavail_mw": 585,
+"start": "2026-11-22T12:00:00+00:00",
+"end": "2026-11-22T15:00:00+00:00",
 "now": false,
 "kind": "planowe"
 },
@@ -346,8 +280,8 @@
 "psr": "nuclear",
 "nominal_mw": 910,
 "unavail_mw": 324,
-"start": "2026-11-21T06:00:00+00:00",
-"end": "2026-11-22T00:00:00+00:00",
+"start": "2026-11-21T06:25:00+00:00",
+"end": "2026-11-21T23:00:00+00:00",
 "now": false,
 "kind": "planowe"
 },
@@ -375,6 +309,28 @@
 },
 {
 "zone": "FR",
+"unit": "ST LAURENT 1",
+"psr": "nuclear",
+"nominal_mw": 915,
+"unavail_mw": 115,
+"start": "2026-11-22T14:00:00+00:00",
+"end": "2026-11-22T16:00:00+00:00",
+"now": false,
+"kind": "planowe"
+},
+{
+"zone": "FR",
+"unit": "ST LAURENT 2",
+"psr": "nuclear",
+"nominal_mw": 915,
+"unavail_mw": 115,
+"start": "2026-11-22T15:00:00+00:00",
+"end": "2026-11-22T17:00:00+00:00",
+"now": false,
+"kind": "planowe"
+},
+{
+"zone": "FR",
 "unit": "CHINON 4",
 "psr": "nuclear",
 "nominal_mw": 905,
@@ -383,17 +339,6 @@
 "end": "2026-11-21T18:30:00+00:00",
 "now": false,
 "kind": "planowe"
-},
-{
-"zone": "BE",
-"unit": "Flemalle CCGT",
-"psr": "gas",
-"nominal_mw": 890,
-"unavail_mw": 890,
-"start": "2026-11-18T16:30:00+00:00",
-"end": "2026-11-19T11:00:00+00:00",
-"now": true,
-"kind": "awaryjne"
 },
 {
 "zone": "BE",
@@ -457,7 +402,7 @@
 "nominal_mw": 414,
 "unavail_mw": 414,
 "start": "2026-07-08T22:00:00+00:00",
-"end": "2026-12-31T21:59:00+00:00",
+"end": "2026-12-31T23:00:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -518,13 +463,13 @@
 },
 {
 "zone": "NL",
-"unit": "Elsta 1",
+"unit": "Eemshaven 20",
 "psr": "gas",
-"nominal_mw": 455,
-"unavail_mw": 123,
-"start": "2026-11-19T07:00:00+00:00",
-"end": "2026-11-19T16:00:00+00:00",
-"now": true,
+"nominal_mw": 470,
+"unavail_mw": 470,
+"start": "2026-11-23T07:00:00+00:00",
+"end": "2026-11-24T17:00:00+00:00",
+"now": false,
 "kind": "planowe"
 },
 {
