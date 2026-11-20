@@ -1,26 +1,26 @@
 ## Ceny day-ahead – przebieg popołudniowy
 
-Ceny na 2026-11-20: 12 z 15 stref (w tym przebiegu uzupełniono: HU, IT-North, NL)
+Ceny na 2026-11-21: 12 z 15 stref
 
 | strefa | dzień | śr. €/MWh | min | maks |
 |---|---|---|---|---|
-| AT | 2026-11-20 | 215,4 | 169,7 | 259,9 |
-| BE | 2026-11-20 | 209,9 | 136,2 | 254,7 |
-| CH | 2026-11-20 | 222,4 | 180,4 | 260,1 |
-| CZ | 2026-11-20 | 217,5 | 163,8 | 262,4 |
-| DE-LU | 2026-11-20 | 214,5 | 165,6 | 259,6 |
-| DK1 | 2026-11-20 | 215,3 | 172,0 | 258,8 |
-| DK2 | 2026-11-20 | 215,6 | 169,9 | 260,2 |
-| FR | 2026-11-20 | 123,5 | 0,0 | 250,8 |
+| AT | 2026-11-21 | 189,1 | 146,5 | 233,8 |
+| BE | 2026-11-21 | 192,2 | 152,3 | 244,6 |
+| CH | 2026-11-21 | 196,5 | 157,0 | 239,9 |
+| CZ | 2026-11-21 | 188,6 | 145,9 | 233,2 |
+| DE-LU | 2026-11-21 | 187,9 | 144,7 | 232,2 |
+| DK1 | 2026-11-21 | 185,8 | 141,1 | 223,5 |
+| DK2 | 2026-11-21 | 171,2 | 120,6 | 219,4 |
+| FR | 2026-11-20 (brak jutra) | 123,5 | 0,0 | 250,8 |
 | HU | 2026-11-19 (brak jutra) | 233,8 | 169,2 | 289,7 |
-| IT-North | 2026-11-19 (brak jutra) | 227,8 | 176,0 | 272,8 |
+| IT-North | 2026-11-21 | 202,8 | 154,6 | 284,8 |
 | NL | 2026-11-19 (brak jutra) | 210,8 | 166,6 | 260,3 |
-| NO2 | 2026-11-20 | 210,9 | 177,6 | 250,0 |
-| PL | 2026-11-20 | 205,4 | 94,1 | 276,6 |
-| SE4 | 2026-11-20 | 204,7 | 121,4 | 257,7 |
-| SI | 2026-11-20 | 209,4 | 158,2 | 254,9 |
+| NO2 | 2026-11-21 | 189,8 | 175,0 | 215,0 |
+| PL | 2026-11-21 | 105,6 | 54,8 | 193,1 |
+| SE4 | 2026-11-21 | 143,0 | 111,2 | 208,7 |
+| SI | 2026-11-21 | 188,9 | 146,6 | 233,8 |
 
-Dane produkcji do 2026-11-18; zapytania do Energy-Charts: 3; czas: 1 min
-- ceny: uzupełnienie stref bez ceny na jutro: HU, IT-North, NL
-- BRAK cen day-ahead na jutro: HU, IT-North, NL (3 z 3 stref; mapa pokaże dla nich ostatni dzień z ceną)
-- szczegóły braków: HU: 0 h na 20.11 (krok 15 min); IT-North: 0 h na 20.11 (krok 15 min); NL: 0 h na 20.11 (krok 15 min)
+Dane produkcji do 2026-11-19; zapytania do Energy-Charts: 16; czas: 18 min
+- ceny: ponowienie bez zmian dla FR, HU, NL – koniec ponowień
+- BRAK cen day-ahead na jutro: FR, HU, NL (3 z 15 stref; mapa pokaże dla nich ostatni dzień z ceną)
+- szczegóły braków: FR: 0 h na 21.11 (krok 15 min); HU: 0 h na 21.11 (krok – min); NL: 0 h na 21.11 (krok – min)
