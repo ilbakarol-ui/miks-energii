@@ -239,6 +239,11 @@ def main(argv=None):
         es_df = pd.read_csv(p) if p.exists() else None
     if es_err:
         run.setdefault("log", []).append(es_err)
+    try:   # 20.11.2026: archiwum prognoz temperatury krajów – „prognoza sprzed 3 dni” w zakładce „Pogoda”
+        from . import weather_tab
+        weather_tab.archive_temp([c["code"] for c in store.load_countries()])
+    except Exception as e:
+        run.setdefault("log", []).append(f"Archiwum prognoz temperatury: {type(e).__name__}: {e}")
     run["minutes"] = (time.time() - t0) / 60
     payload = build.build(settings, es_df, {"requests": run.get("requests", 0), "by_endpoint": run.get("by_endpoint", {}),
                                             "log": run.get("log", [])[:30],

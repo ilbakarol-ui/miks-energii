@@ -14,6 +14,9 @@ tu nie pobieramy, tylko czytamy pliki z repozytorium.
   Norma dzienna: średnia z ostatnich pełnych lat (ERA5), wygładzona ±15 dni.
 - SEAS5 (miesięcznie, do 6 miesięcy): odchylenie średniej miesięcznej każdego z 51 wariantów od normy
   miesięcznej tych samych punktów. Surowy model, bez korekty błędu systematycznego.
+- Prognoza sprzed 3 dni (od 20.11.2026): jedna prognoza wydana 3 dni przed bieżącą – wiatr z archiwum prognoz
+  Miksu (data/forecast/archive.csv, 7 dni), temperatura z archiwum temperatury krajów (data/forecast/temp_archive.csv,
+  zapisywanego w każdym przebiegu przez archive_temp; obowiązuje pierwsze wydanie dnia).
 """
 from __future__ import annotations
 
@@ -28,6 +31,9 @@ import pandas as pd
 from . import sensitivity, store, trends
 
 FOLDER = store.DATA / "shared_weather"
+TEMP_ARCHIVE = store.FORECAST / "temp_archive.csv"   # prognozy temperatury krajów w chwili wydania (od 20.11.2026)
+TEMP_ARCHIVE_DAYS = 60
+PREV_LAG = 3                                         # „prognoza sprzed 3 dni”
 DEFAULTS = {"calib_days": 120, "min_calib_days": 14, "min_r2": 0.6, "norm_years": 7, "recent_days": 14,
             "seas_months": 6, "seas_min_days": 20}
 
@@ -189,7 +195,8 @@ def calibrate(ws: pd.Series, actual: pd.Series, days: int, min_n: int, min_r2: f
 
 
 def wind_block(code: str, e: pd.DataFrame | None, fc: dict | None, ws_m: pd.DataFrame, ws_h: pd.Series,
-               ref: dt.date, n_years: int, min_years: int, conf: dict) -> dict | None:
+               ref: dt.date, n_years: int, min_years: int, conf: dict, prev: tuple | None = None) -> dict | None:
+    """prev = (data wydania, {data: GWh}) – prognoza wydana PREV_LAG dni wcześniej (archiwum prognoz Miksu)."""
     act = e["wind"].dropna() if e is not None and "wind" in e else pd.Series(dtype=float)
     act.index = pd.to_datetime(act.index)
     act = act[act.index <= pd.Timestamp(ref)].tail(conf["recent_days"])
@@ -220,7 +227,16 @@ def wind_block(code: str, e: pd.DataFrame | None, fc: dict | None, ws_m: pd.Data
         "p90": [None] * nr + [_r(q[d][2]) if d in q else None for d in fdates],
         "avg": band["avg"],
         "fit": {k: cal.get(k) for k in ("ok", "n", "r2", "mae_pct", "why")},
+        **_prev_fields(dates, prev),
     }
+
+
+def _prev_fields(dates: list[str], prev: tuple | None) -> dict:
+    """Seria „prognoza sprzed 3 dni” wyrównana do osi dat (puste, gdy brak archiwum albo żadnego wspólnego dnia)."""
+    if not prev or not prev[1]:
+        return {}
+    vals = [_r(prev[1].get(d)) for d in dates]
+    return {"fc3": vals, "fc3_issued": prev[0]} if any(v is not None for v in vals) else {}
 
 
 # ---------------- temperatura ----------------
@@ -317,7 +333,7 @@ def daily_norm(hist: pd.DataFrame, pts: pd.DataFrame, yrs: list[int], weights: d
     return ext.rolling(31, center=True).mean().iloc[15:-15].to_numpy()
 
 
-def temp_block(code: str, W: dict, ref: dt.date, conf: dict) -> dict | None:
+def temp_block(code: str, W: dict, ref: dt.date, conf: dict, prev: tuple | None = None) -> dict | None:
     pts, rec = W.get("points"), W.get("recent")
     if pts is None or rec is None:
         return None
@@ -360,7 +376,77 @@ def temp_block(code: str, W: dict, ref: dt.date, conf: dict) -> dict | None:
         "norm_years": f"{yrs[0]}–{yrs[-1]}" if yrs else None,
         "points": int(p["pt"].nunique()),
         "trial_points": int((p["group"] == TRIAL_GROUP).sum()),
+        **_prev_fields(dates, prev),
     }
+
+
+# ---------------- prognoza sprzed 3 dni ----------------
+
+def country_forecasts(W: dict, codes) -> dict:
+    """Bieżąca prognoza temperatury krajów (te same punkty i średnia co w temp_block) – {kod: Series data -> °C}."""
+    pts, rec = W.get("points"), W.get("recent")
+    if pts is None or rec is None or rec.empty:
+        return {}
+    out = {}
+    for code in codes:
+        p = _pts_for(pts, code, "temp", W.get("trial_ready"))
+        if p.empty:
+            continue
+        s = rec[rec["pt"].isin(p["pt"]) & (rec["fc"] == 1)]
+        det = _mean_pts(s, p, ["date"], "temp").sort_index()
+        if len(det):
+            out[code] = det
+    return out
+
+
+def forecast_issued(W: dict) -> str | None:
+    """Data wydania prognozy temperatury w temp_recent.csv (nocne meta.json albo wieczorne meta_evening.json)."""
+    xs = [x for x in ((W.get("meta") or {}).get("forecast_issued"), (W.get("meta_evening") or {}).get("forecast_issued")) if x]
+    return str(max(xs))[:10] if xs else None
+
+
+def archive_temp(codes, W: dict | None = None, path: Path | None = None, issued: str | None = None,
+                 today: dt.date | None = None) -> int:
+    """Zapis bieżącej prognozy temperatury krajów w archiwum (issued, code, date, temp). Obowiązuje pierwsze wydanie
+    dnia – późniejsze przebiegi tego samego dnia nie zmieniają zapisanych krajów. Zwraca liczbę dopisanych wierszy."""
+    W = W if W is not None else load()
+    path = path or TEMP_ARCHIVE
+    issued = issued or forecast_issued(W)
+    if not issued:
+        return 0
+    fcs = country_forecasts(W, codes)
+    rows = [{"issued": issued, "code": c, "date": d, "temp": round(float(v), 2)}
+            for c, ser in fcs.items() for d, v in ser.items() if pd.notna(v)]
+    if not rows:
+        return 0
+    new = pd.DataFrame(rows)
+    old = pd.read_csv(path, dtype={"issued": str, "date": str, "code": str}) if path.exists() else None
+    if old is not None and len(old):
+        have = set(old.loc[old["issued"] == issued, "code"])
+        new = new[~new["code"].isin(have)]
+        if new.empty:
+            return 0
+        new = pd.concat([old, new], ignore_index=True)
+    added = len(rows) if old is None else len(new) - len(old)
+    cutoff = ((today or dt.date.today()) - dt.timedelta(days=TEMP_ARCHIVE_DAYS)).isoformat()
+    new = new[new["issued"] >= cutoff]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    new.to_csv(path, index=False)
+    return added
+
+
+def _prev_issue(archive: pd.DataFrame | None, value_col: str, current: str | None, lag: int = PREV_LAG,
+                type_: str | None = None) -> tuple[str | None, dict]:
+    """Wydanie z archiwum sprzed `lag` dni względem `current`: (data wydania, {kod: {data: wartość}})."""
+    if archive is None or archive.empty or not current:
+        return None, {}
+    target = (dt.date.fromisoformat(current[:10]) - dt.timedelta(days=lag)).isoformat()
+    a = archive[archive["issued"] == target]
+    if type_ is not None and "type" in a:
+        a = a[a["type"] == type_]
+    if a.empty:
+        return None, {}
+    return target, {c: dict(zip(g["date"], g[value_col])) for c, g in a.groupby("code")}
 
 
 def seas_block(code: str, W: dict, ref: dt.date, conf: dict) -> dict | None:
@@ -673,6 +759,19 @@ def build(derived: dict, fcs: dict, codes: list[str], ref: dt.date, n_years: int
         except Exception as ex:   # jeden kraj nie może zatrzymać zakładki
             coefs.setdefault(code, {})["error"] = f"{type(ex).__name__}: {ex}"
     eu_imp = impact_eu({k: v for k, v in imp.items() if v}, coefs)
+    # prognoza sprzed 3 dni: wiatr z archiwum prognoz Miksu, temperatura z archiwum temperatury krajów
+    wind_cur = next((str(f["issued"])[:10] for f in (fcs or {}).values() if isinstance(f, dict) and f.get("issued")), None)
+    try:
+        w_iss, w_prev = _prev_issue(pd.read_csv(store.FORECAST / "archive.csv", dtype={"issued": str, "date": str, "code": str}),
+                                    "gwh", wind_cur, type_="wind") if (store.FORECAST / "archive.csv").exists() else (None, {})
+    except Exception:
+        w_iss, w_prev = None, {}
+    ta = folder / "temp_archive.csv" if folder else TEMP_ARCHIVE
+    try:
+        t_iss, t_prev = _prev_issue(pd.read_csv(ta, dtype={"issued": str, "date": str, "code": str}), "temp",
+                                    forecast_issued(W)) if ta.exists() else (None, {})
+    except Exception:
+        t_iss, t_prev = None, {}
     out = {}
     for code in codes:
         rec = {}
@@ -691,10 +790,11 @@ def build(derived: dict, fcs: dict, codes: list[str], ref: dt.date, n_years: int
                     rec["impact_seas"] = _seas_out(seas_imp[code])
             ws_m = ens_ws(ens, code, weights) if (code in ens_codes or code == "EU") else pd.DataFrame()
             ws_h = hist_ws(eh, code, weights) if (code in ens_codes or code == "EU") else pd.Series(dtype=float)
-            wb = wind_block(code, derived.get(code), (fcs or {}).get(code), ws_m, ws_h, ref, n_years, min_years, conf)
+            wb = wind_block(code, derived.get(code), (fcs or {}).get(code), ws_m, ws_h, ref, n_years, min_years, conf,
+                            prev=(w_iss, w_prev.get(code)) if w_iss else None)
             if wb:
                 rec["wind"] = wb
-            tb = temp_block(code, W, ref, conf)
+            tb = temp_block(code, W, ref, conf, prev=(t_iss, t_prev.get(code)) if t_iss else None)
             if tb:
                 rec["temp"] = tb
             sb = seas_block(code, W, ref, conf)
@@ -712,6 +812,7 @@ def build(derived: dict, fcs: dict, codes: list[str], ref: dt.date, n_years: int
             "trial_points": sorted(W.get("trial_ready") or []),
             "issued": {"forecast": det_issued, "ensemble": ens_issued, "seasonal": seas_fetched,
                        "updated": max([x for x in (m.get("updated"), mx.get("updated"), me.get("updated")) if x] or [None])},
+            "prev_issued": {"wind": w_iss, "temp": t_iss, "lag": PREV_LAG},
             "wind_weights": {k: _r(v, 3) for k, v in weights.items()},
             "wind_capacity": cap,
             "sensitivity": {k: v for k, v in coefs.items() if v},

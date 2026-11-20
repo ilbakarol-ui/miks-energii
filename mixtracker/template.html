@@ -1717,6 +1717,20 @@ const DATA = /*__DATA__*/null;
   const degS = (v) => (isNum(v) ? sgn(v, 1) + "°C" : "–");
   const monL = (m) => MONTHS[+m.slice(5) - 1] + " " + m.slice(2, 4);
 
+  // prognoza sprzed 3 dni: porównanie z bieżącą prognozą na wspólnych dniach prognozy (najwyżej 7)
+  function prevCmp(b, kind) {
+    if (!b || !b.fc3) return null;
+    const js = [];
+    for (let j = b.split; j < b.dates.length && js.length < 7; j++) if (isNum(b.det[j]) && isNum(b.fc3[j])) js.push(j);
+    if (!js.length) return null;
+    const lab = `vs prognoza z ${dsh(b.fc3_issued)} (${js.length === 1 ? dsh(b.dates[js[0]]) : dsh(b.dates[js[0]]) + "–" + dsh(b.dates[js[js.length - 1]])})`;
+    if (kind === "wind") {
+      const a = js.reduce((x, j) => x + b.det[j], 0), o = js.reduce((x, j) => x + b.fc3[j], 0);
+      return [lab, o > 0 ? sgn(100 * (a / o - 1)) + "%" : "–"];
+    }
+    return [lab, degS(js.reduce((x, j) => x + b.det[j] - b.fc3[j], 0) / js.length)];
+  }
+
   function renderWxKPIs() {
     const c = WXC[S.country] || {};
     const w7 = wxWindAgg(c.wind, 0, 7), w8 = wxWindAgg(c.wind, 7, 14);
@@ -1728,12 +1742,12 @@ const DATA = /*__DATA__*/null;
     const tiles = [];
     tiles.push({ label: "Wiatr · najbliższe 7 dni", val: w7 && isNum(w7.pct) ? `${sgn(w7.pct)}<small>% normy</small>` : w7 ? `${n1}<small>${u1}/dobę</small>` : "–",
       rows: [["średnio na dobę", w7 ? `${n1} ${u1}` : "–"], ["norma", w7 ? fmtU(w7.avg / w7.n, "GWh") : "–"],
-        ["dni 8–" + (w8 ? 7 + w8.n : 12), w8 && isNum(w8.pct) ? sgn(w8.pct) + "%" : "brak"]],
+        ["dni 8–" + (w8 ? 7 + w8.n : 12), w8 && isNum(w8.pct) ? sgn(w8.pct) + "%" : "brak"]].concat(prevCmp(c.wind, "wind") ? [prevCmp(c.wind, "wind")] : []),
       chip: w7 && isNum(w7.pct) ? anomBin(w7.pct) : null, chipT: (k) => (k > 0 ? "więcej wiatru niż zwykle" : k < 0 ? "mniej wiatru niż zwykle" : "w normie (±10%)") });
     tiles.push({ label: "Temperatura · najbliższe 7 dni", val: t7 ? `${degS(t7.anom).replace("°C", "")}<small>°C vs norma</small>` : "–",
       rows: [["średnio", t7 ? fmt1.format(t7.t) + "°C" : "–"], ["norma", t7 ? fmt1.format(t7.norm) + "°C" : "–"],
         ["dni 8–" + (t8 ? 7 + t8.n : 14), t8 ? degS(t8.anom) : "brak"],
-        ["najzimniej w prognozie", (() => { const cs = [t7, t8].filter(Boolean).map((a) => a.cold); if (!cs.length) return "–"; const x = cs.reduce((a, b) => (b.v < a.v ? b : a)); return `${fmt1.format(x.v)}°C (${dsh(x.d)})`; })()]],
+        ["najzimniej w prognozie", (() => { const cs = [t7, t8].filter(Boolean).map((a) => a.cold); if (!cs.length) return "–"; const x = cs.reduce((a, b) => (b.v < a.v ? b : a)); return `${fmt1.format(x.v)}°C (${dsh(x.d)})`; })()]].concat(prevCmp(c.temp, "temp") ? [prevCmp(c.temp, "temp")] : []),
       chip: t7 ? tempBin(t7.anom) : null, chipT: (k) => (k > 0 ? "chłodniej niż zwykle" : k < 0 ? "cieplej niż zwykle" : "w normie (±0,5°C)") });
     const nx = sm[0];
     tiles.push({ label: "Prognoza sezonowa SEAS5", val: nx ? `${degS(nx.p50).replace("°C", "")}<small>°C · ${monL(nx.m)}</small>` : "–",
@@ -1761,17 +1775,21 @@ const DATA = /*__DATA__*/null;
       const items = [{ line: 1, color: css("--ink-2"), label: "rzeczywista" }];
       if (hasDet) items.push({ line: 1, color: wcol, label: "model pogodowy (przerywana)" });
       if (hasEns) { items.push({ line: 1, color: css("--s-total"), label: "mediana ensemble (kropki)" }); items.push({ band: 1, label: "80% wariantów ensemble" }); }
+      const w3 = w.fc3 || null, pcol = css("--s-nuclear");
+      if (w3) items.push({ line: 1, color: pcol, dash: "5 3", label: "prognoza z " + dsh(w.fc3_issued) });
       items.push({ line: 1, color: css("--muted"), label: "norma " + DATA.meta.years5 });
       legend($("x-wind-legend"), items);
       lineChart($("x-wind"), {
         n, unit: "GWh", split: sp < n ? sp : null, H: 250,
         lines: [{ values: w.avg, color: css("--muted"), width: 1.5 }, { values: w.act, color: css("--ink-2"), width: 2.5 },
-          { values: p50, color: css("--s-total"), width: 2, dash: "1 4" }, { values: det, color: wcol, width: 2.5, dash: true }],
+          { values: p50, color: css("--s-total"), width: 2, dash: "1 4" }]
+          .concat(w3 ? [{ values: w3, color: pcol, width: 1.8, dash: "5 3" }] : []).concat([{ values: det, color: wcol, width: 2.5, dash: true }]),
         band: hasEns ? { lo: w.p10, hi: w.p90 } : null,
         xlab: (j) => dayLab(w.dates[j]), tlab: (j) => dayLong(w.dates[j]) + (j >= sp ? " · prognoza" : ""),
         rows: (j) => (j < sp ? [["rzeczywista", fmtU(w.act[j], "GWh"), css("--ink-2")]] : [])
           .concat(j >= sp && isNum(w.det[j]) ? [["model pogodowy", fmtU(w.det[j], "GWh"), wcol]] : [])
           .concat(j >= sp && isNum(w.p50[j]) ? [["mediana ensemble", fmtU(w.p50[j], "GWh"), css("--s-total")], ["80% wariantów", fmtU(w.p10[j], "GWh") + " – " + fmtU(w.p90[j], "GWh")]] : [])
+          .concat(w3 && isNum(w3[j]) ? [["prognoza z " + dsh(w.fc3_issued), fmtU(w3[j], "GWh"), pcol]] : [])
           .concat([["norma", fmtU(w.avg[j], "GWh"), css("--muted")]]),
       });
       const f = w.fit || {};
@@ -1780,6 +1798,7 @@ const DATA = /*__DATA__*/null;
       else if (f.why && f.why !== "brak historii") note = `Bez pasma ensemble: ${f.why} – przelicznik prędkości wiatru na produkcję jest jeszcze niewiarygodny dla tego kraju.`;
       else note = "Brak prognoz ensemble dla tego kraju (wspólna baza pogodowa obejmuje kraje UE).";
       if (hasDet) note += " Model pogodowy: prognoza z zakładki „Prognozy wiatru” (7 dni) z przedłużeniem do 14 dni.";
+      if (w3) note += ` Fioletowa linia: prognoza modelu wydana ${fdate(w.fc3_issued)} (3 dni wcześniej, z archiwum prognoz – 7 dni, bez przedłużenia); na minionych dniach widać, o ile się pomyliła.`;
       if (S.country === "EU" && WX.wind_capacity) {   // wagi wiatru UE: moc farm wiatrowych
         const capv = Object.values(WX.wind_capacity), tot = capv.reduce((a, v) => a + (v.gw || 0), 0);
         const est = Object.entries(WX.wind_capacity).filter(([, v]) => v.src !== "Energy-Charts").map(([k]) => k);
@@ -1797,17 +1816,22 @@ const DATA = /*__DATA__*/null;
       const det = t.det.slice();
       if (sp > 0 && sp < n && isNum(det[sp])) det[sp - 1] = t.act[sp - 1];
       const hasEns = t.p10.some(isNum);
+      const t3 = t.fc3 || null, pcol = css("--s-nuclear");
       legend($("x-temp-legend"), [{ line: 1, color: css("--ink-2"), label: "rzeczywista" }, { line: 1, color: tcol, label: "prognoza ECMWF (przerywana)" }]
-        .concat(hasEns ? [{ band: 1, label: "80% wariantów ensemble" }] : []).concat([{ line: 1, color: css("--muted"), label: "norma " + (t.norm_years || "") }]));
+        .concat(hasEns ? [{ band: 1, label: "80% wariantów ensemble" }] : [])
+        .concat(t3 ? [{ line: 1, color: pcol, dash: "5 3", label: "prognoza z " + dsh(t.fc3_issued) }] : [])
+        .concat([{ line: 1, color: css("--muted"), label: "norma " + (t.norm_years || "") }]));
       lineChart($("x-temp"), {
         n, unit: "°C", split: sp < n ? sp : null, H: 250, zero: false,
-        lines: [{ values: t.norm, color: css("--muted"), width: 1.5 }, { values: t.act, color: css("--ink-2"), width: 2.5 }, { values: det, color: tcol, width: 2.5, dash: true }],
+        lines: [{ values: t.norm, color: css("--muted"), width: 1.5 }, { values: t.act, color: css("--ink-2"), width: 2.5 }]
+          .concat(t3 ? [{ values: t3, color: pcol, width: 1.8, dash: "5 3" }] : []).concat([{ values: det, color: tcol, width: 2.5, dash: true }]),
         band: hasEns ? { lo: t.p10, hi: t.p90 } : null,
         xlab: (j) => dayLab(t.dates[j]), tlab: (j) => dayLong(t.dates[j]) + (j >= sp ? " · prognoza" : ""),
         rows: (j) => {
           const v = j < sp ? t.act[j] : t.det[j];
           const r = [[j < sp ? "rzeczywista" : "prognoza", isNum(v) ? fmt1.format(v) + "°C" : "–", j < sp ? css("--ink-2") : tcol]];
           if (j >= sp && isNum(t.p10[j])) r.push(["80% wariantów", fmt1.format(t.p10[j]) + " … " + fmt1.format(t.p90[j]) + "°C"]);
+          if (t3 && isNum(t3[j])) r.push(["prognoza z " + dsh(t.fc3_issued), fmt1.format(t3[j]) + "°C", pcol]);
           r.push(["norma", isNum(t.norm[j]) ? fmt1.format(t.norm[j]) + "°C" : "–", css("--muted")]);
           if (isNum(v) && isNum(t.norm[j])) r.push(["vs norma", degS(v - t.norm[j])]);
           return r;
@@ -1817,7 +1841,8 @@ const DATA = /*__DATA__*/null;
       $("x-temp-note").textContent = `Średnia z ${t.points} ${t.points === 1 ? "punktu" : "punktów"}` + (S.country === "EU" ? " sieci gazowej UE (więcej punktów w krajach o większym zużyciu gazu)" : "") +
         (t.trial_points ? ` (w tym ${t.trial_points} ${t.trial_points === 1 ? "dodatkowy" : "dodatkowe"} z zagęszczonej siatki miast)` : "") +
         `. Prognoza deterministyczna ECMWF IFS do ${fdate(t.dates[n - 1])}` + (lastEns ? `, pasmo 51 wariantów ensemble do ${fdate(lastEns)}` : "") +
-        `. Norma: średnia ${t.norm_years || "–"} (ERA5) wygładzona ±15 dni.`;
+        `. Norma: średnia ${t.norm_years || "–"} (ERA5) wygładzona ±15 dni.` +
+        (t3 ? ` Fioletowa linia: prognoza ECMWF wydana ${fdate(t.fc3_issued)} (3 dni wcześniej, te same punkty).` : "");
     } else {
       $("x-temp").innerHTML = '<p class="empty">Brak prognozy temperatury dla tego kraju (wspólna baza pogodowa obejmuje kraje UE).</p>';
       $("x-temp-legend").innerHTML = ""; $("x-temp-note").textContent = "";
