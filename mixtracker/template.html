@@ -1942,6 +1942,21 @@ const DATA = /*__DATA__*/null;
     const t = tw ? idx.reduce((a, i) => a + (tw[i] || 0), 0) / idx.length : null;
     return { d, n, pct: n > 0 ? (100 * d) / n : null, t, k: idx.length };
   }
+  // zmiana wpływu temperatury wobec prognozy sprzed 3 dni (GWh/d, średnio na wspólnych dniach prognozy, najwyżej 7)
+  function impPrev(im) {
+    if (!im || !im.fc3_issued) return [];
+    const out = [];
+    for (const [kind, nm] of [["gas", "gaz"], ["power", "prąd"]]) {
+      const x = im[kind];
+      if (!x || !x.fc3) continue;
+      const js = [];
+      for (let j = im.split; j < im.dates.length && js.length < 7; j++) if (isNum(x.det[j]) && isNum(x.fc3[j])) js.push(j);
+      if (!js.length) continue;
+      const d = js.reduce((a, j) => a + x.det[j] - x.fc3[j], 0) / js.length;
+      out.push([`${nm} vs prognoza z ${dsh(im.fc3_issued)} (${dsh(im.dates[js[0]])}–${dsh(im.dates[js[js.length - 1]])})`, gwhS(d)]);
+    }
+    return out;
+  }
   function impTile(c) {
     const im = c.impact;
     const g7 = impAgg(im, "gas", 0, 7), p7 = impAgg(im, "power", 0, 7), g8 = impAgg(im, "gas", 7, 14);
@@ -1951,7 +1966,7 @@ const DATA = /*__DATA__*/null;
       rows: [["gaz vs normalna temp.", g7 ? gwhS(g7.d) + pS(g7) : "–"], ["prąd vs normalna temp.", p7 ? gwhS(p7.d) + pS(p7) : "–"],
         ["gaz, dni 8–" + (g8 ? 7 + g8.k : 14), g8 ? gwhS(g8.d) + pS(g8) : "brak"],
         [S.country === "EU" ? "temp. ważona wrażl. gazu / prądu" : "temperatura vs norma",
-          S.country === "EU" ? `${degS(g7 && g7.t)} / ${degS(p7 && p7.t)}` : degS((g7 || p7).t)]],
+          S.country === "EU" ? `${degS(g7 && g7.t)} / ${degS(p7 && p7.t)}` : degS((g7 || p7).t)]].concat(impPrev(im)),
       chip: g7 && isNum(g7.t) ? tempBin(g7.t) : null, chipT: (k) => (k > 0 ? "więcej gazu na ogrzewanie" : k < 0 ? "mniej gazu na ogrzewanie" : "blisko normy") };
   }
   function renderImpChart(elId, legId, im, kind) {
@@ -1961,11 +1976,15 @@ const DATA = /*__DATA__*/null;
     const det = x.det.slice();
     if (sp > 0 && sp < n && isNum(det[sp])) det[sp - 1] = x.act[sp - 1];
     const hasEns = x.p10.some(isNum);
+    const f3 = x.fc3 || null, pcol = css("--s-nuclear");
     legend($(legId), [{ line: 1, color: css("--ink-2"), label: "rzeczywista temperatura" }, { line: 1, dash: 1, color: colr, label: "prognoza ECMWF" }]
-      .concat(hasEns ? [{ band: 1, label: "80% wariantów ensemble" }] : []).concat([{ line: 1, color: css("--muted"), label: "0 = normalna temperatura" }]));
+      .concat(hasEns ? [{ band: 1, label: "80% wariantów ensemble" }] : [])
+      .concat(f3 ? [{ line: 1, color: pcol, dash: "5 3", label: "prognoza z " + dsh(im.fc3_issued) }] : [])
+      .concat([{ line: 1, color: css("--muted"), label: "0 = normalna temperatura" }]));
     lineChart(el, {
       n, unit: "GWh", split: sp < n ? sp : null, H: 220, zero: false,
-      lines: [{ values: im.dates.map(() => 0), color: css("--muted"), width: 1 }, { values: x.act, color: css("--ink-2"), width: 2.5 }, { values: det, color: colr, width: 2.5, dash: true }],
+      lines: [{ values: im.dates.map(() => 0), color: css("--muted"), width: 1 }, { values: x.act, color: css("--ink-2"), width: 2.5 }]
+        .concat(f3 ? [{ values: f3, color: pcol, width: 1.8, dash: "5 3" }] : []).concat([{ values: det, color: colr, width: 2.5, dash: true }]),
       band: hasEns ? { lo: x.p10, hi: x.p90 } : null,
       xlab: (j) => dayLab(im.dates[j]), tlab: (j) => dayLong(im.dates[j]) + (j >= sp ? " · prognoza" : ""),
       rows: (j) => {
@@ -1973,6 +1992,7 @@ const DATA = /*__DATA__*/null;
         const r = [["vs normalna temperatura", gwhS(v), j < sp ? css("--ink-2") : colr]];
         if (isNum(v) && isNum(x.norm[j]) && x.norm[j] > 0) r.push(["% normalnego zużycia", sgn((100 * v) / x.norm[j], 1) + "%"]);
         if (j >= sp && isNum(x.p10[j])) r.push(["80% wariantów", gwhS(x.p10[j]) + " … " + gwhS(x.p90[j])]);
+        if (f3 && isNum(f3[j])) r.push(["prognoza z " + dsh(im.fc3_issued), gwhS(f3[j]), pcol]);
         if (isNum(x.norm[j])) r.push(["zużycie przy normie", fmtU(x.norm[j], "GWh")]);
         const tw = im["tw_" + kind] || im.tanom;
         if (tw && isNum(tw[j])) r.push([S.country === "EU" ? "temp. ważona wrażliwością" : "temperatura vs norma", degS(tw[j])]);
@@ -2025,7 +2045,8 @@ const DATA = /*__DATA__*/null;
         s.power ? `+${fmt1.format(s.power.bh)} GWh/d prądu (R² ${String(s.power.r2).replace(".", ",")})` + (s.power.bc ? `, a 1°C cieplej powyżej 22°C +${fmt1.format(s.power.bc)} GWh/d prądu` : "") : null].filter(Boolean).join(", ") + ".";
     } else note = "Brak wrażliwości dla tego kraju (brak punktów temperatury albo danych o zużyciu).";
     $("x-imp-note").textContent = note + ` Wrażliwość gazu: regresja miesięcznego zużycia z Eurostatu (nrg_cb_gasm, ${gs.since || "2023-01"}–${gs.last_month || "–"}; te same dane, do których kalibruje się raport Gaz UE) na stopniodniach grzania; prądu: zużycie dzienne z 730 dni na stopniodniach grzania i chłodzenia oraz dniu tygodnia. ` +
-      "Odchylenie = wrażliwość × (stopniodni z prognozy − stopniodni przy normie 2019–2025). Pokazuje tylko efekt temperatury – wiatr, ceny i przemysł zmieniają zużycie niezależnie. SEAS5: surowy model, bez korekty błędu systematycznego.";
+      "Odchylenie = wrażliwość × (stopniodni z prognozy − stopniodni przy normie 2019–2025). Pokazuje tylko efekt temperatury – wiatr, ceny i przemysł zmieniają zużycie niezależnie. SEAS5: surowy model, bez korekty błędu systematycznego." +
+      (im && im.fc3_issued ? ` Fioletowa linia: ta sama wrażliwość zastosowana do prognozy temperatury wydanej ${fdate(im.fc3_issued)} (3 dni wcześniej)` + (S.country === "EU" ? " – suma krajów." : ".") : "");
   }
 
   function renderWx() {

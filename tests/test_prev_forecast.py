@@ -71,3 +71,32 @@ def test_build_without_archives(tmp_path, monkeypatch):
     monkeypatch.setattr(wt.store, "FORECAST", tmp_path / "brak")
     r = wt.build(_derived(), {}, ["EU", "PL"], REF, 5, 3, folder=tmp_path)
     assert "fc3" not in r["countries"]["PL"]["temp"] and r["prev_issued"]["temp"] is None
+
+
+def test_impact_fc3_country_and_eu(tmp_path, monkeypatch):
+    """Wpływ na gaz i prąd z prognozy sprzed 3 dni: ta sama wrażliwość, 1 °C cieplej → mniej gazu i prądu; UE = suma."""
+    _write_base(tmp_path)
+    monkeypatch.setattr(wt.store, "FORECAST", tmp_path / "brak")
+    W = wt.load(tmp_path)
+    wt.archive_temp(["PL", "DE"], W=dict(W, recent=W["recent"].assign(temp=W["recent"]["temp"] + 1.0)),
+                    path=tmp_path / "temp_archive.csv", issued="2026-10-27", today=REF)
+    conf = dict(wt.DEFAULTS)
+    coefs = {"PL": {"gas": {"a": 100.0, "b": 30.0}, "power": {"a": 400.0, "bh": 5.0, "bc": 0.0}},
+             "DE": {"gas": {"a": 300.0, "b": 200.0}, "power": {"a": 1300.0, "bh": 17.0, "bc": 0.0}}}
+    arch = pd.read_csv(tmp_path / "temp_archive.csv", dtype={"issued": str, "date": str})
+    iss, prev = wt._prev_issue(arch, "temp", "2026-10-30")
+    blocks = {c: wt.impact_country(c, W, coefs[c], REF, conf, prev=(iss, prev.get(c))) for c in coefs}
+    pl = blocks["PL"]
+    k = pl["split"] + 3
+    # listopad: zawsze poniżej 15,5 °C – 1 °C cieplej = 30 GWh/d gazu i 5 GWh/d prądu mniej
+    assert pl["fc3_issued"] == "2026-10-27"
+    assert abs(pl["gas"]["fc3"][k] - (pl["gas"]["det"][k] - 30)) <= 1 and abs(pl["power"]["fc3"][k] - (pl["power"]["det"][k] - 5)) <= 1
+    eu = wt.impact_eu(blocks, coefs)
+    j = eu["dates"].index(pl["dates"][k])
+    de = blocks["DE"]
+    assert eu["fc3_issued"] == "2026-10-27"
+    assert abs(eu["gas"]["fc3"][j] - (pl["_gas3"][k] + de["_gas3"][de["dates"].index(pl["dates"][k])])) <= 1
+    # bez archiwum – brak serii
+    b0 = wt.impact_country("PL", W, coefs["PL"], REF, conf)
+    assert "fc3" not in b0["gas"] and "fc3_issued" not in b0
+    assert "fc3" not in wt.impact_eu({"PL": b0}, coefs)["gas"]

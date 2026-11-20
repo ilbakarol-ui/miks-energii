@@ -522,9 +522,10 @@ def _q(m: np.ndarray):
     return (float(np.quantile(m, 0.1)), float(np.quantile(m, 0.5)), float(np.quantile(m, 0.9)))
 
 
-def impact_country(code: str, W: dict, coef: dict, ref: dt.date, conf: dict) -> dict | None:
+def impact_country(code: str, W: dict, coef: dict, ref: dt.date, conf: dict, prev: tuple | None = None) -> dict | None:
     """Odchylenie zużycia gazu i prądu od normy (GWh/d) wynikające z temperatury: 14 dni wstecz, prognoza ECMWF,
-    pasmo 80% wariantów ensemble (przesuniętych o średnią różnicę z prognozą w dniach 1–3)."""
+    pasmo 80% wariantów ensemble (przesuniętych o średnią różnicę z prognozą w dniach 1–3).
+    prev = (data wydania, {data: °C}) – prognoza temperatury sprzed 3 dni (archiwum) przeliczona tą samą wrażliwością."""
     p = _pts_for(W["points"], code, "temp", W.get("trial_ready"))
     if p.empty or not coef:
         return None
@@ -570,6 +571,9 @@ def impact_country(code: str, W: dict, coef: dict, ref: dt.date, conf: dict) -> 
                     ge, pe = eff(v, idx[k])
                     members[x] = {"gas": ge, "power": pe}
     nr = len(act)
+    pv = prev[1] if prev and prev[1] else {}
+    g3, p3 = zip(*[eff(float(pv[x]), idx[k]) if x in pv and pd.notna(pv[x]) else (None, None)
+                   for k, x in enumerate(dates)])
 
     def series(kind, vals):
         if vals[0] is None:
@@ -582,13 +586,20 @@ def impact_country(code: str, W: dict, coef: dict, ref: dt.date, conf: dict) -> 
                 "p90": [_r(q[x][2], 0) if x in q else None for x in dates]}
     out = {"dates": dates, "split": nr,
            "tanom": [_r(T[k] - tn[idx[k]]) for k in range(len(dates))],
-           "_members": members, "_gas": list(gas_v), "_power": list(pow_v)}
+           "_members": members, "_gas": list(gas_v), "_power": list(pow_v), "_gas3": list(g3), "_power3": list(p3)}
+    has3 = any(v is not None for v in g3 + p3)
+    if has3:
+        out["fc3_issued"] = prev[0]
     if g:
         out["gas"] = series("gas", gas_v)
         out["gas"]["norm"] = [_r(g["a"] + g["b"] * nh[i], 0) for i in idx]
+        if has3:
+            out["gas"]["fc3"] = [_r(v, 0) for v in g3]
     if pw:
         out["power"] = series("power", pow_v)
         out["power"]["norm"] = [_r(pw["a"] + pw["bh"] * nh[i] + pw["bc"] * nc[i], 0) for i in idx]
+        if has3:
+            out["power"]["fc3"] = [_r(v, 0) for v in p3]
     return out
 
 
@@ -618,12 +629,19 @@ def impact_eu(blocks: dict, coefs: dict) -> dict | None:
             ms = [blocks[c]["_members"].get(x, {}).get(kind) for c in cs]
             if all(m is not None for m in ms) and len({len(m) for m in ms}) == 1:
                 q[x] = _q(np.sum(ms, axis=0))
+        # prognoza sprzed 3 dni: suma krajów tylko dla dni, w których każdy kraj ją ma
+        t3 = [sum(blocks[c]["_" + kind + "3"][pos[c][x]] for c in cs)
+              if all(blocks[c].get("_" + kind + "3") and blocks[c]["_" + kind + "3"][pos[c][x]] is not None for c in cs)
+              else None for x in common]
+        if any(v is not None for v in t3):
+            out["fc3_issued"] = next((blocks[c]["fc3_issued"] for c in cs if blocks[c].get("fc3_issued")), None)
         out[kind] = {"act": [_r(v, 0) for v in tot[:split]] + [None] * (len(common) - split),
                      "det": [None] * split + [_r(v, 0) for v in tot[split:]],
                      "p10": [_r(q[x][0], 0) if x in q else None for x in common],
                      "p50": [_r(q[x][1], 0) if x in q else None for x in common],
                      "p90": [_r(q[x][2], 0) if x in q else None for x in common],
-                     "norm": [_r(v, 0) for v in norm], "countries": len(cs)}
+                     "norm": [_r(v, 0) for v in norm], "countries": len(cs),
+                     **({"fc3": [_r(v, 0) for v in t3]} if any(v is not None for v in t3) else {})}
         out["tw_" + kind] = [_r(v) for v in tw]
     return out
 
@@ -734,6 +752,19 @@ def build(derived: dict, fcs: dict, codes: list[str], ref: dt.date, n_years: int
     weights = capacity_weights(cap, ens_codes)
     if weights.empty:
         weights = wind_weights(derived, ens_codes)
+    # prognoza sprzed 3 dni: wiatr z archiwum prognoz Miksu, temperatura z archiwum temperatury krajów
+    wind_cur = next((str(f["issued"])[:10] for f in (fcs or {}).values() if isinstance(f, dict) and f.get("issued")), None)
+    try:
+        w_iss, w_prev = _prev_issue(pd.read_csv(store.FORECAST / "archive.csv", dtype={"issued": str, "date": str, "code": str}),
+                                    "gwh", wind_cur, type_="wind") if (store.FORECAST / "archive.csv").exists() else (None, {})
+    except Exception:
+        w_iss, w_prev = None, {}
+    ta = folder / "temp_archive.csv" if folder else TEMP_ARCHIVE
+    try:
+        t_iss, t_prev = _prev_issue(pd.read_csv(ta, dtype={"issued": str, "date": str, "code": str}), "temp",
+                                    forecast_issued(W)) if ta.exists() else (None, {})
+    except Exception:
+        t_iss, t_prev = None, {}
     # wrażliwość na temperaturę: gaz (Eurostat, miesięcznie) i prąd (zużycie dzienne)
     gas_m = sensitivity.read_gas()
     coefs, imp, seas_imp = {}, {}, {}
@@ -752,26 +783,13 @@ def build(derived: dict, fcs: dict, codes: list[str], ref: dt.date, n_years: int
             if not c:
                 continue
             coefs[code] = c
-            imp[code] = impact_country(code, W, c, ref, conf)
+            imp[code] = impact_country(code, W, c, ref, conf, prev=(t_iss, t_prev.get(code)) if t_iss else None)
             si = impact_seas(code, W, c, ref, conf)
             if si:
                 seas_imp[code] = si
         except Exception as ex:   # jeden kraj nie może zatrzymać zakładki
             coefs.setdefault(code, {})["error"] = f"{type(ex).__name__}: {ex}"
     eu_imp = impact_eu({k: v for k, v in imp.items() if v}, coefs)
-    # prognoza sprzed 3 dni: wiatr z archiwum prognoz Miksu, temperatura z archiwum temperatury krajów
-    wind_cur = next((str(f["issued"])[:10] for f in (fcs or {}).values() if isinstance(f, dict) and f.get("issued")), None)
-    try:
-        w_iss, w_prev = _prev_issue(pd.read_csv(store.FORECAST / "archive.csv", dtype={"issued": str, "date": str, "code": str}),
-                                    "gwh", wind_cur, type_="wind") if (store.FORECAST / "archive.csv").exists() else (None, {})
-    except Exception:
-        w_iss, w_prev = None, {}
-    ta = folder / "temp_archive.csv" if folder else TEMP_ARCHIVE
-    try:
-        t_iss, t_prev = _prev_issue(pd.read_csv(ta, dtype={"issued": str, "date": str, "code": str}), "temp",
-                                    forecast_issued(W)) if ta.exists() else (None, {})
-    except Exception:
-        t_iss, t_prev = None, {}
     out = {}
     for code in codes:
         rec = {}
