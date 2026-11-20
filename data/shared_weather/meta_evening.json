@@ -5,45 +5,35 @@
  "steps": {
   "recent": {
    "status": "OK",
-   "seconds": 101,
-   "requests": 10,
+   "seconds": 2,
+   "requests": 9,
    "weighted": 167.1,
    "http429": 0,
-   "last_error": "api.open-meteo.com: ReadTimeout"
+   "last_error": null
   },
   "ensemble": {
    "status": "OK",
-   "seconds": 975,
-   "requests": 22,
+   "seconds": 844,
+   "requests": 21,
    "weighted": 93.5,
    "http429": 0,
    "last_error": "ensemble-api.open-meteo.com: ReadTimeout"
   }
  },
- "forecast_issued": "2026-11-19",
- "updated": "2026-11-19T17:25Z",
- "weighted_calls": 539.2,
- "ensemble_issued": "2026-11-19",
+ "forecast_issued": "2026-11-20",
+ "updated": "2026-11-20T17:01Z",
+ "weighted_calls": 581.9,
+ "ensemble_issued": "2026-11-20",
  "ensemble_kind": "ensemble",
  "power": {
-  "countries": 21,
+  "countries": 30,
   "points": 173,
-  "missing": [
-   "NL",
-   "NO",
-   "PL",
-   "PT",
-   "RO",
-   "SE",
-   "SI",
-   "SK",
-   "UK"
-  ],
+  "missing": [],
   "last_error": null,
-  "status": "częściowo",
-  "issued": "2026-11-19T17:07Z",
-  "seconds": 340,
-  "requests": 8,
-  "weighted": 278.6
+  "status": "OK",
+  "issued": "2026-11-20T16:47Z",
+  "seconds": 275,
+  "requests": 9,
+  "weighted": 321.3
  }
 }
