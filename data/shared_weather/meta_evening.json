@@ -5,7 +5,7 @@
  "steps": {
   "recent": {
    "status": "OK",
-   "seconds": 2,
+   "seconds": 1,
    "requests": 9,
    "weighted": 167.1,
    "http429": 0,
@@ -13,17 +13,17 @@
   },
   "ensemble": {
    "status": "OK",
-   "seconds": 844,
-   "requests": 21,
+   "seconds": 587,
+   "requests": 19,
    "weighted": 93.5,
    "http429": 0,
    "last_error": "ensemble-api.open-meteo.com: ReadTimeout"
   }
  },
- "forecast_issued": "2026-11-20",
- "updated": "2026-11-20T17:01Z",
+ "forecast_issued": "2026-11-21",
+ "updated": "2026-11-21T19:02Z",
  "weighted_calls": 581.9,
- "ensemble_issued": "2026-11-20",
+ "ensemble_issued": "2026-11-21",
  "ensemble_kind": "ensemble",
  "power": {
   "countries": 30,
@@ -31,9 +31,9 @@
   "missing": [],
   "last_error": null,
   "status": "OK",
-  "issued": "2026-11-20T16:47Z",
-  "seconds": 275,
-  "requests": 9,
+  "issued": "2026-11-21T18:52Z",
+  "seconds": 63,
+  "requests": 7,
   "weighted": 321.3
  }
 }
