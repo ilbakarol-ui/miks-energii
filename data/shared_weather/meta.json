@@ -5,7 +5,7 @@
  "steps": {
   "recent": {
    "status": "OK",
-   "seconds": 21,
+   "seconds": 1,
    "requests": 9,
    "weighted": 167.1,
    "http429": 0,
@@ -13,7 +13,7 @@
   },
   "hist": {
    "status": "OK",
-   "seconds": 4,
+   "seconds": 5,
    "requests": 7,
    "weighted": 63.0,
    "http429": 0,
@@ -21,35 +21,35 @@
   },
   "prev": {
    "status": "OK",
-   "seconds": 220,
-   "requests": 15,
+   "seconds": 433,
+   "requests": 17,
    "weighted": 63.0,
    "http429": 0,
    "last_error": "previous-runs-api.open-meteo.com: ReadTimeout"
   }
  },
- "forecast_issued": "2026-11-20",
- "updated": "2026-11-20T07:29Z",
+ "forecast_issued": "2026-11-21",
+ "updated": "2026-11-21T07:20Z",
  "coverage": {
   "hist": {
    "points": 63,
    "points_to_end": 63,
    "from": "2019-01-01",
-   "to": "2026-11-14",
-   "rows": 181125
+   "to": "2026-11-15",
+   "rows": 181188
   },
   "prev": {
    "points": 63,
    "points_to_end": 63,
    "from": "2024-01-01",
-   "to": "2026-11-19",
-   "rows": 66402
+   "to": "2026-11-20",
+   "rows": 66465
   },
   "recent": {
    "points": 63,
    "points_to_end": 47,
-   "from": "2026-11-06",
-   "to": "2026-12-05",
+   "from": "2026-11-07",
+   "to": "2026-12-06",
    "rows": 1874
   }
  },
@@ -66,10 +66,10 @@
   "steps": {
    "hist": {
     "status": "OK",
-    "seconds": 212,
-    "requests": 4,
+    "seconds": 2,
+    "requests": 2,
     "weighted": 15.0,
-    "last_error": "archive-api.open-meteo.com: ReadTimeout"
+    "last_error": null
    },
    "prev": {
     "status": "pominięte – serwer wolny",
@@ -84,8 +84,8 @@
     "points": 15,
     "points_to_end": 15,
     "from": "2019-01-01",
-    "to": "2026-11-14",
-    "rows": 43125
+    "to": "2026-11-15",
+    "rows": 43140
    },
    "prev": {
     "points": 15,
@@ -97,8 +97,8 @@
    "recent": {
     "points": 15,
     "points_to_end": 13,
-    "from": "2026-11-06",
-    "to": "2026-12-05",
+    "from": "2026-11-07",
+    "to": "2026-12-06",
     "rows": 448
    }
   }
@@ -109,9 +109,9 @@
   "missing": [],
   "last_error": null,
   "status": "OK",
-  "issued": "2026-11-20T07:21Z",
-  "seconds": 150,
-  "requests": 8,
+  "issued": "2026-11-21T07:13Z",
+  "seconds": 65,
+  "requests": 7,
   "weighted": 321.3
  }
 }
