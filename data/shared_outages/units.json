@@ -171,7 +171,18 @@
 "nominal_mw": 890,
 "unavail_mw": 890,
 "start": "2026-08-21T22:00:00+00:00",
-"end": "2026-11-26T22:00:00+00:00",
+"end": "2026-11-24T22:00:00+00:00",
+"now": true,
+"kind": "planowe"
+},
+{
+"zone": "FR",
+"unit": "ST ALBAN 1",
+"psr": "nuclear",
+"nominal_mw": 1335,
+"unavail_mw": 629,
+"start": "2026-11-22T02:15:00+00:00",
+"end": "2026-11-22T21:00:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -210,34 +221,23 @@
 },
 {
 "zone": "FR",
-"unit": "GRAVELINES 2",
-"psr": "nuclear",
-"nominal_mw": 910,
-"unavail_mw": 324,
-"start": "2026-11-21T06:25:00+00:00",
-"end": "2026-11-21T23:00:00+00:00",
-"now": true,
-"kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "CATTENOM 4",
-"psr": "nuclear",
-"nominal_mw": 1300,
-"unavail_mw": 210,
-"start": "2026-11-16T08:00:00+00:00",
-"end": "2026-11-21T12:00:00+00:00",
-"now": true,
-"kind": "planowe"
-},
-{
-"zone": "FR",
 "unit": "CRUAS 4",
 "psr": "nuclear",
 "nominal_mw": 915,
 "unavail_mw": 117,
 "start": "2026-11-17T01:56:00+00:00",
 "end": "2026-11-23T05:00:00+00:00",
+"now": true,
+"kind": "planowe"
+},
+{
+"zone": "FR",
+"unit": "ST LAURENT 1",
+"psr": "nuclear",
+"nominal_mw": 915,
+"unavail_mw": 115,
+"start": "2026-11-22T07:00:00+00:00",
+"end": "2026-11-22T09:00:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -265,6 +265,28 @@
 },
 {
 "zone": "FR",
+"unit": "PALUEL 4",
+"psr": "nuclear",
+"nominal_mw": 1330,
+"unavail_mw": 701,
+"start": "2026-11-24T14:30:00+00:00",
+"end": "2026-11-24T15:00:00+00:00",
+"now": false,
+"kind": "planowe"
+},
+{
+"zone": "FR",
+"unit": "BELLEVILLE 1",
+"psr": "nuclear",
+"nominal_mw": 1310,
+"unavail_mw": 670,
+"start": "2026-11-24T06:30:00+00:00",
+"end": "2026-11-24T07:00:00+00:00",
+"now": false,
+"kind": "planowe"
+},
+{
+"zone": "FR",
 "unit": "BOUCHAIN 7",
 "psr": "gas",
 "nominal_mw": 585,
@@ -276,56 +298,12 @@
 },
 {
 "zone": "FR",
-"unit": "ST ALBAN 1",
-"psr": "nuclear",
-"nominal_mw": 1335,
-"unavail_mw": 570,
-"start": "2026-11-22T03:00:00+00:00",
-"end": "2026-11-22T21:00:00+00:00",
-"now": false,
-"kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "GOLFECH 1",
-"psr": "nuclear",
-"nominal_mw": 1310,
-"unavail_mw": 190,
-"start": "2026-11-21T17:00:00+00:00",
-"end": "2026-11-21T19:00:00+00:00",
-"now": false,
-"kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "ST LAURENT 1",
-"psr": "nuclear",
-"nominal_mw": 915,
-"unavail_mw": 115,
-"start": "2026-11-22T07:00:00+00:00",
-"end": "2026-11-22T09:00:00+00:00",
-"now": false,
-"kind": "planowe"
-},
-{
-"zone": "FR",
 "unit": "ST LAURENT 2",
 "psr": "nuclear",
 "nominal_mw": 915,
 "unavail_mw": 115,
 "start": "2026-11-22T09:00:00+00:00",
 "end": "2026-11-22T11:00:00+00:00",
-"now": false,
-"kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "CHINON 4",
-"psr": "nuclear",
-"nominal_mw": 905,
-"unavail_mw": 107,
-"start": "2026-11-22T00:00:00+00:00",
-"end": "2026-11-22T01:30:00+00:00",
 "now": false,
 "kind": "planowe"
 },
