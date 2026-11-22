@@ -13,7 +13,7 @@
   },
   "hist": {
    "status": "OK",
-   "seconds": 5,
+   "seconds": 4,
    "requests": 7,
    "weighted": 63.0,
    "http429": 0,
@@ -21,36 +21,36 @@
   },
   "prev": {
    "status": "OK",
-   "seconds": 433,
+   "seconds": 441,
    "requests": 17,
    "weighted": 63.0,
    "http429": 0,
    "last_error": "previous-runs-api.open-meteo.com: ReadTimeout"
   }
  },
- "forecast_issued": "2026-11-21",
- "updated": "2026-11-21T07:20Z",
+ "forecast_issued": "2026-11-22",
+ "updated": "2026-11-22T07:00Z",
  "coverage": {
   "hist": {
    "points": 63,
    "points_to_end": 63,
    "from": "2019-01-01",
-   "to": "2026-11-15",
-   "rows": 181188
+   "to": "2026-11-16",
+   "rows": 181251
   },
   "prev": {
    "points": 63,
    "points_to_end": 63,
    "from": "2024-01-01",
-   "to": "2026-11-20",
-   "rows": 66465
+   "to": "2026-11-21",
+   "rows": 66528
   },
   "recent": {
    "points": 63,
    "points_to_end": 47,
-   "from": "2026-11-07",
-   "to": "2026-12-06",
-   "rows": 1874
+   "from": "2026-11-08",
+   "to": "2026-12-07",
+   "rows": 1858
   }
  },
  "weighted_calls": 629.4,
@@ -66,7 +66,7 @@
   "steps": {
    "hist": {
     "status": "OK",
-    "seconds": 2,
+    "seconds": 1,
     "requests": 2,
     "weighted": 15.0,
     "last_error": null
@@ -84,8 +84,8 @@
     "points": 15,
     "points_to_end": 15,
     "from": "2019-01-01",
-    "to": "2026-11-15",
-    "rows": 43140
+    "to": "2026-11-16",
+    "rows": 43155
    },
    "prev": {
     "points": 15,
@@ -97,9 +97,9 @@
    "recent": {
     "points": 15,
     "points_to_end": 13,
-    "from": "2026-11-07",
-    "to": "2026-12-06",
-    "rows": 448
+    "from": "2026-11-08",
+    "to": "2026-12-07",
+    "rows": 446
    }
   }
  },
@@ -109,8 +109,8 @@
   "missing": [],
   "last_error": null,
   "status": "OK",
-  "issued": "2026-11-21T07:13Z",
-  "seconds": 65,
+  "issued": "2026-11-22T06:52Z",
+  "seconds": 63,
   "requests": 7,
   "weighted": 321.3
  }
