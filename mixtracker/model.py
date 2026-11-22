@@ -115,6 +115,11 @@ def hours_factor(idx, code: str | None) -> np.ndarray:
 # do czasu poprawki źródła (P-20261026-B1).
 LOAD_PROVISIONAL_DAYS = {"DK": 8}
 LOAD_PROVISIONAL_RATIO = 0.9
+# B-20261122-1: CH – źródło publikuje najświeższą dobę zużycia zawyżoną i poprawia ją po 1–2 dniach (8 z 14 nocnych
+# przebiegów 8–21.11.2026: ×1,12…×3,3; 21.11: 286,1 GWh przy medianie dnia tygodnia 186,7). Świeże doby powyżej
+# 112% mediany tego samego dnia tygodnia z 4 tygodni są luką do czasu poprawki.
+LOAD_PROVISIONAL_HIGH = {"CH": 3}
+LOAD_PROVISIONAL_HIGH_RATIO = 1.12
 
 
 def bad_days(y: pd.Series, feat: pd.DataFrame | None, kind: str, code: str | None = None) -> pd.DatetimeIndex:
@@ -129,10 +134,14 @@ def bad_days(y: pd.Series, feat: pd.DataFrame | None, kind: str, code: str | Non
         med = med.fillna(y.median())
         bad |= (y < 0.6 * med) | (y > 1.6 * med)
         lag = LOAD_PROVISIONAL_DAYS.get(code or "", 0)
-        if lag:
+        lag_hi = LOAD_PROVISIONAL_HIGH.get(code or "", 0)
+        if lag or lag_hi:
             wk = pd.concat([y.shift(7 * k, freq="D") for k in range(1, 5)], axis=1).reindex(y.index).median(axis=1)
-            fresh = pd.Series(y.index > y.index.max() - pd.Timedelta(days=lag), index=y.index)
-            bad |= fresh & (y < LOAD_PROVISIONAL_RATIO * wk).fillna(False)
+            age = pd.Series((y.index.max() - y.index).days, index=y.index)
+            if lag:
+                bad |= (age < lag) & (y < LOAD_PROVISIONAL_RATIO * wk).fillna(False)
+            if lag_hi:
+                bad |= (age < lag_hi) & (y > LOAD_PROVISIONAL_HIGH_RATIO * wk).fillna(False)
     elif feat is not None and not feat.empty:
         x = feat["cf" if kind == "wind" else "ghi"].reindex(y.index)
         lo_x = 0.15 if kind == "wind" else 1.0
