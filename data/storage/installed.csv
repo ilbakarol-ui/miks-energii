@@ -2,9 +2,9 @@ code,year,pumped_gw,bat_gw,bat_gwh,bat_src
 EU,2019,42.32,,,
 EU,2020,42.67,,,
 EU,2021,42.54,,,
-EU,2022,41.0,8.227,12.427,"Eurostat, Niemcy wg MaStR"
-EU,2023,41.13,13.702,21.772,"Eurostat, Niemcy wg MaStR"
-EU,2024,40.98,21.845,37.072,"Eurostat, Niemcy wg MaStR"
+EU,2022,41.0,8.232,12.431,"Eurostat, Niemcy wg MaStR"
+EU,2023,41.13,13.709,21.781,"Eurostat, Niemcy wg MaStR"
+EU,2024,40.98,21.857,37.089,"Eurostat, Niemcy wg MaStR"
 EU,2025,40.58,,,
 AT,2019,3.12,,,Eurostat
 AT,2020,3.46,0.008,0.014,Eurostat
@@ -122,14 +122,14 @@ LV,2022,,0.0,0.0,Eurostat
 LV,2023,,0.0,0.0,Eurostat
 LV,2024,,0.0,0.0,Eurostat
 MT,2021,,,,Eurostat
-DE,2019,10.001,1.012,1.445,MaStR (Energy-Charts)
-DE,2020,10.001,1.563,2.335,MaStR (Energy-Charts)
-DE,2021,10.001,2.42,3.721,MaStR (Energy-Charts)
-DE,2022,10.001,4.202,6.352,MaStR (Energy-Charts)
-DE,2023,10.001,8.372,12.474,MaStR (Energy-Charts)
-DE,2024,9.902,12.68,18.693,MaStR (Energy-Charts)
-DE,2025,9.902,16.884,25.5,MaStR (Energy-Charts)
-DE,2026,9.902,21.833,34.2,MaStR (Energy-Charts)
+DE,2019,10.001,1.012,1.444,MaStR (Energy-Charts)
+DE,2020,10.001,1.562,2.334,MaStR (Energy-Charts)
+DE,2021,10.001,2.419,3.721,MaStR (Energy-Charts)
+DE,2022,10.001,4.207,6.356,MaStR (Energy-Charts)
+DE,2023,10.001,8.379,12.483,MaStR (Energy-Charts)
+DE,2024,9.902,12.692,18.71,MaStR (Energy-Charts)
+DE,2025,9.902,16.908,25.54,MaStR (Energy-Charts)
+DE,2026,9.902,22.668,35.624,MaStR (Energy-Charts)
 PL,2019,1.78,,,Eurostat
 PL,2020,1.79,,,Eurostat
 PL,2021,1.59,,,Eurostat

@@ -83,7 +83,7 @@
 "nominal_mw": 915,
 "unavail_mw": 915,
 "start": "2026-10-16T20:55:00+00:00",
-"end": "2026-11-23T15:00:00+00:00",
+"end": "2026-11-23T22:00:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -171,9 +171,20 @@
 "nominal_mw": 890,
 "unavail_mw": 890,
 "start": "2026-08-21T22:00:00+00:00",
-"end": "2026-11-24T22:00:00+00:00",
+"end": "2026-11-24T04:00:00+00:00",
 "now": true,
 "kind": "planowe"
+},
+{
+"zone": "FR",
+"unit": "CRUAS 4",
+"psr": "nuclear",
+"nominal_mw": 915,
+"unavail_mw": 455,
+"start": "2026-11-17T01:56:00+00:00",
+"end": "2026-11-23T22:00:00+00:00",
+"now": true,
+"kind": "awaryjne"
 },
 {
 "zone": "FR",
@@ -210,17 +221,6 @@
 },
 {
 "zone": "FR",
-"unit": "CRUAS 4",
-"psr": "nuclear",
-"nominal_mw": 915,
-"unavail_mw": 117,
-"start": "2026-11-17T01:56:00+00:00",
-"end": "2026-11-23T22:00:00+00:00",
-"now": true,
-"kind": "planowe"
-},
-{
-"zone": "FR",
 "unit": "CRUAS 2",
 "psr": "nuclear",
 "nominal_mw": 915,
@@ -238,6 +238,17 @@
 "unavail_mw": 701,
 "start": "2026-11-24T14:30:00+00:00",
 "end": "2026-11-24T15:00:00+00:00",
+"now": false,
+"kind": "planowe"
+},
+{
+"zone": "FR",
+"unit": "BELLEVILLE 2",
+"psr": "nuclear",
+"nominal_mw": 1310,
+"unavail_mw": 679,
+"start": "2026-11-25T01:30:00+00:00",
+"end": "2026-11-25T02:00:00+00:00",
 "now": false,
 "kind": "planowe"
 },
@@ -353,6 +364,17 @@
 },
 {
 "zone": "NL",
+"unit": "Eemshaven 20",
+"psr": "gas",
+"nominal_mw": 470,
+"unavail_mw": 470,
+"start": "2026-11-23T07:00:00+00:00",
+"end": "2026-11-24T17:00:00+00:00",
+"now": true,
+"kind": "planowe"
+},
+{
+"zone": "NL",
 "unit": "Hemweg 9",
 "psr": "gas",
 "nominal_mw": 440,
@@ -360,17 +382,6 @@
 "start": "2026-08-28T08:00:00+00:00",
 "end": "2026-12-11T23:00:00+00:00",
 "now": true,
-"kind": "planowe"
-},
-{
-"zone": "NL",
-"unit": "Eemshaven 20",
-"psr": "gas",
-"nominal_mw": 470,
-"unavail_mw": 470,
-"start": "2026-11-23T07:00:00+00:00",
-"end": "2026-11-24T17:00:00+00:00",
-"now": false,
 "kind": "planowe"
 },
 {

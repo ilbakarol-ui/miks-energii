@@ -2,7 +2,7 @@
  "AT": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:36+00:00",
+  "last_ok": "2026-11-23T11:30+00:00",
   "names": [
    "Biomass",
    "Cross border electricity trading",
@@ -28,7 +28,7 @@
  "BE": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:36+00:00",
+  "last_ok": "2026-11-23T11:32+00:00",
   "names": [
    "Battery",
    "Biomass",
@@ -56,7 +56,7 @@
  "BG": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:37+00:00",
+  "last_ok": "2026-11-23T11:32+00:00",
   "names": [
    "Battery",
    "Battery Consumption",
@@ -84,7 +84,7 @@
  "CH": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:50+00:00",
+  "last_ok": "2026-11-23T11:45+00:00",
   "names": [
    "Cross border electricity trading",
    "Hydro Run-of-River",
@@ -107,7 +107,7 @@
   "cursor": "2023-09-08",
   "floor": "2024-09-08",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:38+00:00",
+  "last_ok": "2026-11-23T11:33+00:00",
   "names": [
    "Biomass",
    "Fossil oil",
@@ -144,7 +144,7 @@
  "CZ": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:38+00:00",
+  "last_ok": "2026-11-23T11:33+00:00",
   "names": [
    "Biomass",
    "Cross border electricity trading",
@@ -175,7 +175,7 @@
  "DE": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:45+00:00",
+  "last_ok": "2026-11-23T11:40+00:00",
   "names": [
    "Biomass",
    "Cross border electricity trading",
@@ -260,17 +260,17 @@
      "load": 133713.0
     }
    },
-   "updated": "2026-11-23T01:52+00:00"
+   "updated": "2026-11-23T11:52+00:00"
   },
   "entsoe": {
    "from": "2026-10-25",
    "gen_days": 10,
    "last": "2026-11-22",
    "load_days": 23,
-   "updated": "2026-11-23T01:52+00:00"
+   "updated": "2026-11-23T11:52+00:00"
   },
   "history_complete": true,
-  "last_ok": "2026-11-23T01:39+00:00",
+  "last_ok": "2026-11-23T11:34+00:00",
   "names": [
    "Biomass",
    "Cross border electricity trading",
@@ -298,7 +298,7 @@
  "EE": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:39+00:00",
+  "last_ok": "2026-11-23T11:35+00:00",
   "names": [
    "Battery",
    "Biomass",
@@ -324,7 +324,7 @@
  "ES": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:41+00:00",
+  "last_ok": "2026-11-23T11:36+00:00",
   "names": [
    "Battery",
    "Battery Consumption",
@@ -355,7 +355,7 @@
  "EU": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:35+00:00",
+  "last_ok": "2026-11-23T11:30+00:00",
   "names": [
    "Battery",
    "Battery Consumption",
@@ -392,7 +392,7 @@
  "FI": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:40+00:00",
+  "last_ok": "2026-11-23T11:35+00:00",
   "names": [
    "Battery",
    "Battery Consumption",
@@ -421,7 +421,7 @@
  "FR": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:40+00:00",
+  "last_ok": "2026-11-23T11:35+00:00",
   "names": [
    "Battery",
    "Battery Consumption",
@@ -459,7 +459,7 @@
  "GB": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:51+00:00",
+  "last_ok": "2026-11-23T11:46+00:00",
   "method": "fuelhh",
   "names": [
    "BIOMASS",
@@ -510,7 +510,7 @@
  "GR": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:41+00:00",
+  "last_ok": "2026-11-23T11:36+00:00",
   "names": [
    "Battery",
    "Battery Consumption",
@@ -534,7 +534,7 @@
  "HR": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:37+00:00",
+  "last_ok": "2026-11-23T11:32+00:00",
   "names": [
    "Battery",
    "Battery Consumption",
@@ -564,7 +564,7 @@
  "HU": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:48+00:00",
+  "last_ok": "2026-11-23T11:43+00:00",
   "names": [
    "Biomass",
    "Cross border electricity trading",
@@ -593,7 +593,7 @@
  "IE": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:43+00:00",
+  "last_ok": "2026-11-23T11:37+00:00",
   "names": [
    "Cross border electricity trading",
    "Fossil gas",
@@ -640,7 +640,7 @@
  "IT": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:49+00:00",
+  "last_ok": "2026-11-23T11:44+00:00",
   "names": [
    "Battery",
    "Battery Consumption",
@@ -673,7 +673,7 @@
  "LT": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:43+00:00",
+  "last_ok": "2026-11-23T11:38+00:00",
   "names": [
    "Battery",
    "Battery Consumption",
@@ -699,7 +699,7 @@
  "LU": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:44+00:00",
+  "last_ok": "2026-11-23T11:39+00:00",
   "names": [
    "Biomass",
    "Cross border electricity trading",
@@ -721,7 +721,7 @@
  "LV": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:44+00:00",
+  "last_ok": "2026-11-23T11:39+00:00",
   "names": [
    "Battery",
    "Biomass",
@@ -747,10 +747,10 @@
    "gen_days": 83,
    "last": "2026-11-22",
    "load_days": 83,
-   "updated": "2026-11-23T01:52+00:00"
+   "updated": "2026-11-23T11:51+00:00"
   },
   "history_complete": true,
-  "last_ok": "2026-11-23T01:42+00:00",
+  "last_ok": "2026-11-23T11:37+00:00",
   "names": [
    "Biomass",
    "Cross border electricity trading",
@@ -774,7 +774,7 @@
  "NO": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:49+00:00",
+  "last_ok": "2026-11-23T11:44+00:00",
   "names": [
    "Biomass",
    "Cross border electricity trading",
@@ -801,7 +801,7 @@
  "PL": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:45+00:00",
+  "last_ok": "2026-11-23T11:41+00:00",
   "names": [
    "Battery",
    "Battery Consumption",
@@ -833,7 +833,7 @@
  "PT": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:46+00:00",
+  "last_ok": "2026-11-23T11:41+00:00",
   "names": [
    "Biomass",
    "Cross border electricity trading",
@@ -859,7 +859,7 @@
  "RO": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:46+00:00",
+  "last_ok": "2026-11-23T11:41+00:00",
   "names": [
    "Battery",
    "Biomass",
@@ -895,7 +895,7 @@
  "SE": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:48+00:00",
+  "last_ok": "2026-11-23T11:43+00:00",
   "names": [
    "Cross border electricity trading",
    "Fossil gas",
@@ -916,7 +916,7 @@
  "SI": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:47+00:00",
+  "last_ok": "2026-11-23T11:42+00:00",
   "names": [
    "Biomass",
    "Cross border electricity trading",
@@ -943,7 +943,7 @@
  "SK": {
   "cursor": "2021-01-01",
   "history_complete": true,
-  "last_ok": "2026-11-23T01:47+00:00",
+  "last_ok": "2026-11-23T11:42+00:00",
   "names": [
    "Biomass",
    "Cross border electricity trading",
@@ -981,10 +981,10 @@
    "gen_days": 0,
    "last": null,
    "load_days": 0,
-   "updated": "2026-11-23T01:51+00:00"
+   "updated": "2026-11-23T11:50+00:00"
   },
   "history_complete": true,
-  "last_ok": "2026-11-23T01:50+00:00",
+  "last_ok": "2026-11-23T11:45+00:00",
   "names": [
    "Biomass",
    "Cross border electricity trading",
