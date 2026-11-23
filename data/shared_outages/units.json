@@ -34,6 +34,17 @@
 },
 {
 "zone": "FR",
+"unit": "PENLY 2",
+"psr": "nuclear",
+"nominal_mw": 1330,
+"unavail_mw": 1330,
+"start": "2026-11-22T22:30:00+00:00",
+"end": "2026-12-01T22:00:00+00:00",
+"now": true,
+"kind": "planowe"
+},
+{
+"zone": "FR",
 "unit": "NOGENT 1",
 "psr": "nuclear",
 "nominal_mw": 1310,
@@ -72,7 +83,7 @@
 "nominal_mw": 915,
 "unavail_mw": 915,
 "start": "2026-10-16T20:55:00+00:00",
-"end": "2026-11-23T11:00:00+00:00",
+"end": "2026-11-23T15:00:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -95,17 +106,6 @@
 "unavail_mw": 910,
 "start": "2026-08-28T22:00:00+00:00",
 "end": "2026-12-01T22:00:00+00:00",
-"now": true,
-"kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "BLAYAIS 4",
-"psr": "nuclear",
-"nominal_mw": 910,
-"unavail_mw": 910,
-"start": "2026-11-17T19:00:00+00:00",
-"end": "2026-11-22T19:00:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -177,17 +177,6 @@
 },
 {
 "zone": "FR",
-"unit": "ST ALBAN 1",
-"psr": "nuclear",
-"nominal_mw": 1335,
-"unavail_mw": 629,
-"start": "2026-11-22T02:15:00+00:00",
-"end": "2026-11-22T21:00:00+00:00",
-"now": true,
-"kind": "planowe"
-},
-{
-"zone": "FR",
 "unit": "SPEM CCG",
 "psr": "gas",
 "nominal_mw": 435,
@@ -226,30 +215,8 @@
 "nominal_mw": 915,
 "unavail_mw": 117,
 "start": "2026-11-17T01:56:00+00:00",
-"end": "2026-11-23T05:00:00+00:00",
+"end": "2026-11-23T22:00:00+00:00",
 "now": true,
-"kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "ST LAURENT 1",
-"psr": "nuclear",
-"nominal_mw": 915,
-"unavail_mw": 115,
-"start": "2026-11-22T07:00:00+00:00",
-"end": "2026-11-22T09:00:00+00:00",
-"now": true,
-"kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "PENLY 2",
-"psr": "nuclear",
-"nominal_mw": 1330,
-"unavail_mw": 1330,
-"start": "2026-11-22T22:30:00+00:00",
-"end": "2026-12-01T22:00:00+00:00",
-"now": false,
 "kind": "planowe"
 },
 {
@@ -282,28 +249,6 @@
 "unavail_mw": 670,
 "start": "2026-11-24T06:30:00+00:00",
 "end": "2026-11-24T07:00:00+00:00",
-"now": false,
-"kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "BOUCHAIN 7",
-"psr": "gas",
-"nominal_mw": 585,
-"unavail_mw": 585,
-"start": "2026-11-22T12:00:00+00:00",
-"end": "2026-11-22T15:00:00+00:00",
-"now": false,
-"kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "ST LAURENT 2",
-"psr": "nuclear",
-"nominal_mw": 915,
-"unavail_mw": 115,
-"start": "2026-11-22T09:00:00+00:00",
-"end": "2026-11-22T11:00:00+00:00",
 "now": false,
 "kind": "planowe"
 },
@@ -408,17 +353,6 @@
 },
 {
 "zone": "NL",
-"unit": "FLEVO 4",
-"psr": "gas",
-"nominal_mw": 443,
-"unavail_mw": 443,
-"start": "2026-11-21T00:00:00+00:00",
-"end": "2026-11-22T23:00:00+00:00",
-"now": true,
-"kind": "planowe"
-},
-{
-"zone": "NL",
 "unit": "Hemweg 9",
 "psr": "gas",
 "nominal_mw": 440,
@@ -447,6 +381,17 @@
 "unavail_mw": 464,
 "start": "2026-12-12T00:00:00+00:00",
 "end": "2026-12-13T23:00:00+00:00",
+"now": false,
+"kind": "planowe"
+},
+{
+"zone": "NL",
+"unit": "FLEVO 4",
+"psr": "gas",
+"nominal_mw": 443,
+"unavail_mw": 443,
+"start": "2026-12-13T00:00:00+00:00",
+"end": "2026-12-16T23:00:00+00:00",
 "now": false,
 "kind": "planowe"
 }
