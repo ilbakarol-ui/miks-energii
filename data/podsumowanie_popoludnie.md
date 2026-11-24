@@ -1,6 +1,6 @@
 ## Ceny day-ahead – przebieg popołudniowy
 
-Ceny na 2026-11-25: 0 z 15 stref
+Ceny na 2026-11-25: 0 z 15 stref (w tym przebiegu uzupełniono: AT, BE, CH, CZ, DE-LU, DK1, DK2, FR, HU, IT-North, NL, NO2, PL, SE4, SI)
 
 | strefa | dzień | śr. €/MWh | min | maks |
 |---|---|---|---|---|
@@ -20,7 +20,7 @@ Ceny na 2026-11-25: 0 z 15 stref
 | SE4 | 2026-11-24 (brak jutra) | 249,1 | 147,5 | 356,7 |
 | SI | 2026-11-24 (brak jutra) | 250,3 | 199,4 | 338,3 |
 
-Dane produkcji do 2026-11-22; zapytania do Energy-Charts: 15; czas: 8 min
+Dane produkcji do 2026-11-22; zapytania do Energy-Charts: 15; czas: 7 min
+- ceny: uzupełnienie stref bez ceny na jutro: AT, BE, CH, CZ, DE-LU, DK1, DK2, FR, HU, IT-North, NL, NO2, PL, SE4, SI
 - BRAK cen day-ahead na jutro: AT, BE, CH, CZ, DE-LU, DK1, DK2, FR, HU, IT-North, NL, NO2, PL, SE4, SI (15 z 15 stref; mapa pokaże dla nich ostatni dzień z ceną)
 - szczegóły braków: AT: 0 h na 25.11 (krok 15 min); BE: 0 h na 25.11 (krok 15 min); CH: 0 h na 25.11 (krok 15 min); CZ: 0 h na 25.11 (krok 15 min); DE-LU: 0 h na 25.11 (krok 15 min); DK1: 0 h na 25.11 (krok 15 min); DK2: 0 h na 25.11 (krok 15 min); FR: 0 h na 25.11 (krok 15 min); HU: 0 h na 25.11 (krok 15 min); IT-North: 0 h na 25.11 (krok 15 min); NL: 0 h na 25.11 (krok 15 min); NO2: 0 h na 25.11 (krok 15 min); PL: 0 h na 25.11 (krok 15 min); SE4: 0 h na 25.11 (krok 15 min); SI: 0 h na 25.11 (krok 15 min)
-- Prognozy przeliczone po południu (nocny przebieg ich nie policzył): 31 krajów
