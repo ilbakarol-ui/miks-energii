@@ -5,7 +5,7 @@
  "steps": {
   "recent": {
    "status": "OK",
-   "seconds": 2,
+   "seconds": 1,
    "requests": 9,
    "weighted": 167.1,
    "http429": 0,
@@ -13,15 +13,15 @@
   },
   "hist": {
    "status": "OK",
-   "seconds": 4,
-   "requests": 7,
-   "weighted": 63.0,
+   "seconds": 0,
+   "requests": 0,
+   "weighted": 0.0,
    "http429": 0,
    "last_error": null
   },
   "prev": {
    "status": "OK",
-   "seconds": 218,
+   "seconds": 223,
    "requests": 15,
    "weighted": 63.0,
    "http429": 0,
@@ -29,7 +29,7 @@
   }
  },
  "forecast_issued": "2026-11-24",
- "updated": "2026-11-24T04:51Z",
+ "updated": "2026-11-24T15:25Z",
  "coverage": {
   "hist": {
    "points": 63,
@@ -49,11 +49,11 @@
    "points": 63,
    "points_to_end": 47,
    "from": "2026-11-10",
-   "to": "2026-12-08",
-   "rows": 1811
+   "to": "2026-12-09",
+   "rows": 1874
   }
  },
- "weighted_calls": 629.4,
+ "weighted_calls": 551.4,
  "trial": {
   "groups": [
    "eu_gas_x"
@@ -66,9 +66,9 @@
   "steps": {
    "hist": {
     "status": "OK",
-    "seconds": 1,
-    "requests": 2,
-    "weighted": 15.0,
+    "seconds": 0,
+    "requests": 0,
+    "weighted": 0.0,
     "last_error": null
    },
    "prev": {
@@ -98,8 +98,8 @@
     "points": 15,
     "points_to_end": 13,
     "from": "2026-11-10",
-    "to": "2026-12-08",
-    "rows": 433
+    "to": "2026-12-09",
+    "rows": 448
    }
   }
  },
@@ -109,8 +109,8 @@
   "missing": [],
   "last_error": null,
   "status": "OK",
-  "issued": "2026-11-24T04:47Z",
-  "seconds": 64,
+  "issued": "2026-11-24T15:21Z",
+  "seconds": 62,
   "requests": 7,
   "weighted": 321.3
  }
