@@ -156,6 +156,34 @@ def _refresh_shared_weather(log: list) -> bool:
         return False
 
 
+def refresh_afternoon_prices_note(data_dir=None, today: dt.date | None = None) -> bool:
+    """B-20261124-4: pełny przebieg, który pobrał ceny na jutro, odświeża stan cen w podsumowaniu popołudniowym –
+    inaczej zostaje tam nieaktualne „0 z 15 stref” z wcześniejszego (np. spóźnionego) przebiegu popołudniowego.
+    Zwraca True, gdy plik zapisano."""
+    data_dir = data_dir or store.DATA
+    today = today or dt.datetime.now(dt.timezone.utc).date()
+    tm = (today + dt.timedelta(days=1)).isoformat()
+    zones, have = [], []
+    for f in sorted((data_dir / "prices").glob("*.csv")):
+        lines = f.read_text(encoding="utf-8").rstrip().splitlines()
+        zones.append(f.stem)
+        if len(lines) > 1 and lines[-1][:10] >= tm:
+            have.append(f.stem)
+    if not have:
+        return False
+    pp = data_dir / "podsumowanie_popoludnie.md"
+    head = f"Ceny na {tm}: {len(have)} z {len(zones)} stref"
+    if pp.exists() and head in pp.read_text(encoding="utf-8"):
+        return False
+    missing = [z for z in zones if z not in have]
+    now = dt.datetime.now(dt.timezone.utc)
+    pp.write_text(f"## Ceny day-ahead – stan po pełnym przebiegu {now:%Y-%m-%d %H:%M} UTC\n\n" + head
+                  + (f"; brak: {', '.join(missing)}" if missing else "")
+                  + "\n\n(przebieg popołudniowy nie zapisał dziś aktualnego podsumowania – ceny pobrał przebieg pełny)\n",
+                  encoding="utf-8")
+    return True
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--budget", type=float, default=None, help="limit czasu pobierania (min)")
@@ -260,6 +288,8 @@ def main(argv=None):
         print("\n".join(run.get("log", [])))
         return
     (store.DATA / name).write_text(md, encoding="utf-8")
+    if not args.afternoon:
+        refresh_afternoon_prices_note()   # B-20261124-4
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:
             f.write(md)
