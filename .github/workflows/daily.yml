@@ -68,7 +68,7 @@ jobs:
           # B-20261124-1: popołudniowe zdarzenie harmonogramu (12:37/14:07/15:13 UTC), które GitHub opóźnił
           # za północ UTC, jest nieaktualne – liczyłoby „popołudnie” nowego dnia przed publikacją cen na jutro
           # (24.11: starty 00:17, 01:37, 02:09 UTC dały commity „Dane z 2026-11-24 (popołudnie)” bez cen)
-          h=$((10#$(date -u +%H)))
+          h=$((10#${GATE_HOUR:-$(date -u +%H)}))   # B-20261124-2: godzinę można podać w testach (jak w shared_weather.yml)
           case "$SCHEDULE" in
             "37 12 * * *"|"7 14 * * *"|"13 15 * * *")
               if [ "$h" -lt 11 ]; then

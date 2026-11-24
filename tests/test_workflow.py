@@ -80,8 +80,9 @@ def test_daily_afternoon_backup_gate(tmp_path):
     full = _repo(tmp_path / "a", prices={"PL": tomorrow, "DE_LU": tomorrow})
     part = _repo(tmp_path / "b", prices={"PL": tomorrow, "DE_LU": _today().isoformat()})
     for sched in ("7 14 * * *", "13 15 * * *"):
-        assert _gate(script, full, SCHEDULE=sched) == "0"
-        assert _gate(script, part, SCHEDULE=sched) == "1"
+        assert _gate(script, full, SCHEDULE=sched, GATE_HOUR="14") == "0"
+        assert _gate(script, part, SCHEDULE=sched, GATE_HOUR="14") == "1"
+        assert _gate(script, part, SCHEDULE=sched, GATE_HOUR="01") == "0"   # B-20261124-1: spóźnione za północ
 
 
 def test_shared_weather_backup_gates(tmp_path):
@@ -149,9 +150,15 @@ def test_daily_afternoon_main_gate(tmp_path):
     full = _repo(tmp_path / "a", [f"Dane z {t} (popołudnie)"], prices={"PL": tm, "NL": tm})
     part = _repo(tmp_path / "b", [f"Dane z {t} (popołudnie)"], prices={"PL": tm, "NL": t})
     none_ = _repo(tmp_path / "c", [f"Dane z {t}"], prices={"PL": tm, "NL": tm})
-    assert _gate(script, full, SCHEDULE="37 12 * * *") == "0"
-    assert _gate(script, part, SCHEDULE="37 12 * * *") == "1"
-    assert _gate(script, none_, SCHEDULE="37 12 * * *") == "1"
+    # B-20261124-2: godzina bramki podana wprost – wynik nie zależy od godziny uruchomienia testów
+    for h, exp in (("13", ["0", "1", "1"]), ("00", ["0", "0", "0"])):
+        assert [_gate(script, r, SCHEDULE="37 12 * * *", GATE_HOUR=h) for r in (full, part, none_)] == exp
+
+
+def test_daily_gate_hour_overridable():
+    """B-20261124-2: bramka daily.yml czyta GATE_HOUR (testy przed 11:00 UTC nie mogą zależeć od zegara)."""
+    wf, _ = _wf("daily.yml")
+    assert "GATE_HOUR" in _step(wf, "update", "need")["run"]
 
 
 def test_evening_commit_title_from_forecast_issued():
