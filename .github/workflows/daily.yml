@@ -65,6 +65,17 @@ jobs:
             echo "$brak"
           }
           run=1
+          # B-20261124-1: popołudniowe zdarzenie harmonogramu (12:37/14:07/15:13 UTC), które GitHub opóźnił
+          # za północ UTC, jest nieaktualne – liczyłoby „popołudnie” nowego dnia przed publikacją cen na jutro
+          # (24.11: starty 00:17, 01:37, 02:09 UTC dały commity „Dane z 2026-11-24 (popołudnie)” bez cen)
+          h=$((10#$(date -u +%H)))
+          case "$SCHEDULE" in
+            "37 12 * * *"|"7 14 * * *"|"13 15 * * *")
+              if [ "$h" -lt 11 ]; then
+                echo "Spóźnione zdarzenie popołudniowe ($SCHEDULE) o $(date -u +%H:%M) UTC – z poprzedniego dnia, pominięte."
+                echo "run=0" >> "$GITHUB_OUTPUT"; exit 0
+              fi ;;
+          esac
           if [ "$SCHEDULE" = "53 0 * * *" ] || [ "$SCHEDULE" = "23 3 * * *" ]; then
             # przebieg nocny i jego zapas: tylko gdy dziś nie ma jeszcze „Dane z <dziś>”
             if has "Dane z $t"; then run=0; echo "Przebieg nocny już był („Dane z $t”) – $SCHEDULE pominięty."; fi
