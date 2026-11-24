@@ -13,47 +13,47 @@
   },
   "hist": {
    "status": "OK",
-   "seconds": 0,
-   "requests": 0,
-   "weighted": 0.0,
+   "seconds": 4,
+   "requests": 7,
+   "weighted": 63.0,
    "http429": 0,
    "last_error": null
   },
   "prev": {
    "status": "OK",
-   "seconds": 220,
+   "seconds": 218,
    "requests": 15,
    "weighted": 63.0,
    "http429": 0,
    "last_error": "previous-runs-api.open-meteo.com: ReadTimeout"
   }
  },
- "forecast_issued": "2026-11-23",
- "updated": "2026-11-23T11:19Z",
+ "forecast_issued": "2026-11-24",
+ "updated": "2026-11-24T04:51Z",
  "coverage": {
   "hist": {
    "points": 63,
    "points_to_end": 63,
    "from": "2019-01-01",
-   "to": "2026-11-17",
-   "rows": 181314
+   "to": "2026-11-18",
+   "rows": 181377
   },
   "prev": {
    "points": 63,
    "points_to_end": 63,
    "from": "2024-01-01",
-   "to": "2026-11-22",
-   "rows": 66591
+   "to": "2026-11-23",
+   "rows": 66654
   },
   "recent": {
    "points": 63,
    "points_to_end": 47,
-   "from": "2026-11-09",
+   "from": "2026-11-10",
    "to": "2026-12-08",
-   "rows": 1874
+   "rows": 1811
   }
  },
- "weighted_calls": 551.4,
+ "weighted_calls": 629.4,
  "trial": {
   "groups": [
    "eu_gas_x"
@@ -66,9 +66,9 @@
   "steps": {
    "hist": {
     "status": "OK",
-    "seconds": 0,
-    "requests": 0,
-    "weighted": 0.0,
+    "seconds": 1,
+    "requests": 2,
+    "weighted": 15.0,
     "last_error": null
    },
    "prev": {
@@ -84,8 +84,8 @@
     "points": 15,
     "points_to_end": 15,
     "from": "2019-01-01",
-    "to": "2026-11-17",
-    "rows": 43170
+    "to": "2026-11-18",
+    "rows": 43185
    },
    "prev": {
     "points": 15,
@@ -97,9 +97,9 @@
    "recent": {
     "points": 15,
     "points_to_end": 13,
-    "from": "2026-11-09",
+    "from": "2026-11-10",
     "to": "2026-12-08",
-    "rows": 448
+    "rows": 433
    }
   }
  },
@@ -109,8 +109,8 @@
   "missing": [],
   "last_error": null,
   "status": "OK",
-  "issued": "2026-11-23T11:15Z",
-  "seconds": 65,
+  "issued": "2026-11-24T04:47Z",
+  "seconds": 64,
   "requests": 7,
   "weighted": 321.3
  }
