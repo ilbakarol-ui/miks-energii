@@ -78,17 +78,6 @@
 },
 {
 "zone": "FR",
-"unit": "CRUAS 1",
-"psr": "nuclear",
-"nominal_mw": 915,
-"unavail_mw": 915,
-"start": "2026-10-16T20:55:00+00:00",
-"end": "2026-11-23T22:00:00+00:00",
-"now": true,
-"kind": "planowe"
-},
-{
-"zone": "FR",
 "unit": "TRICASTIN 3",
 "psr": "nuclear",
 "nominal_mw": 915,
@@ -169,9 +158,9 @@
 "unit": "DAMPIERRE 4",
 "psr": "nuclear",
 "nominal_mw": 890,
-"unavail_mw": 890,
-"start": "2026-08-21T22:00:00+00:00",
-"end": "2026-11-24T04:00:00+00:00",
+"unavail_mw": 862,
+"start": "2026-11-24T04:00:00+00:00",
+"end": "2026-11-27T12:00:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -180,11 +169,22 @@
 "unit": "CRUAS 4",
 "psr": "nuclear",
 "nominal_mw": 915,
-"unavail_mw": 455,
+"unavail_mw": 575,
 "start": "2026-11-17T01:56:00+00:00",
-"end": "2026-11-23T22:00:00+00:00",
+"end": "2026-11-28T16:00:00+00:00",
 "now": true,
 "kind": "awaryjne"
+},
+{
+"zone": "FR",
+"unit": "CRUAS 1",
+"psr": "nuclear",
+"nominal_mw": 915,
+"unavail_mw": 543,
+"start": "2026-11-23T17:30:00+00:00",
+"end": "2026-11-27T03:30:00+00:00",
+"now": true,
+"kind": "planowe"
 },
 {
 "zone": "FR",
@@ -258,8 +258,8 @@
 "psr": "nuclear",
 "nominal_mw": 1310,
 "unavail_mw": 670,
-"start": "2026-11-24T06:30:00+00:00",
-"end": "2026-11-24T07:00:00+00:00",
+"start": "2026-11-24T13:30:00+00:00",
+"end": "2026-11-24T14:00:00+00:00",
 "now": false,
 "kind": "planowe"
 },
