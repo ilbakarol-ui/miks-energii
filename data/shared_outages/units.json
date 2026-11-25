@@ -158,9 +158,9 @@
 "unit": "DAMPIERRE 4",
 "psr": "nuclear",
 "nominal_mw": 890,
-"unavail_mw": 862,
+"unavail_mw": 710,
 "start": "2026-11-24T04:00:00+00:00",
-"end": "2026-11-27T20:00:00+00:00",
+"end": "2026-11-28T10:30:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -171,7 +171,7 @@
 "nominal_mw": 915,
 "unavail_mw": 575,
 "start": "2026-11-17T01:56:00+00:00",
-"end": "2026-11-29T16:00:00+00:00",
+"end": "2026-11-26T17:00:00+00:00",
 "now": true,
 "kind": "awaryjne"
 },
@@ -182,7 +182,7 @@
 "nominal_mw": 915,
 "unavail_mw": 543,
 "start": "2026-11-23T17:30:00+00:00",
-"end": "2026-11-27T03:30:00+00:00",
+"end": "2026-11-27T07:00:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -232,23 +232,23 @@
 },
 {
 "zone": "FR",
-"unit": "BELLEVILLE 2",
-"psr": "nuclear",
-"nominal_mw": 1310,
-"unavail_mw": 679,
-"start": "2026-11-25T01:30:00+00:00",
-"end": "2026-11-25T02:00:00+00:00",
-"now": false,
-"kind": "planowe"
-},
-{
-"zone": "FR",
 "unit": "CATTENOM 4",
 "psr": "nuclear",
 "nominal_mw": 1300,
 "unavail_mw": 660,
 "start": "2026-11-27T07:00:00+00:00",
 "end": "2026-11-27T09:00:00+00:00",
+"now": false,
+"kind": "planowe"
+},
+{
+"zone": "FR",
+"unit": "MARTIGUES PONTEAU 5",
+"psr": "gas",
+"nominal_mw": 465,
+"unavail_mw": 465,
+"start": "2026-12-24T23:00:00+00:00",
+"end": "2026-12-27T23:00:00+00:00",
 "now": false,
 "kind": "planowe"
 },
