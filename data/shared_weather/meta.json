@@ -13,47 +13,47 @@
   },
   "hist": {
    "status": "OK",
-   "seconds": 0,
-   "requests": 0,
-   "weighted": 0.0,
+   "seconds": 3,
+   "requests": 7,
+   "weighted": 63.0,
    "http429": 0,
    "last_error": null
   },
   "prev": {
    "status": "OK",
-   "seconds": 223,
-   "requests": 15,
+   "seconds": 161,
+   "requests": 14,
    "weighted": 63.0,
    "http429": 0,
    "last_error": "previous-runs-api.open-meteo.com: ReadTimeout"
   }
  },
- "forecast_issued": "2026-11-24",
- "updated": "2026-11-24T15:25Z",
+ "forecast_issued": "2026-11-25",
+ "updated": "2026-11-25T05:46Z",
  "coverage": {
   "hist": {
    "points": 63,
    "points_to_end": 63,
    "from": "2019-01-01",
-   "to": "2026-11-18",
-   "rows": 181377
+   "to": "2026-11-19",
+   "rows": 181440
   },
   "prev": {
    "points": 63,
    "points_to_end": 63,
    "from": "2024-01-01",
-   "to": "2026-11-23",
-   "rows": 66654
+   "to": "2026-11-24",
+   "rows": 66717
   },
   "recent": {
    "points": 63,
    "points_to_end": 47,
-   "from": "2026-11-10",
-   "to": "2026-12-09",
-   "rows": 1874
+   "from": "2026-11-11",
+   "to": "2026-12-10",
+   "rows": 1858
   }
  },
- "weighted_calls": 551.4,
+ "weighted_calls": 629.4,
  "trial": {
   "groups": [
    "eu_gas_x"
@@ -66,9 +66,9 @@
   "steps": {
    "hist": {
     "status": "OK",
-    "seconds": 0,
-    "requests": 0,
-    "weighted": 0.0,
+    "seconds": 1,
+    "requests": 2,
+    "weighted": 15.0,
     "last_error": null
    },
    "prev": {
@@ -84,8 +84,8 @@
     "points": 15,
     "points_to_end": 15,
     "from": "2019-01-01",
-    "to": "2026-11-18",
-    "rows": 43185
+    "to": "2026-11-19",
+    "rows": 43200
    },
    "prev": {
     "points": 15,
@@ -97,9 +97,9 @@
    "recent": {
     "points": 15,
     "points_to_end": 13,
-    "from": "2026-11-10",
-    "to": "2026-12-09",
-    "rows": 448
+    "from": "2026-11-11",
+    "to": "2026-12-10",
+    "rows": 446
    }
   }
  },
@@ -109,7 +109,7 @@
   "missing": [],
   "last_error": null,
   "status": "OK",
-  "issued": "2026-11-24T15:21Z",
+  "issued": "2026-11-25T05:43Z",
   "seconds": 62,
   "requests": 7,
   "weighted": 321.3
