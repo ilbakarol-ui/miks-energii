@@ -13,23 +13,23 @@
   },
   "hist": {
    "status": "OK",
-   "seconds": 3,
-   "requests": 7,
-   "weighted": 63.0,
+   "seconds": 0,
+   "requests": 0,
+   "weighted": 0.0,
    "http429": 0,
    "last_error": null
   },
   "prev": {
    "status": "OK",
-   "seconds": 161,
-   "requests": 14,
+   "seconds": 219,
+   "requests": 15,
    "weighted": 63.0,
    "http429": 0,
    "last_error": "previous-runs-api.open-meteo.com: ReadTimeout"
   }
  },
  "forecast_issued": "2026-11-25",
- "updated": "2026-11-25T05:46Z",
+ "updated": "2026-11-25T16:03Z",
  "coverage": {
   "hist": {
    "points": 63,
@@ -50,10 +50,10 @@
    "points_to_end": 47,
    "from": "2026-11-11",
    "to": "2026-12-10",
-   "rows": 1858
+   "rows": 1874
   }
  },
- "weighted_calls": 629.4,
+ "weighted_calls": 551.4,
  "trial": {
   "groups": [
    "eu_gas_x"
@@ -66,9 +66,9 @@
   "steps": {
    "hist": {
     "status": "OK",
-    "seconds": 1,
-    "requests": 2,
-    "weighted": 15.0,
+    "seconds": 0,
+    "requests": 0,
+    "weighted": 0.0,
     "last_error": null
    },
    "prev": {
@@ -99,7 +99,7 @@
     "points_to_end": 13,
     "from": "2026-11-11",
     "to": "2026-12-10",
-    "rows": 446
+    "rows": 448
    }
   }
  },
@@ -109,7 +109,7 @@
   "missing": [],
   "last_error": null,
   "status": "OK",
-  "issued": "2026-11-25T05:43Z",
+  "issued": "2026-11-25T15:59Z",
   "seconds": 62,
   "requests": 7,
   "weighted": 321.3
