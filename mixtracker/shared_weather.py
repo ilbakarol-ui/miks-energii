@@ -60,6 +60,12 @@ ENS_VARS = {"ws": "wind_speed_100m_mean", "sr": "shortwave_radiation_sum", "t": 
 ENS_PAST, ENS_DAYS, ENS_HIST_DAYS = 5, 12, 400
 SEAS_DAYS, SEAS_MAX_AGE = 183, 7
 HIST_START = "2019-01-01"
+# 26.11.2026: norma temperatury 2016–2025 w zakładce „Pogoda” Miksu – ERA5 z lat 2016–2018 w osobnym pliku
+# temp_hist_old.csv (tylko punkty sieci gazowej UE i próbne EX_), żeby temp_hist.csv czytany przez raport Gaz UE
+# się nie zmienił (jego norma i zimy analogowe od 2019 r.)
+HIST_OLD_START, HIST_OLD_END = "2016-01-01", "2018-12-31"
+HIST_OLD_GROUPS = ("eu_gas", "eu_gas_x")
+HIST_OLD_MAX_MINUTES = 8
 PREV_START = "2024-01-01"
 LEADS = 7
 ERA5_LAG = 6            # archiwum ERA5 ma ok. 5 dni opóźnienia
@@ -330,6 +336,87 @@ def step_hist(pts, q: Quota, get=http_get, today: dt.date | None = None) -> int:
         if new:
             _write(pd.concat([old] + new, ignore_index=True), "temp_hist.csv")
     return len(jobs) - len(done)
+
+
+def step_hist_old(pts, q: Quota, get=http_get, today: dt.date | None = None) -> int:
+    """ERA5 2016–2018 (HIST_OLD_START..HIST_OLD_END) dla punktów, które go jeszcze nie mają – do normy temperatury
+    2016–2025 w Miksie. Jednorazowe dociągnięcie w kawałkach po HIST_CHUNK_DAYS dni; potem krok nic nie pobiera.
+    Zwraca liczbę punktów bez kompletu."""
+    end = dt.date.fromisoformat(HIST_OLD_END)
+    old = _read("temp_hist_old.csv", ["pt", "date", "temp"])
+    last = old.groupby("pt").date.max().to_dict() if len(old) else {}
+    jobs = pts.copy()
+    jobs["start"] = [(dt.date.fromisoformat(last[p]) + dt.timedelta(days=1)) if p in last
+                     else dt.date.fromisoformat(HIST_OLD_START) for p in jobs.pt]
+    jobs = jobs[jobs.start <= end]
+    new, done = [], set()
+    try:
+        for (start, tz), g in jobs.groupby(["start", "tz"]):
+            for i in range(0, len(g), BATCH):
+                gg = g.iloc[i:i + BATCH]
+                a = start
+                while a <= end:
+                    b = min(end, a + dt.timedelta(days=HIST_CHUNK_DAYS - 1))
+                    w = q.weight(len(gg), (b - a).days + 1)
+                    if not q.can(w):
+                        break
+                    q.take(w)
+                    try:
+                        res = get(ARCHIVE_URL, {**_coords(gg), "daily": "temperature_2m_mean", "timezone": tz,
+                                                "start_date": a.isoformat(), "end_date": b.isoformat()})
+                    except (Deadline, DailyLimit):
+                        raise
+                    except Exception as e:
+                        _HIST_FAILED.append(f"{','.join(gg.pt)} {a}..{b}: {type(e).__name__}")
+                        break
+                    for pt, js in zip(gg.pt, res):
+                        d = js.get("daily") or {}
+                        new.append(pd.DataFrame({"pt": pt, "date": d.get("time", []),
+                                                 "temp": d.get("temperature_2m_mean", [])}).dropna())
+                        if b == end:
+                            done.add(pt)
+                    a = b + dt.timedelta(days=1)
+    finally:
+        if new:
+            _write(pd.concat([old] + new, ignore_index=True).drop_duplicates(["pt", "date"], keep="last")
+                   .sort_values(["pt", "date"]), "temp_hist_old.csv")
+    return len(jobs) - len(done)
+
+
+def _run_hist_old(meta: dict, pts: pd.DataFrame, q: Quota, get, today: dt.date, meta_name: str):
+    """Krok „hist_old” na końcu zadania temp: najwyżej HIST_OLD_MAX_MINUTES minut, stan w meta["hist_old"]
+    (nie w errors / pending / steps, które czyta raport Gaz UE)."""
+    sel = _sel(pts[pts["group"].isin(HIST_OLD_GROUPS)], "temp")
+    if sel.empty:
+        return
+    end_all = DEADLINE[0]
+    DEADLINE[0] = min(end_all, time.time() + HIST_OLD_MAX_MINUTES * 60 - TRIAL_REQUEST_MARGIN)
+    t0, r0 = time.time(), STATS["requests"]
+    STATS["last_error"] = None
+    st = {"range": f"{HIST_OLD_START}..{HIST_OLD_END}", "points": int(len(sel))}
+    prev = _read("temp_hist_old.csv", ["pt", "date", "temp"])
+    was_complete = bool(len(prev)) and all(
+        prev.loc[prev["pt"] == pt, "date"].max() == HIST_OLD_END if (prev["pt"] == pt).any() else False for pt in sel.pt)
+    try:
+        st["pending"] = int(step_hist_old(sel, q, get=get, today=today))
+        st["status"] = "OK"
+    except Deadline:
+        st.update(status="limit czasu", pending=int(len(sel)))
+    except DailyLimit as e:
+        st.update(status=f"dzienny limit ({e})", pending=int(len(sel)))
+    except Exception as e:
+        st.update(status=f"błąd {type(e).__name__}: {str(e)[:120]}", pending=int(len(sel)))
+    finally:
+        DEADLINE[0] = end_all
+    if _HIST_FAILED:
+        st["errors"] = [f"{len(_HIST_FAILED)} paczek bez danych, np. {_HIST_FAILED[0]}"]
+        _HIST_FAILED.clear()
+    st.update(seconds=round(time.time() - t0), requests=STATS["requests"] - r0, last_error=STATS["last_error"])
+    if st.get("pending") == 0 and was_complete:
+        st["status"] = "komplet"
+    meta["hist_old"] = st
+    print(f"  hist_old (ERA5 {st['range']}): {st['status']}, punkty bez kompletu {st.get('pending')}")
+    _save_meta(meta, q, meta_name)
 
 
 def step_prev(pts, q: Quota, get=http_get, today: dt.date | None = None) -> int:
@@ -784,6 +871,8 @@ def run(budget: float = 8000, get=http_get, today: dt.date | None = None, minute
             break
     if "trial" in meta and not stopped:
         _run_trial(meta, trial, q, get, today, meta_name)
+    if job == "temp" and not stopped:
+        _run_hist_old(meta, pts, q, get, today, meta_name)
     _HIST_FAILED.clear()
     _PREV_FAILED.clear()
     _save_meta(meta, q, meta_name)

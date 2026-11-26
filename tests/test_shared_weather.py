@@ -295,7 +295,7 @@ def test_hist_increment_first_and_backfill_in_chunks(tmp_path, monkeypatch):
     sw.run(budget=1e6, get=fake_get_factory(calls), today=TODAY + dt.timedelta(days=1))
     h = [c[1] for c in calls if c[0] == sw.ARCHIVE_URL]
     assert h[0]["start_date"] == "2026-10-14"                      # najpierw dzienny przyrost
-    p9 = [c for c in h if c["latitude"] == "59.00"]
+    p9 = [c for c in h if c["latitude"] == "59.00" and c["start_date"] >= "2019"]   # bez ERA5 2016–2018 (hist_old)
     assert len(p9) == 4 and p9[0]["start_date"] == "2023-01-01"
     for c in h:                                                    # waga zapytania ≤ 10 × 365/14
         days = (dt.date.fromisoformat(c["end_date"]) - dt.date.fromisoformat(c["start_date"])).days + 1

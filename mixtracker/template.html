@@ -2045,7 +2045,7 @@ const DATA = /*__DATA__*/null;
         s.power ? `+${fmt1.format(s.power.bh)} GWh/d prądu (R² ${String(s.power.r2).replace(".", ",")})` + (s.power.bc ? `, a 1°C cieplej powyżej 22°C +${fmt1.format(s.power.bc)} GWh/d prądu` : "") : null].filter(Boolean).join(", ") + ".";
     } else note = "Brak wrażliwości dla tego kraju (brak punktów temperatury albo danych o zużyciu).";
     $("x-imp-note").textContent = note + ` Wrażliwość gazu: regresja miesięcznego zużycia z Eurostatu (nrg_cb_gasm, ${gs.since || "2023-01"}–${gs.last_month || "–"}; te same dane, do których kalibruje się raport Gaz UE) na stopniodniach grzania; prądu: zużycie dzienne z 730 dni na stopniodniach grzania i chłodzenia oraz dniu tygodnia. ` +
-      "Odchylenie = wrażliwość × (stopniodni z prognozy − stopniodni przy normie 2019–2025). Pokazuje tylko efekt temperatury – wiatr, ceny i przemysł zmieniają zużycie niezależnie. SEAS5: surowy model, bez korekty błędu systematycznego." +
+      `Odchylenie = wrażliwość × (stopniodni z prognozy − stopniodni przy normie ${(im && im.norm_years) || "–"}).` + " Pokazuje tylko efekt temperatury – wiatr, ceny i przemysł zmieniają zużycie niezależnie. SEAS5: surowy model, bez korekty błędu systematycznego." +
       (im && im.fc3_issued ? ` Fioletowa linia: ta sama wrażliwość zastosowana do prognozy temperatury wydanej ${fdate(im.fc3_issued)} (3 dni wcześniej)` + (S.country === "EU" ? " – suma krajów." : ".") : "");
   }
 

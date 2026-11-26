@@ -34,8 +34,11 @@ FOLDER = store.DATA / "shared_weather"
 TEMP_ARCHIVE = store.FORECAST / "temp_archive.csv"   # prognozy temperatury krajów w chwili wydania (od 20.11.2026)
 TEMP_ARCHIVE_DAYS = 60
 PREV_LAG = 3                                         # „prognoza sprzed 3 dni”
-DEFAULTS = {"calib_days": 120, "min_calib_days": 14, "min_r2": 0.6, "norm_years": 7, "recent_days": 14,
-            "seas_months": 6, "seas_min_days": 20}
+# 26.11.2026: norma temperatury = średnia z lat 2016–2025 (stały okres; lata bez kompletu danych są pomijane, a
+# opis normy pokazuje faktycznie użyte lata). ERA5 2016–2018: data/shared_weather/temp_hist_old.csv.
+DEFAULTS = {"calib_days": 120, "min_calib_days": 14, "min_r2": 0.6, "norm_from": 2016, "norm_to": 2025,
+            "recent_days": 14, "seas_months": 6, "seas_min_days": 20}
+HIST_OLD_GROUPS = ("eu_gas", "eu_gas_x")
 
 
 def _r(v, nd=1):
@@ -75,8 +78,25 @@ def load(folder: Path | None = None) -> dict:
         "meta_extra": _read_json(f / "meta_extra.json"),
         "meta_evening": _read_json(f / "meta_evening.json"),
     }
+    W["hist"] = _with_old_hist(W.get("hist"), _read_csv(f / "temp_hist_old.csv"), W.get("points"))
     W["trial_ready"] = trial_ready(W)
     return W
+
+
+def _with_old_hist(hist, old, points):
+    """Dołącza ERA5 2016–2018 dopiero, gdy jest kompletne dla wszystkich punktów sieci gazowej i próbnych –
+    inaczej część krajów miałaby normę z innych lat, a punkty próbne wypadłyby ze średniej (trial_ready)."""
+    if hist is None or old is None or old.empty or points is None or "group" not in points:
+        return hist
+    has_temp = points["uses"].fillna("").str.split(";").apply(lambda u: "temp" in u)
+    need = points.loc[points["group"].isin(HIST_OLD_GROUPS) & has_temp, "pt"]
+    o = old[old["pt"].isin(need)].dropna(subset=["temp"])
+    n_days = (dt.date(2018, 12, 31) - dt.date(2016, 1, 1)).days + 1
+    cnt = o.groupby("pt")["date"].nunique()
+    if len(need) == 0 or not all(cnt.get(pt, 0) >= n_days for pt in need):
+        return hist
+    o = o[~o["date"].isin(set(hist["date"]))] if len(hist) else o
+    return pd.concat([o[["pt", "date", "temp"]], hist], ignore_index=True)
 
 
 # ---------------- wiatr ----------------
@@ -310,14 +330,17 @@ def _md_index(dates) -> np.ndarray:
     return np.array([dt.date(2001, x.month, x.day).timetuple().tm_yday - 1 for x in d])
 
 
-def norm_years(hist: pd.DataFrame, pts: pd.DataFrame, ref: dt.date, years: int) -> list[int]:
+def norm_years(hist: pd.DataFrame, pts: pd.DataFrame, ref: dt.date, conf: dict) -> list[int]:
+    """Lata normy: pełne lata (≥ 360 dni z kompletem punktów) z okresu norm_from–norm_to (domyślnie 2016–2025),
+    nie później niż rok przed `ref`."""
     if hist is None or hist.empty:
         return []
-    d = hist[hist["pt"].isin(pts["pt"])]
-    yrs = pd.to_datetime(d["date"]).dt.year
-    cnt = d.groupby(yrs)["date"].nunique()
-    full = [int(y) for y, n in cnt.items() if n >= 360 and y < ref.year]
-    return sorted(full)[-years:]
+    lo, hi = int(conf.get("norm_from", 2016)), min(int(conf.get("norm_to", 2025)), ref.year - 1)
+    days = pd.Series(sorted(_complete_dates(hist, list(pts["pt"]))), dtype=str)
+    if days.empty:
+        return []
+    cnt = days.groupby(days.str[:4].astype(int)).size()
+    return [int(y) for y, n in cnt.items() if n >= 360 and lo <= y <= hi]
 
 
 def daily_norm(hist: pd.DataFrame, pts: pd.DataFrame, yrs: list[int], weights: dict | None = None) -> np.ndarray | None:
@@ -362,7 +385,7 @@ def temp_block(code: str, W: dict, ref: dt.date, conf: dict, prev: tuple | None 
     if not rdates and not fdates:
         return None
     dates = rdates + fdates
-    yrs = norm_years(W.get("hist"), p, ref, conf["norm_years"])
+    yrs = norm_years(W.get("hist"), p, ref, conf)
     nd = daily_norm(W["hist"], p, yrs) if yrs else None
     nr = len(rdates)
     return {
@@ -469,7 +492,7 @@ def seas_block(code: str, W: dict, ref: dt.date, conf: dict) -> dict | None:
     first = (ref.replace(day=1) + dt.timedelta(days=32)).replace(day=1).isoformat()[:7]   # od następnego miesiąca
     cnt = df.groupby("m")["date"].nunique()
     months = [m for m in sorted(cnt.index) if m >= first and cnt[m] >= conf["seas_min_days"]][: conf["seas_months"]]
-    yrs = norm_years(hist, p, ref, conf["norm_years"])
+    yrs = norm_years(hist, p, ref, conf)
     if not months or not yrs:
         return None
     h = hist[pd.to_datetime(hist["date"]).dt.year.isin(yrs)]
@@ -530,7 +553,7 @@ def impact_country(code: str, W: dict, coef: dict, ref: dt.date, conf: dict, pre
     if p.empty or not coef:
         return None
     t_all = country_temp(W, p)
-    yrs = norm_years(W.get("hist"), p, ref, conf["norm_years"])
+    yrs = norm_years(W.get("hist"), p, ref, conf)
     nd = _norm_degree_days(t_all, yrs) if yrs else None
     tn = daily_norm(W["hist"], p, yrs) if yrs else None
     if nd is None or tn is None:
@@ -586,6 +609,7 @@ def impact_country(code: str, W: dict, coef: dict, ref: dt.date, conf: dict, pre
                 "p90": [_r(q[x][2], 0) if x in q else None for x in dates]}
     out = {"dates": dates, "split": nr,
            "tanom": [_r(T[k] - tn[idx[k]]) for k in range(len(dates))],
+           "norm_years": f"{yrs[0]}–{yrs[-1]}",
            "_members": members, "_gas": list(gas_v), "_power": list(pow_v), "_gas3": list(g3), "_power3": list(p3)}
     has3 = any(v is not None for v in g3 + p3)
     if has3:
@@ -615,6 +639,9 @@ def impact_eu(blocks: dict, coefs: dict) -> dict | None:
     last_act = b0["dates"][b0["split"] - 1] if b0["split"] else ""
     split = sum(1 for x in common if x <= last_act)
     out = {"dates": common, "split": split, "countries": len(codes)}
+    ny = sorted({blocks[c].get("norm_years") for c in codes if blocks[c].get("norm_years")})
+    if ny:
+        out["norm_years"] = ny[0] if len(ny) == 1 else ", ".join(ny)
     for kind, key in (("gas", "b"), ("power", "bh")):
         cs = [c for c in codes if kind in blocks[c] and blocks[c][kind]]
         if not cs:
@@ -666,7 +693,7 @@ def impact_seas(code: str, W: dict, coef: dict, ref: dt.date, conf: dict) -> dic
     cnt = df.groupby("m")["date"].nunique()
     months = [m for m in sorted(cnt.index) if m >= first and cnt[m] >= conf["seas_min_days"]][: conf["seas_months"]]
     t_hist = country_temp(W, p)
-    yrs = norm_years(W.get("hist"), p, ref, conf["norm_years"])
+    yrs = norm_years(W.get("hist"), p, ref, conf)
     if not months or not yrs or t_hist.empty:
         return None
     h = t_hist[t_hist.index.year.isin(yrs)]
