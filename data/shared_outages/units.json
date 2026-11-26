@@ -155,17 +155,6 @@
 },
 {
 "zone": "FR",
-"unit": "CRUAS 1",
-"psr": "nuclear",
-"nominal_mw": 915,
-"unavail_mw": 575,
-"start": "2026-11-23T17:30:00+00:00",
-"end": "2026-11-27T15:00:00+00:00",
-"now": true,
-"kind": "planowe"
-},
-{
-"zone": "FR",
 "unit": "CRUAS 4",
 "psr": "nuclear",
 "nominal_mw": 915,
@@ -183,6 +172,17 @@
 "unavail_mw": 533,
 "start": "2026-11-24T04:00:00+00:00",
 "end": "2026-11-28T10:30:00+00:00",
+"now": true,
+"kind": "planowe"
+},
+{
+"zone": "FR",
+"unit": "CRUAS 1",
+"psr": "nuclear",
+"nominal_mw": 915,
+"unavail_mw": 495,
+"start": "2026-11-23T17:30:00+00:00",
+"end": "2026-11-27T16:40:00+00:00",
 "now": true,
 "kind": "planowe"
 },
@@ -227,17 +227,6 @@
 "unavail_mw": 690,
 "start": "2026-11-27T15:30:00+00:00",
 "end": "2026-11-27T16:00:00+00:00",
-"now": false,
-"kind": "planowe"
-},
-{
-"zone": "FR",
-"unit": "BELLEVILLE 2",
-"psr": "nuclear",
-"nominal_mw": 1310,
-"unavail_mw": 680,
-"start": "2026-11-26T01:30:00+00:00",
-"end": "2026-11-26T02:00:00+00:00",
 "now": false,
 "kind": "planowe"
 },
