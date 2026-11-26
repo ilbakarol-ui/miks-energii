@@ -5,24 +5,24 @@
  "steps": {
   "ensemble": {
    "status": "OK",
-   "seconds": 716,
-   "requests": 20,
+   "seconds": 130,
+   "requests": 16,
    "weighted": 93.5,
-   "http429": 0,
-   "last_error": "ensemble-api.open-meteo.com: ReadTimeout"
+   "http429": 1,
+   "last_error": "ensemble-api.open-meteo.com: HTTP 429 {\"reason\":\"Minutely API request limit exceeded. Please try again in one minute.\",\"error\":true}"
   },
   "seasonal": {
    "status": "OK",
-   "seconds": 249,
-   "requests": 8,
-   "weighted": 313.7,
+   "seconds": 0,
+   "requests": 0,
+   "weighted": 0.0,
    "http429": 0,
-   "last_error": "seasonal-api.open-meteo.com: ReadTimeout"
+   "last_error": null
   }
  },
  "ensemble_issued": "2026-11-26",
  "ensemble_kind": "ensemble",
- "updated": "2026-11-26T03:07Z",
- "weighted_calls": 407.2,
- "seasonal_refreshed_points": 24
+ "updated": "2026-11-26T16:18Z",
+ "weighted_calls": 93.5,
+ "seasonal_refreshed_points": 0
 }
