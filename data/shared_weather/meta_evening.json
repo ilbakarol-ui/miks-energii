@@ -5,7 +5,7 @@
  "steps": {
   "recent": {
    "status": "OK",
-   "seconds": 1,
+   "seconds": 0,
    "requests": 9,
    "weighted": 167.1,
    "http429": 0,
@@ -13,17 +13,17 @@
   },
   "ensemble": {
    "status": "OK",
-   "seconds": 848,
-   "requests": 21,
+   "seconds": 130,
+   "requests": 16,
    "weighted": 93.5,
-   "http429": 0,
-   "last_error": "ensemble-api.open-meteo.com: ReadTimeout"
+   "http429": 1,
+   "last_error": "ensemble-api.open-meteo.com: HTTP 429 {\"error\":true,\"reason\":\"Minutely API request limit exceeded. Please try again in one minute.\"}"
   }
  },
- "forecast_issued": "2026-11-22",
- "updated": "2026-11-22T18:54Z",
+ "forecast_issued": "2026-11-26",
+ "updated": "2026-11-26T15:56Z",
  "weighted_calls": 581.9,
- "ensemble_issued": "2026-11-22",
+ "ensemble_issued": "2026-11-26",
  "ensemble_kind": "ensemble",
  "power": {
   "countries": 30,
@@ -31,8 +31,8 @@
   "missing": [],
   "last_error": null,
   "status": "OK",
-  "issued": "2026-11-22T18:40Z",
-  "seconds": 63,
+  "issued": "2026-11-26T15:54Z",
+  "seconds": 65,
   "requests": 7,
   "weighted": 321.3
  }
