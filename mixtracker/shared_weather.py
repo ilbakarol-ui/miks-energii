@@ -65,7 +65,7 @@ HIST_START = "2019-01-01"
 # się nie zmienił (jego norma i zimy analogowe od 2019 r.)
 HIST_OLD_START, HIST_OLD_END = "2016-01-01", "2018-12-31"
 HIST_OLD_GROUPS = ("eu_gas", "eu_gas_x")
-HIST_OLD_MAX_MINUTES = 8
+HIST_OLD_MAX_MINUTES = 15     # 26.11: serwer archiwum ERA5 wolny (9 zapytań w 484 s) – dociąganie w ok. 2 nocach
 PREV_START = "2024-01-01"
 LEADS = 7
 ERA5_LAG = 6            # archiwum ERA5 ma ok. 5 dni opóźnienia
