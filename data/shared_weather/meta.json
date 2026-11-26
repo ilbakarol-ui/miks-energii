@@ -21,15 +21,15 @@
   },
   "prev": {
    "status": "OK",
-   "seconds": 218,
-   "requests": 15,
+   "seconds": 7,
+   "requests": 13,
    "weighted": 63.0,
    "http429": 0,
-   "last_error": "previous-runs-api.open-meteo.com: ReadTimeout"
+   "last_error": null
   }
  },
  "forecast_issued": "2026-11-26",
- "updated": "2026-11-26T18:32Z",
+ "updated": "2026-11-26T19:02Z",
  "coverage": {
   "hist": {
    "points": 63,
@@ -53,16 +53,14 @@
    "rows": 1874
   }
  },
- "weighted_calls": 2125.7,
+ "weighted_calls": 3464.3,
  "trial": {
   "groups": [
    "eu_gas_x"
   ],
   "points": 15,
   "errors": [],
-  "pending": {
-   "prev": 15
-  },
+  "pending": {},
   "steps": {
    "hist": {
     "status": "OK",
@@ -72,11 +70,11 @@
     "last_error": null
    },
    "prev": {
-    "status": "pominięte – serwer wolny",
-    "seconds": 0,
-    "requests": 0,
-    "weighted": 0.0,
-    "last_error": null
+    "status": "OK",
+    "seconds": 163,
+    "requests": 4,
+    "weighted": 15.0,
+    "last_error": "previous-runs-api.open-meteo.com: ReadTimeout"
    }
   },
   "coverage": {
@@ -89,10 +87,10 @@
    },
    "prev": {
     "points": 15,
-    "points_to_end": 0,
+    "points_to_end": 15,
     "from": "2024-01-01",
-    "to": "2026-11-18",
-    "rows": 15795
+    "to": "2026-11-25",
+    "rows": 15900
    },
    "recent": {
     "points": 15,
@@ -103,24 +101,24 @@
    }
   }
  },
+ "hist_old": {
+  "range": "2016-01-01..2018-12-31",
+  "points": 64,
+  "status": "limit czasu",
+  "pending": 64,
+  "seconds": 868,
+  "requests": 18,
+  "last_error": "archive-api.open-meteo.com: ReadTimeout"
+ },
  "power": {
   "countries": 30,
   "points": 173,
   "missing": [],
   "last_error": null,
   "status": "OK",
-  "issued": "2026-11-26T18:20Z",
-  "seconds": 63,
+  "issued": "2026-11-26T18:45Z",
+  "seconds": 62,
   "requests": 7,
   "weighted": 321.3
- },
- "hist_old": {
-  "range": "2016-01-01..2018-12-31",
-  "points": 64,
-  "status": "limit czasu",
-  "pending": 64,
-  "seconds": 484,
-  "requests": 9,
-  "last_error": "archive-api.open-meteo.com: ReadTimeout"
  }
 }
