@@ -5,8 +5,8 @@
  "steps": {
   "ensemble": {
    "status": "OK",
-   "seconds": 586,
-   "requests": 19,
+   "seconds": 849,
+   "requests": 21,
    "weighted": 93.5,
    "http429": 0,
    "last_error": "ensemble-api.open-meteo.com: ReadTimeout"
@@ -22,7 +22,7 @@
  },
  "ensemble_issued": "2026-11-27",
  "ensemble_kind": "ensemble",
- "updated": "2026-11-27T06:13Z",
+ "updated": "2026-11-27T18:19Z",
  "weighted_calls": 93.5,
  "seasonal_refreshed_points": 0
 }
