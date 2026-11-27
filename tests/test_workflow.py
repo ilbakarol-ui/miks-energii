@@ -50,7 +50,8 @@ def _gate(script, cwd, **env):
 def test_daily_every_cron_has_a_branch_and_backups_exist():
     wf, on = _wf("daily.yml")
     crons = [c["cron"] for c in on["schedule"]]
-    assert {"53 0 * * *", "37 12 * * *", "7 14 * * *", "23 3 * * *", "13 15 * * *"} == set(crons)
+    # 27.11.2026: tylko start nocny i popołudniowy; bramki dla dawnych startów zapasowych zostają (testy niżej)
+    assert ["53 0 * * *", "37 12 * * *"] == crons
     assert wf["jobs"]["update"]["steps"][0]["with"]["fetch-depth"] >= 20
     text = (WF / "daily.yml").read_text(encoding="utf-8")
     # zapas popołudniowy działa jak przebieg uzupełniający: popołudnie, tylko brakujące ceny, dopisek w commicie
@@ -88,7 +89,7 @@ def test_daily_afternoon_backup_gate(tmp_path):
 def test_shared_weather_backup_gates(tmp_path):
     wf, on = _wf("shared_weather.yml")
     crons = {c["cron"] for c in on["schedule"]}
-    assert {"17 0 * * *", "47 17 * * *", "41 3 * * *", "53 18 * * *"} == crons
+    assert {"17 0 * * *", "47 17 * * *"} == crons                        # 27.11.2026: bez zapasów 03:41 i 18:53
     job = wf["jobs"]["weather"]
     assert "'53 18 * * *'" in job["strategy"]["matrix"]["job"]            # zapas wieczorny = zadanie evening
     later = [s for s in job["steps"][2:]]

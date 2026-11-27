@@ -15,10 +15,8 @@ on:
   schedule:
     - cron: "17 0 * * *"
     - cron: "47 17 * * *"
-    # B-20261116-1: zapasowe starty (GitHub opóźnia albo pomija zdarzenia harmonogramu – 16.11 noc +6,5 h, wieczór pominięty);
-    # bramka „need” pomija zadanie, gdy jego dzisiejszy commit („Wspólna pogoda <zadanie> <dziś>”) już jest
-    - cron: "41 3 * * *"        # zapas nocny (temp, extra)
-    - cron: "53 18 * * *"       # zapas wieczorny (evening), przed raportem gazowym o 20:41 czasu polskiego
+    # 27.11.2026: zapasy 03:41 i 18:53 UTC (B-20261116-1) usunięte – dwa starty dziennie (nocny i wieczorny);
+    # bramka „need” zostaje (spóźnione zdarzenie, gdy zadanie zapisało już dziś dane, kończy się po kilku sekundach)
   workflow_dispatch:
     inputs:
       budget:
