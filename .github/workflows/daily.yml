@@ -8,6 +8,8 @@ on:
     # 15:13 UTC; B-20261027-1, B-20261116-1) usunięte – GitHub i tak opóźniał je o wiele godzin, a większość kończyła
     # się w bramce bez pracy. Brakujący przebieg można uruchomić ręcznie (Run workflow); bramka „need” zostaje:
     # spóźnione zdarzenie, gdy dane z tego dnia już są, kończy się po kilku sekundach.
+    # 28.11.2026: brakujący przebieg uruchamia też „Wspólna pogoda” po swoim zadaniu nocnym (temp) i wieczornym (evening)
+    # – krok „chain” w shared_weather.yml (workflow_dispatch); zadanie Claude „Energia dzienny” wyłączone.
   workflow_dispatch:
     inputs:
       budget:

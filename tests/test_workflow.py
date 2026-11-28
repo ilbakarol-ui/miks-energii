@@ -92,7 +92,7 @@ def test_shared_weather_backup_gates(tmp_path):
     assert {"17 0 * * *", "47 17 * * *"} == crons                        # 27.11.2026: bez zapasów 03:41 i 18:53
     job = wf["jobs"]["weather"]
     assert "'53 18 * * *'" in job["strategy"]["matrix"]["job"]            # zapas wieczorny = zadanie evening
-    later = [s for s in job["steps"][2:]]
+    later = [s for s in job["steps"][2:] if s.get("id") != "chain"]   # łańcuch (28.11.2026) sprawdza dane sam
     assert all("steps.need.outputs.run == '1'" in str(s.get("if", "")) for s in later)
     script = _step(wf, "weather", "need")["run"]
     t = _today().isoformat()
@@ -165,3 +165,44 @@ def test_daily_gate_hour_overridable():
 def test_evening_commit_title_from_forecast_issued():
     text = (WF / "shared_weather.yml").read_text(encoding="utf-8")
     assert "forecast_issued" in text and 'Wspólna pogoda ${{ matrix.job }} ${D:-$(date -u +%Y-%m-%d)}' in text
+
+
+def _chain(script, cwd, **env):
+    out = cwd / "gh_output"
+    out.write_text("")
+    subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script], cwd=cwd, check=True,
+                   env={**os.environ, "GITHUB_OUTPUT": str(out), "CHAIN_DRY": "1", **env}, capture_output=True)
+    return dict(line.split("=", 1) if "=" in line else (line, "") for line in out.read_text().splitlines())["dispatch"]
+
+
+def test_shared_weather_chain_step():
+    """28.11.2026: po pogodzie nocnej i wieczornej workflow uruchamia brakujący przebieg energii przez API."""
+    wf, _ = _wf("shared_weather.yml")
+    assert wf["permissions"].get("actions") == "write"
+    step = _step(wf, "weather", "chain")
+    assert "always()" in step["if"] and "temp" in step["if"] and "evening" in step["if"] and "extra" not in step["if"]
+    assert step["continue-on-error"] is True and "GITHUB_TOKEN" in step["env"]["GH_TOKEN"]
+    run = step["run"]
+    assert "workflows/daily.yml/dispatches" in run and "inputs[afternoon]=true" in run
+    assert run.index("CHAIN_DRY") < run.index("gh api")   # w testach bez wywołań API
+
+
+def test_shared_weather_chain_decisions(tmp_path):
+    wf, _ = _wf("shared_weather.yml")
+    script = _step(wf, "weather", "chain")["run"]
+    t, tm = _today().isoformat(), (_today() + dt.timedelta(days=1)).isoformat()
+    done = _repo(tmp_path / "a", [f"Dane z {t}"], prices={"PL": tm, "NL": tm})
+    part = _repo(tmp_path / "b", [f"Dane z {t} (popołudnie)"], prices={"PL": tm, "NL": t})
+    none_ = _repo(tmp_path / "c", ["start"], prices={"PL": t})
+    # noc: tylko gdy brak „Dane z <dziś>” (commit popołudniowy się nie liczy)
+    assert [_chain(script, r, JOB="temp") for r in (done, part, none_)] == ["", "night", "night"]
+    # wieczór: gdy któraś strefa nie ma ceny na jutro; po północy UTC – nigdy
+    assert [_chain(script, r, JOB="evening", GATE_HOUR="18") for r in (done, part, none_)] == ["", "afternoon", "afternoon"]
+    assert [_chain(script, r, JOB="evening", GATE_HOUR="01") for r in (done, part, none_)] == ["", "", ""]
+
+
+def test_shared_weather_chain_sees_origin_after_delay(tmp_path):
+    wf, _ = _wf("shared_weather.yml")
+    script = _step(wf, "weather", "chain")["run"]
+    clone = _late_clone(tmp_path, f"Dane z {_today().isoformat()}")
+    assert _chain(script, clone, JOB="temp") == ""

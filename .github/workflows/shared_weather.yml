@@ -10,7 +10,10 @@ name: Wspólna pogoda dla dashboardów
 #   gazowym o 5:41,
 # - 17:47 UTC – lekki przebieg wieczorny (zadanie evening, limit 25 min): tylko świeża prognoza temperatury, pogoda do prognoz
 #   Miksu energii (zapas na noc, gdy Open-Meteo nie odpowiada) i ensemble do energetyki, zapis w meta_evening.json; przed wieczornym raportem gazowym o 20:41 (czas polski). ERA5, dawne
-#   prognozy i SEAS5 – tylko w nocy. Repozytorium jest publiczne, więc minuty GitHub Actions nie liczą się do limitu.
+#   prognozy i SEAS5 – tylko w nocy.
+# Łańcuch (28.11.2026): GitHub opóźnia harmonogram „Miks energii” o wiele godzin, a ten workflow startuje prawie na czas,
+# więc po zadaniu temp (noc) uruchamia przebieg nocny energii, gdy nie ma jeszcze commita „Dane z <dziś>”, a po zadaniu
+# evening – przebieg popołudniowy, gdy któraś strefa nie ma ceny na jutro (API workflow_dispatch, token GITHUB_TOKEN). Repozytorium jest publiczne, więc minuty GitHub Actions nie liczą się do limitu.
 on:
   schedule:
     - cron: "17 0 * * *"
@@ -35,6 +38,7 @@ on:
 
 permissions:
   contents: write
+  actions: write   # 28.11.2026: łańcuch – uruchamia brakujący przebieg „Miks energii” (krok „chain”)
 
 concurrency:
   group: shared-weather
@@ -116,3 +120,40 @@ jobs:
             sleep $((i * 20))
           done
           exit 1
+
+      # 28.11.2026: łańcuch do „Miks energii” – zamiast zadania Claude, które uruchamiało brakujące przebiegi ręcznie
+      - name: Brakujący przebieg energii
+        id: chain
+        if: always() && (matrix.job == 'temp' || matrix.job == 'evening')
+        continue-on-error: true
+        env:
+          JOB: ${{ matrix.job }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          if git fetch -q origin main 2>/dev/null; then REF=origin/main; else REF=HEAD; fi
+          t=$(date -u +%Y-%m-%d); tm=$(date -u -d tomorrow +%Y-%m-%d); h=$((10#${GATE_HOUR:-$(date -u +%H)}))
+          has() { git log "$REF" -80 --format=%s | grep -qxF "$1"; }
+          d=""
+          if [ "$JOB" = "temp" ]; then
+            if has "Dane z $t"; then echo "Przebieg nocny energii już był („Dane z $t”)."; else d=night; fi
+          elif [ "$h" -lt 12 ]; then
+            echo "Wieczorny przebieg po północy ($h UTC) – bez uruchamiania przebiegu popołudniowego."
+          else
+            brak=""
+            for f in $(git ls-tree --name-only "$REF" data/prices/ | grep '\.csv$'); do
+              x=$(git show "$REF:$f" | tail -1 | cut -d, -f1 | cut -c1-10)
+              if [[ "$x" < "$tm" ]]; then brak="$brak $(basename "$f" .csv)"; fi
+            done
+            if [ -n "$brak" ]; then d=afternoon; echo "Bez ceny na $tm:$brak"; else echo "Wszystkie strefy mają cenę na $tm."; fi
+          fi
+          echo "dispatch=$d" >> "$GITHUB_OUTPUT"
+          if [ -z "$d" ] || [ -n "$CHAIN_DRY" ]; then exit 0; fi
+          busy=$(gh api "repos/$REPO/actions/workflows/daily.yml/runs?per_page=20" --jq '[.workflow_runs[] | select(.status != "completed")] | length' || echo 0)
+          if [ "${busy:-0}" -gt 0 ]; then echo "Przebieg energii już trwa albo czeka w kolejce – bez uruchamiania."; exit 0; fi
+          if [ "$d" = "afternoon" ]; then
+            gh api -X POST "repos/$REPO/actions/workflows/daily.yml/dispatches" -f ref=main -F 'inputs[afternoon]=true'
+          else
+            gh api -X POST "repos/$REPO/actions/workflows/daily.yml/dispatches" -f ref=main
+          fi
+          echo "Uruchomiono przebieg energii: $d."
