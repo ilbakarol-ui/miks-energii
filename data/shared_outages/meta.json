@@ -4,34 +4,34 @@
    "note": null,
    "current_ok": true,
    "history_ok": true,
-   "last_ok": "2026-11-27T06:23:00+00:00"
+   "last_ok": "2026-11-28T08:09:00+00:00"
   },
   "BE": {
    "note": null,
    "current_ok": true,
    "history_ok": true,
-   "last_ok": "2026-11-27T06:23:00+00:00"
+   "last_ok": "2026-11-28T08:09:00+00:00"
   },
   "ES": {
    "note": null,
    "current_ok": true,
    "history_ok": true,
-   "last_ok": "2026-11-27T06:23:00+00:00"
+   "last_ok": "2026-11-28T08:09:00+00:00"
   },
   "NL": {
    "note": null,
    "current_ok": true,
    "history_ok": true,
-   "last_ok": "2026-11-27T06:23:00+00:00"
+   "last_ok": "2026-11-28T08:09:00+00:00"
   }
  },
- "updated_at": "2026-11-27T06:23:00+00:00",
+ "updated_at": "2026-11-28T08:09:00+00:00",
  "requests": 8,
  "window": [
-  "2025-10-23",
-  "2027-10-22"
+  "2025-10-24",
+  "2027-10-23"
  ],
- "events": 15616,
+ "events": 15660,
  "zones_conf": {
   "FR": "10YFR-RTE------C",
   "BE": "10YBE----------2",
